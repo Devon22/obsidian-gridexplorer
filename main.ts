@@ -1,4 +1,4 @@
-import { Plugin, TFolder, TFile } from 'obsidian';
+import { Plugin, TFolder, TFile, App } from 'obsidian';
 import { GridView } from './src/GridView';
 import { showFolderSelectionModal } from './src/FolderSelectionModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
@@ -8,6 +8,7 @@ import { t } from './src/translations';
 export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings;
     statusBarItem: HTMLElement;
+    app: App;
 
     async onload() {
         await this.loadSettings();
@@ -27,6 +28,14 @@ export default class GridExplorerPlugin extends Plugin {
             name: t('open_grid_view'),
             callback: () => {
                 showFolderSelectionModal(this.app, this);
+            }
+        });
+
+        this.addCommand({
+            id: 'view-current-note-in-grid-view',
+            name: t('view_current_note_in_grid_view'),
+            callback: () => {
+                this.viewCurrentNoteInGridView();
             }
         });
 
@@ -50,14 +59,30 @@ export default class GridExplorerPlugin extends Plugin {
                             .setTitle(t('open_in_grid_view'))
                             .setIcon('grid')
                             .onClick(() => {
-                                // 如果是文件，使用其父資料夾路徑
-                                const folderPath = file instanceof TFile ? file.parent?.path : file.path;
-                                this.activateView('folder', folderPath);
+                                this.openInGridView(file);
                             });
                     });
                 }
             })
         );
+    }
+
+    // 獲取當前頁面並嘗試打開
+    // 如果獲取失敗，打開根目錄
+    viewCurrentNoteInGridView() {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile) {
+            this.openInGridView(activeFile);
+        } else {
+            // 如果沒有當前筆記，則打開根目錄
+            this.openInGridView(this.app.vault.getRoot());
+        }
+    }
+
+    openInGridView(file: TFile | TFolder = this.app.vault.getRoot()) {
+        // 如果是文件，使用其父資料夾路徑
+        const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
+        this.activateView('folder', folderPath);
     }
 
     async activateView(mode = 'bookmarks', path = '') {

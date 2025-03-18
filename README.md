@@ -26,6 +26,7 @@ This is a grid view plugin designed for Obsidian, aimed at providing a more intu
 
 - Click the grid icon in the toolbar to open the grid view.
 - Use the right-click menu to select "Open in Grid View" on a folder.
+- Use command to view the current note in the grid view (If there is no active note currently, open the root directory).
 - In the grid view, you can click on notes to open them or click on folders to enter them.
 
 ## Settings
