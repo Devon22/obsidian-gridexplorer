@@ -27,7 +27,7 @@ export const TRANSLATIONS: Translations = {
         'sorting': '排序方式',
         'refresh': '重新整理',
         'reselect_folder': '重新選擇位置',
-        'go_up': '回上層資料夾',
+        'go_up': '返回上層資料夾',
         'no_backlinks': '沒有反向連結',
         'search': '搜尋',
         'search_placeholder': '搜尋關鍵字',
@@ -94,9 +94,9 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default_desc': '將所有設定重置為預設值',
         'settings_reset_notice': '設定值已重置為預設值',
         
-        // 顯示"返回上级文件夹"選項設定
-        'show_parent_folder_item': '顯示「返回上級資料夾」',
-        'show_parent_folder_item_desc': '在網格的第一項顯示「返回上級資料夾」選項',
+        // 顯示"返回上層資料夾"選項設定
+        'show_parent_folder_item': '顯示「返回上層資料夾」',
+        'show_parent_folder_item_desc': '在網格的第一項顯示「返回上層資料夾」選項',
         'parent_folder': '上級資料夾',
         
         // 預設開啟位置設定
@@ -223,7 +223,7 @@ export const TRANSLATIONS: Translations = {
         'sorting': '排序方式',
         'refresh': '刷新',
         'reselect_folder': '重新选择位置',
-        'go_up': '返回上层文件夹',
+        'go_up': '返回上级文件夹',
         'no_backlinks': '没有反向链接',
         'search': '搜索',
         'search_placeholder': '搜索关键字',

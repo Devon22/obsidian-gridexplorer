@@ -141,12 +141,6 @@ export class MediaModal extends Modal {
         // 更新當前顯示的索引
         this.currentIndex = index;
         
-        // 移除當前顯示的媒體元素
-        if (this.currentMediaElement) {
-            this.currentMediaElement.remove();
-            this.currentMediaElement = null;
-        }
-        
         // 如果存在之前的滾輪事件處理程序，先移除它
         if (this.handleWheel) {
             const mediaView = contentEl.querySelector('.ge-media-view');
@@ -166,12 +160,23 @@ export class MediaModal extends Modal {
             // 創建圖片元素
             const img = document.createElement('img');
             img.className = 'ge-fullscreen-image';
+            img.style.display = 'none'; // 先隱藏新圖片
             img.src = this.app.vault.getResourcePath(mediaFile);
-            mediaContainer.appendChild(img);
-            this.currentMediaElement = img;
             
-            // 設置圖片樣式，預設滿屏顯示
-            this.resetImageStyles(img);
+            // 等待新圖片載入完成
+            img.onload = () => {
+                // 移除舊的媒體元素
+                if (this.currentMediaElement) {
+                    this.currentMediaElement.remove();
+                }
+                this.currentMediaElement = img;
+                // 設置圖片樣式，預設滿屏顯示
+                this.resetImageStyles(img);
+                // 顯示新圖片
+                img.style.display = '';
+            };
+            
+            mediaContainer.appendChild(img);
             
             // 圖片點擊事件（放大/縮小）
             img.addEventListener('click', (event) => {
@@ -180,7 +185,10 @@ export class MediaModal extends Modal {
             });
             
         } else if (videoExtensions.includes(mediaFile.extension.toLowerCase())) {
-            // 創建影片元素
+            // 對於影片，維持原有的處理方式
+            if (this.currentMediaElement) {
+                this.currentMediaElement.remove();
+            }
             const video = document.createElement('video');
             video.className = 'ge-fullscreen-video';
             video.controls = true;

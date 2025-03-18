@@ -531,7 +531,7 @@ export class GridView extends ItemView {
         if (this.sourceMode === 'folder' && this.searchQuery === '' && 
             this.plugin.settings.showParentFolderItem && this.sourcePath !== '/') {
             // 创建"返回上级文件夹"项目
-            const parentFolderEl = container.createDiv('ge-grid-item ge-folder-item ge-parent-folder-item');
+            const parentFolderEl = container.createDiv('ge-grid-item ge-folder-item');
             this.gridItems.push(parentFolderEl); // 添加到網格項目數組
             
             // 获取父文件夹路径
@@ -542,7 +542,7 @@ export class GridView extends ItemView {
             
             const contentArea = parentFolderEl.createDiv('ge-content-area');
             const titleContainer = contentArea.createDiv('ge-title-container');
-            const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: `⤴️ ${t('parent_folder')}` });
+            const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ..` });
             
             // 点击事件 - 返回上级文件夹
             parentFolderEl.addEventListener('click', () => {

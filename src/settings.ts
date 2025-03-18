@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     searchMediaFiles: false, // 預設搜尋時也包含圖片和影片
     showVideoThumbnails: false, // 預設不顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
-    showParentFolderItem: true, // 預設顯示"返回上级文件夹"選項
+    showParentFolderItem: false, // 預設顯示"返回上级文件夹"選項
 };
 
 // 設定頁面類別
@@ -166,6 +166,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
+        // 顯示"返回上级文件夹"選項設定
+        new Setting(containerEl)
+            .setName(t('show_parent_folder_item'))
+            .setDesc(t('show_parent_folder_item_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showParentFolderItem)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showParentFolderItem = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+            
         // 網格項目寬度設定
         new Setting(containerEl)
             .setName(t('grid_item_width'))
@@ -253,19 +266,6 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setDynamicTooltip()
                     .onChange(async (value) => {
                         this.plugin.settings.summaryLength = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
-        // 顯示"返回上级文件夹"選項設定
-        new Setting(containerEl)
-            .setName(t('show_parent_folder_item'))
-            .setDesc(t('show_parent_folder_item_desc'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showParentFolderItem)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showParentFolderItem = value;
                         await this.plugin.saveSettings();
                     });
             });
