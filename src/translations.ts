@@ -94,6 +94,11 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default_desc': '將所有設定重置為預設值',
         'settings_reset_notice': '設定值已重置為預設值',
         
+        // 顯示"返回上级文件夹"選項設定
+        'show_parent_folder_item': '顯示「返回上級資料夾」',
+        'show_parent_folder_item_desc': '在網格的第一項顯示「返回上級資料夾」選項',
+        'parent_folder': '上級資料夾',
+        
         // 預設開啟位置設定
         'default_open_location': '預設開啟位置',
         'default_open_location_desc': '設定網格視圖預設開啟的位置',
@@ -187,6 +192,11 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default_desc': 'Reset all settings to default values',
         'settings_reset_notice': 'Settings have been reset to default values',
         
+        // Show "Parent Folder" option setting
+        'show_parent_folder_item': 'Show "Parent Folder" item',
+        'show_parent_folder_item_desc': 'Show a "Parent Folder" item as the first item in the grid',
+        'parent_folder': 'Parent Folder',
+        
         // Default open location setting
         'default_open_location': 'Default open location',
         'default_open_location_desc': 'Set the default location to open the grid view',
@@ -276,11 +286,16 @@ export const TRANSLATIONS: Translations = {
         'summary_length_desc': '设置摘要的长度',
         'enable_file_watcher': '启用文件监控',
         'enable_file_watcher_desc': '启用后会自动检测文件变更并更新视图，关闭后需手动点击刷新按钮',
-        'reset_to_default': '重置为默认',
-        'reset_to_default_desc': '重置所有设置为默认值',
+        'reset_to_default': '重置为默认值',
+        'reset_to_default_desc': '将所有设置重置为默认值',
         'settings_reset_notice': '设置值已重置为默认值',
         
-        // 預設開啟位置設定
+        // 显示"返回上级文件夹"选项设置
+        'show_parent_folder_item': '显示「返回上级文件夹」',
+        'show_parent_folder_item_desc': '在网格的第一项显示「返回上级文件夹」选项',
+        'parent_folder': '上级文件夹',
+        
+        // 默认打开位置设置
         'default_open_location': '默认打开位置',
         'default_open_location_desc': '设置网格视图默认打开的位置',
         'open_in_left_sidebar': '打开在左侧边栏',
@@ -372,6 +387,11 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default': 'デフォルトに戻す',
         'reset_to_default_desc': 'すべての設定をデフォルト値に戻',
         'settings_reset_notice': '設定値がデフォルト値にリセットされました',
+        
+        // 「親フォルダ」オプション設定を表示
+        'show_parent_folder_item': '「親フォルダ」項目を表示',
+        'show_parent_folder_item_desc': 'グリッドの最初の項目として「親フォルダ」項目を表示します',
+        'parent_folder': '親フォルダ',
         
         // 預設開啟位置設定
         'default_open_location': 'デフォルトの開く場所',

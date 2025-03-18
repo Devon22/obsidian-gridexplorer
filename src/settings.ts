@@ -17,6 +17,7 @@ export interface GallerySettings {
     searchMediaFiles: boolean;
     showVideoThumbnails: boolean;
     defaultOpenLocation: string; // 預設開啟位置
+    showParentFolderItem: boolean; // 是否显示"返回上级文件夹"选项
 }
 
 // 預設設定
@@ -34,7 +35,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showMediaFiles: true, // 預設顯示圖片和影片
     searchMediaFiles: false, // 預設搜尋時也包含圖片和影片
     showVideoThumbnails: false, // 預設不顯示影片縮圖
-    defaultOpenLocation: 'tab' // 預設開啟位置：新分頁
+    defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
+    showParentFolderItem: true, // 預設顯示"返回上级文件夹"選項
 };
 
 // 設定頁面類別
@@ -251,6 +253,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setDynamicTooltip()
                     .onChange(async (value) => {
                         this.plugin.settings.summaryLength = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 顯示"返回上级文件夹"選項設定
+        new Setting(containerEl)
+            .setName(t('show_parent_folder_item'))
+            .setDesc(t('show_parent_folder_item_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showParentFolderItem)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showParentFolderItem = value;
                         await this.plugin.saveSettings();
                     });
             });
