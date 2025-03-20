@@ -18,6 +18,7 @@ export interface GallerySettings {
     showVideoThumbnails: boolean;
     defaultOpenLocation: string; // 預設開啟位置
     showParentFolderItem: boolean; // 是否显示"返回上级文件夹"选项
+    reuseExistingLeaf: boolean; // 是否重用現有的網格視圖
 }
 
 // 預設設定
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showVideoThumbnails: false, // 預設不顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
     showParentFolderItem: false, // 預設顯示"返回上级文件夹"選項
+    reuseExistingLeaf: false, // 是否重用現有的網格視圖
 };
 
 // 設定頁面類別
@@ -116,6 +118,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         containerEl.createEl('h3', { text: t('grid_view_settings') });
+
+        // 重用現有的網格視圖
+        new Setting(containerEl)
+        .setName(t('reuse_existing_leaf'))
+        .setDesc(t('reuse_existing_leaf_desc'))
+        .addToggle(toggle => {
+            toggle
+                .setValue(this.plugin.settings.reuseExistingLeaf)
+                .onChange(async (value) => {
+                    this.plugin.settings.reuseExistingLeaf = value;
+                    await this.plugin.saveSettings();
+                });
+        });
 
         // 預設開啟位置設定
         new Setting(containerEl)

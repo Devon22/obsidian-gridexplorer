@@ -104,6 +104,9 @@ export const TRANSLATIONS: Translations = {
         'default_open_location_desc': '設定網格視圖預設開啟的位置',
         'open_in_left_sidebar': '開在左側邊欄',
         'open_in_right_sidebar': '開在右側邊欄',
+        'open_in_new_tab': '在新分頁開啟',
+        'reuse_existing_leaf': '重複使用已開啟的視圖',
+        'reuse_existing_leaf_desc': '開啟網格視圖時，優先使用已開啟的視圖而非建立新視圖',
 
         // 選擇資料夾對話框
         'select_folders': '選擇資料夾',
@@ -112,7 +115,6 @@ export const TRANSLATIONS: Translations = {
         'view_current_note_in_grid_view': '在網格視圖中查看當前筆記',
         'open_settings': '開啟設定',
         'delete_note': '刪除檔案',
-        'open_in_new_tab': '在新分頁開啟',
         'searching': '搜尋中...',
         'no_files': '沒有找到任何檔案',
         'filter_folders': '篩選資料夾...',
@@ -202,6 +204,9 @@ export const TRANSLATIONS: Translations = {
         'default_open_location_desc': 'Set the default location to open the grid view',
         'open_in_left_sidebar': 'Open in left sidebar',
         'open_in_right_sidebar': 'Open in right sidebar',
+        'open_in_new_tab': 'Open in new tab',
+        'reuse_existing_leaf': 'Reuse existing view',
+        'reuse_existing_leaf_desc': 'When opening Grid View, prioritize using an existing view instead of creating a new one',
 
         // Select Folder Dialog
         'select_folders': 'Select folder',
@@ -210,7 +215,6 @@ export const TRANSLATIONS: Translations = {
         'view_current_note_in_grid_view': 'View current note in grid view',
         'open_settings': 'Open settings',
         'delete_note': 'Delete file',
-        'open_in_new_tab': 'Open in new tab',
         'searching': 'Searching...',
         'no_files': 'No files found',
         'filter_folders': 'Filter folders...',
@@ -298,8 +302,11 @@ export const TRANSLATIONS: Translations = {
         // 默认打开位置设置
         'default_open_location': '默认打开位置',
         'default_open_location_desc': '设置网格视图默认打开的位置',
-        'open_in_left_sidebar': '打开在左侧边栏',
-        'open_in_right_sidebar': '打开在右侧边栏',
+        'open_in_left_sidebar': '在左侧边栏打开',
+        'open_in_right_sidebar': '在右侧边栏打开',
+        'open_in_new_tab': '在新标签页打开',
+        'reuse_existing_leaf': '重复使用已打开的视图',
+        'reuse_existing_leaf_desc': '打开网格视图时，优先使用已打开的视图而非创建新视图',
 
         // 选择文件夹对话框
         'select_folders': '选择文件夹',
@@ -308,7 +315,6 @@ export const TRANSLATIONS: Translations = {
         'view_current_note_in_grid_view': '在网格视图中查看当前笔记',
         'open_settings': '打开设置',
         'delete_note': '删除文件',
-        'open_in_new_tab': '在新标签页打开',
         'searching': '搜索中...',
         'no_files': '没有找到任何文件',
         'filter_folders': '筛选文件夹...',
@@ -398,6 +404,9 @@ export const TRANSLATIONS: Translations = {
         'default_open_location_desc': 'グリッドビューを開くデフォルトの場所を設定',
         'open_in_left_sidebar': '左サイドバーで開く',
         'open_in_right_sidebar': '右サイドバーで開く',
+        'open_in_new_tab': '新しいタブで開く',
+        'reuse_existing_leaf': '既存のビューを再利用',
+        'reuse_existing_leaf_desc': 'グリッドビューを開くとき、新しいビューを作成せずに既存のビューを優先的に使用',
 
         // フォルダ選択ダイアログ
         'select_folders': 'フォルダを選択',
@@ -406,7 +415,6 @@ export const TRANSLATIONS: Translations = {
         'view_current_note_in_grid_view': '現在のノートをグリッドビューで表示',
         'open_settings': '設定を開く',
         'delete_note': 'ファイルを削除',
-        'open_in_new_tab': '新しいタブで開く',
         'searching': '検索中...',
         'no_files': 'ファイルが見つかりません',
         'filter_folders': 'フォルダをフィルタリング...',

@@ -91,18 +91,23 @@ export default class GridExplorerPlugin extends Plugin {
         let leaf = null;
         const leaves = workspace.getLeavesOfType('grid-view');
 
-        // 根據設定選擇開啟位置
-        switch (this.settings.defaultOpenLocation) {
-            case 'left':
-                leaf = workspace.getLeftLeaf(false);
-                break;
-            case 'right':
-                leaf = workspace.getRightLeaf(false);
-                break;
-            case 'tab':
-            default:
-                leaf = workspace.getLeaf('tab');
-                break;
+        // 如果設定為重用現有的leaf且存在已開啟的 grid-view，則使用第一個
+        if (this.settings.reuseExistingLeaf && leaves.length > 0) {
+            leaf = leaves[0];
+        } else {
+            // 根據設定選擇開啟位置
+            switch (this.settings.defaultOpenLocation) {
+                case 'left':
+                    leaf = workspace.getLeftLeaf(false);
+                    break;
+                case 'right':
+                    leaf = workspace.getRightLeaf(false);
+                    break;
+                case 'tab':
+                default:
+                    leaf = workspace.getLeaf('tab');
+                    break;
+            }
         }
         
         // 確保 leaf 不為 null
