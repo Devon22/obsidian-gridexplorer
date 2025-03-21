@@ -42,8 +42,7 @@ export class GridView extends ItemView {
         // 註冊鍵盤事件處理
         this.registerDomEvent(document, 'keydown', (event: KeyboardEvent) => {
             // 只有當 GridView 是活動視圖時才處理鍵盤事件
-            const activeLeaf = this.app.workspace.activeLeaf;
-            if (activeLeaf && activeLeaf.view === this) {
+            if (this.app.workspace.getActiveViewOfType(GridView) === this) {
                 this.handleKeyDown(event);
             }
         });
@@ -68,8 +67,8 @@ export class GridView extends ItemView {
             return t('search_results');
         } else if (this.sourceMode === 'backlinks') {
             return t('backlinks_mode');
-        } else if (this.sourceMode === 'all-notes') {
-            return t('all_notes_mode');
+        } else if (this.sourceMode === 'all-files') {
+            return t('all_files_mode');
         } else {
             return '';
         }
@@ -168,7 +167,7 @@ export class GridView extends ItemView {
             
             bookmarks.forEach(processBookmarkItem);
             return Array.from(bookmarkedFiles) as TFile[];
-        } else if (this.sourceMode === 'all-notes') {
+        } else if (this.sourceMode === 'all-files') {
             // 所有筆記模式
             const allFiles = this.app.vault.getFiles();
             
@@ -186,6 +185,23 @@ export class GridView extends ItemView {
             });
             
             return this.sortFiles(filteredFiles);
+        } else if (this.sourceMode === 'random-note') {
+            // 隨機筆記模式，從所有筆記中隨機選取10筆
+            const allFiles = this.app.vault.getFiles();
+            const filteredFiles = allFiles.filter(file => {
+                // 如果是 Markdown 檔案，直接包含
+                if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas') return true;
+                
+                // 如果是媒體檔案，根據設定決定是否包含
+                if (this.plugin.settings.showMediaFiles && this.isMediaFile(file)) {
+                    return true;
+                }
+                
+                return false;
+            });
+            
+            // 隨機打亂並選取前10筆
+            return filteredFiles.sort(() => Math.random() - 0.5);
         } else {
             return [];
         }
@@ -404,7 +420,7 @@ export class GridView extends ItemView {
         setIcon(refreshButton, 'refresh-ccw');
 
         // 添加排序按鈕
-        if (this.sourceMode !== 'bookmarks') {
+        if (this.sourceMode !== 'bookmarks' && this.sourceMode !== 'random-note') {
             const sortButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('sorting') }  });
             sortButton.addEventListener('click', (evt) => {
                 const menu = new Menu();
@@ -437,44 +453,44 @@ export class GridView extends ItemView {
             setIcon(sortButton, 'arrow-up-narrow-wide');
         }
 
-        // 添加搜尋按鈕
-        const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
-        
-        // 搜尋按鈕
-        const searchButton = searchButtonContainer.createEl('button', {
-            cls: 'search-button',
-            attr: { 'aria-label': t('search') }
-        });
-        setIcon(searchButton, 'search');
-        searchButton.addEventListener('click', () => {
-            this.showSearchModal();
-        });
-
-        // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
-        if (this.searchQuery) {
-            searchButton.style.display = 'none';
-            const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
-
-            // 創建搜尋文字
-            const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: this.searchQuery });
-            // 讓搜尋文字可點選
-            searchText.style.cursor = 'pointer';
-            searchText.addEventListener('click', () => {
-                this.showSearchModal(this.searchQuery);
+        if (this.sourceMode !== 'random-note') {
+            // 添加搜尋按鈕
+            const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
+            const searchButton = searchButtonContainer.createEl('button', {
+                cls: 'search-button',
+                attr: { 'aria-label': t('search') }
+            });
+            setIcon(searchButton, 'search');
+            searchButton.addEventListener('click', () => {
+                this.showSearchModal();
             });
 
-            // 創建取消按鈕
-            const clearButton = searchTextContainer.createDiv('ge-clear-button');
-            setIcon(clearButton, 'x');
-            clearButton.addEventListener('click', (e) => {
-                e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
-                this.searchQuery = '';
-                this.searchAllFiles = true;
-                this.clearSelection();
-                this.render();
-                // 通知 Obsidian 保存視圖狀態
-                this.app.workspace.requestSaveLayout();
-            });
+            // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
+            if (this.searchQuery) {
+                searchButton.style.display = 'none';
+                const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
+
+                // 創建搜尋文字
+                const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: this.searchQuery });
+                // 讓搜尋文字可點選
+                searchText.style.cursor = 'pointer';
+                searchText.addEventListener('click', () => {
+                    this.showSearchModal(this.searchQuery);
+                });
+
+                // 創建取消按鈕
+                const clearButton = searchTextContainer.createDiv('ge-clear-button');
+                setIcon(clearButton, 'x');
+                clearButton.addEventListener('click', (e) => {
+                    e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
+                    this.searchQuery = '';
+                    this.searchAllFiles = true;
+                    this.clearSelection();
+                    this.render();
+                    // 通知 Obsidian 保存視圖狀態
+                    this.app.workspace.requestSaveLayout();
+                });
+            }
         }
 
         // 創建內容區域
@@ -542,7 +558,7 @@ export class GridView extends ItemView {
             
             const contentArea = parentFolderEl.createDiv('ge-content-area');
             const titleContainer = contentArea.createDiv('ge-title-container');
-            const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ..` });
+            titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ..` });
             
             // 点击事件 - 返回上级文件夹
             parentFolderEl.addEventListener('click', () => {
@@ -609,8 +625,9 @@ export class GridView extends ItemView {
                             const matchesIgnoredPattern = this.plugin.settings.ignoredFolderPatterns.some(pattern => {
                                 try {
                                     // 嘗試將模式作為正則表達式處理
+                                    // 如果模式包含特殊字符，使用正則表達式處理
                                     if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
-                                        const regex = new RegExp(pattern);
+                                        const regex = new RegExp(pattern); 
                                         return regex.test(child.path);
                                     } else {
                                         // 檢查資料夾名稱是否包含模式字串（不區分大小寫）
@@ -639,7 +656,7 @@ export class GridView extends ItemView {
                     
                     const contentArea = folderEl.createDiv('ge-content-area');
                     const titleContainer = contentArea.createDiv('ge-title-container');
-                    const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ${folder.name}` });
+                    titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ${folder.name}` });
                     
                     // 檢查同名筆記是否存在
                     const notePath = `${folder.path}/${folder.name}.md`;
@@ -650,7 +667,7 @@ export class GridView extends ItemView {
                         const noteIcon = titleContainer.createEl('span', {
                             cls: 'ge-note-button'
                         });
-                        setIcon(noteIcon, 'ellipsis-vertical');
+                        setIcon(noteIcon, 'panel-left-open');
                         
                         // 點擊圖示時開啟同名筆記
                         noteIcon.addEventListener('click', (e) => {
@@ -664,12 +681,59 @@ export class GridView extends ItemView {
                         this.setSource('folder', folder.path);
                         this.clearSelection();
                     });
+
+                    // 添加右鍵選單
+                    folderEl.addEventListener('contextmenu', (event) => {
+                        event.preventDefault();
+                        const menu = new Menu();
+
+                        // 檢查同名筆記是否存在
+                        const notePath = `${folder.path}/${folder.name}.md`;
+                        let noteFile = this.app.vault.getAbstractFileByPath(notePath);
+                        if (noteFile instanceof TFile) {
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_folder_note'))
+                                    .setIcon('panel-left-open')
+                                    .onClick(() => {
+                                        this.app.workspace.getLeaf(false).openFile(noteFile as TFile);
+                                    });
+                            });
+                        } else {
+                            //建立Folder note
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('create_folder_note'))
+                                    .setIcon('file-cog')
+                                    .onClick(() => {
+                                        this.app.vault.create(notePath, '');
+                                        setTimeout(() => {
+                                            this.render();
+                                            noteFile = this.app.vault.getAbstractFileByPath(notePath);
+                                            this.app.workspace.getLeaf(false).openFile(noteFile as TFile);
+                                        }, 100);
+                                    });
+                            });
+                        }
+                        //加入"忽略此資料夾"選項
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('ignore_folder'))
+                                .setIcon('x')
+                                .onClick(() => {
+                                    this.plugin.settings.ignoredFolders.push(folder.path);
+                                    this.plugin.saveSettings();
+                                    this.render();
+                                });
+                        });
+                        menu.showAtMouseEvent(event);
+                    });
                 }
             }
         }
 
         let files: TFile[] = [];
-        if (this.searchQuery) {
+        if (this.searchQuery && this.sourceMode !== 'random-note') {
             // 顯示搜尋中的提示
             const loadingDiv = container.createDiv('ge-loading-indicator');
             loadingDiv.setText(t('searching'));
@@ -725,6 +789,10 @@ export class GridView extends ItemView {
         //忽略檔案
         files = this.ignoredFiles(files)
 
+        if (this.sourceMode === 'random-note') {
+            files = files.slice(0, 10);
+        }
+
         // 如果沒有檔案，顯示提示訊息
         if (files.length === 0) {
             const noFilesDiv = container.createDiv('ge-no-files');
@@ -779,12 +847,12 @@ export class GridView extends ItemView {
                             const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
                             
                             // 創建預覽內容
-                            const contentEl = contentArea.createEl('p', { text: preview.trim() });
+                            contentArea.createEl('p', { text: preview.trim() });
 
                             imageUrl = await findFirstImageInNote(this.app, content);
                         } else {
                             // 其他檔案顯示副檔名
-                            const contentEl = contentArea.createEl('p', { text: file.extension.toUpperCase() });
+                            contentArea.createEl('p', { text: file.extension.toUpperCase() });
                         }   
                         contentArea.setAttribute('data-loaded', 'true');
                     }
@@ -876,7 +944,7 @@ export class GridView extends ItemView {
             titleEl.setAttribute('title', file.basename);
             
             // 創建圖片區域，但先不載入圖片
-            const imageArea = fileEl.createDiv('ge-image-area');
+            fileEl.createDiv('ge-image-area');
             
             // 開始觀察這個元素
             observer.observe(fileEl);

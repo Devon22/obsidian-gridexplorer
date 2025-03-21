@@ -56,85 +56,111 @@ export class FolderSelectionModal extends Modal {
         this.searchInput.addEventListener('keydown', this.handleKeyDown.bind(this));
 
         // 建立書籤選項
-        const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
-        if (bookmarksPlugin?.enabled) {
-            const bookmarkOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
-                text: `📑 ${t('bookmarks_mode')}`
-            });
+        if (this.plugin.settings.showBookmarksMode) {
+            const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
+            if (bookmarksPlugin?.enabled) {
+                const bookmarkOption = this.folderOptionsContainer.createEl('div', {
+                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    text: `📑 ${t('bookmarks_mode')}`
+                });
 
-            bookmarkOption.addEventListener('click', () => {
-                if (this.activeView) {
-                    this.activeView.setSource('bookmarks');
-                } else {
-                    this.plugin.activateView('bookmarks');
-                }
-                this.close();
-            });
-            this.folderOptions.push(bookmarkOption);
+                bookmarkOption.addEventListener('click', () => {
+                    if (this.activeView) {
+                        this.activeView.setSource('bookmarks');
+                    } else {
+                        this.plugin.activateView('bookmarks');
+                    }
+                    this.close();
+                });
+                this.folderOptions.push(bookmarkOption);
+            }
         }
 
         // 建立搜尋結果選項
-        const searchLeaf = (this.app as any).workspace.getLeavesOfType('search')[0];
-        if (searchLeaf) {
-            const searchView = searchLeaf.view;
-            const searchInputEl = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
-            if(searchInputEl) {
-                if (searchInputEl.value.trim().length > 0) {
-                    const searchOption = this.folderOptionsContainer.createEl('div', {
-                        cls: 'ge-grid-view-folder-option ge-special-option',
-                        text: `🔍 ${t('search_results')}: ${searchInputEl.value}`
-                    });
+        if (this.plugin.settings.showSearchMode) {
+            const searchLeaf = (this.app as any).workspace.getLeavesOfType('search')[0];
+            if (searchLeaf) {
+                const searchView = searchLeaf.view;
+                const searchInputEl = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
+                if(searchInputEl) {
+                    if (searchInputEl.value.trim().length > 0) {
+                        const searchOption = this.folderOptionsContainer.createEl('div', {
+                            cls: 'ge-grid-view-folder-option ge-special-option',
+                            text: `🔍 ${t('search_results')}: ${searchInputEl.value}`
+                        });
 
-                    searchOption.addEventListener('click', () => {
-                        if (this.activeView) {
-                            this.activeView.setSource('search');
-                        } else {
-                            this.plugin.activateView('search');
-                        }
-                        this.close();
-                    });
-                    this.folderOptions.push(searchOption);
+                        searchOption.addEventListener('click', () => {
+                            if (this.activeView) {
+                                this.activeView.setSource('search');
+                            } else {
+                                this.plugin.activateView('search');
+                            }
+                            this.close();
+                        });
+                        this.folderOptions.push(searchOption);
+                    }
                 }
             }
         }
 
         // 建立反向連結選項
-        const activeFile = this.app.workspace.getActiveFile();
-        if (activeFile) {
-            const activeFileName = activeFile ? `: ${activeFile.basename}` : '';
-            const backlinksOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
-                text: `🔗 ${t('backlinks_mode')}${activeFileName}`
-            });
+        if (this.plugin.settings.showBacklinksMode) {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) {
+                const activeFileName = activeFile ? `: ${activeFile.basename}` : '';
+                const backlinksOption = this.folderOptionsContainer.createEl('div', {
+                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    text: `🔗 ${t('backlinks_mode')}${activeFileName}`
+                });
 
-            backlinksOption.addEventListener('click', () => {
-                if (this.activeView) {
-                    this.activeView.setSource('backlinks');
-                } else {
-                    this.plugin.activateView('backlinks');
-                }
-                this.close();
-            });
-            this.folderOptions.push(backlinksOption);
+                backlinksOption.addEventListener('click', () => {
+                    if (this.activeView) {
+                        this.activeView.setSource('backlinks');
+                    } else {
+                        this.plugin.activateView('backlinks');
+                    }
+                    this.close();
+                });
+                this.folderOptions.push(backlinksOption);
+            }
         }
 
         // 建立所有筆記選項
-        const allNotesOption = this.folderOptionsContainer.createEl('div', {
-            cls: 'ge-grid-view-folder-option ge-special-option',
-            text: `📔 ${t('all_notes_mode')}`
-        });
+        if (this.plugin.settings.showAllFilesMode) {
+            const allFilesOption = this.folderOptionsContainer.createEl('div', {
+                cls: 'ge-grid-view-folder-option ge-special-option',
+                text: `📔 ${t('all_files_mode')}`
+            });
 
-        allNotesOption.addEventListener('click', () => {
-            if (this.activeView) {
-                this.activeView.setSource('all-notes');
-            } else {
-                this.plugin.activateView('all-notes');
-            }
-            this.close();
-        });
-        this.folderOptions.push(allNotesOption);
+            allFilesOption.addEventListener('click', () => {
+                if (this.activeView) {
+                    this.activeView.setSource('all-files');
+                } else {
+                    this.plugin.activateView('all-files');
+                }
+                this.close();
+            });
+            this.folderOptions.push(allFilesOption);
+        }
 
+        // 建立隨機筆記選項
+        if (this.plugin.settings.showRandomNoteMode) {
+            const randomNoteOption = this.folderOptionsContainer.createEl('div', {
+                cls: 'ge-grid-view-folder-option ge-special-option',
+                text: `🎲 ${t('random_note_mode')}`
+            });
+
+            randomNoteOption.addEventListener('click', () => {
+                if (this.activeView) {
+                    this.activeView.setSource('random-note');
+                } else {
+                    this.plugin.activateView('random-note');
+                }
+                this.close();
+            });
+            this.folderOptions.push(randomNoteOption);
+        }
+        
         // 建立根目錄選項
         const rootFolderOption = this.folderOptionsContainer.createEl('div', {
             cls: 'ge-grid-view-folder-option',

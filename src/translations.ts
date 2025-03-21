@@ -44,7 +44,8 @@ export const TRANSLATIONS: Translations = {
         'folder_mode': '資料夾',
         'search_results': '搜尋結果',
         'backlinks_mode': '反向連結',
-        'all_notes_mode': '所有檔案',
+        'all_files_mode': '所有檔案',
+        'random_note_mode': '隨機筆記',
 
         // 排序選項
         'sort_name_asc': '名稱 (A → Z)',
@@ -93,11 +94,18 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default' : '重置為預設值',
         'reset_to_default_desc': '將所有設定重置為預設值',
         'settings_reset_notice': '設定值已重置為預設值',
+        'ignored_folders_settings': '忽略資料夾設定',
+        'display_mode_settings': '顯示模式設定',
+        'show_bookmarks_mode': '顯示書籤模式',
+        'show_search_mode': '顯示搜尋結果模式',
+        'show_backlinks_mode': '顯示反向連結模式',
+        'show_all_files_mode': '顯示所有檔案模式',
+        'show_random_note_mode': '顯示隨機筆記模式',
         
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
         'show_parent_folder_item_desc': '在網格的第一項顯示「返回上層資料夾」選項',
-        'parent_folder': '上級資料夾',
+        'parent_folder': '上層資料夾',
         
         // 預設開啟位置設定
         'default_open_location': '預設開啟位置',
@@ -111,10 +119,13 @@ export const TRANSLATIONS: Translations = {
         // 選擇資料夾對話框
         'select_folders': '選擇資料夾',
         'open_grid_view': '開啟網格視圖',
-        'open_in_grid_view': '在網格視圖中開啟',
-        'view_current_note_in_grid_view': '在網格視圖中查看當前筆記',
+        'open_note_in_grid_view': '在網格視圖中開啟當前筆記',
+        'open_backlinks_in_grid_view': '在網格視圖中開啟反向連結',
         'open_settings': '開啟設定',
         'delete_note': '刪除檔案',
+        'open_folder_note': '開啟資料夾筆記',
+        'create_folder_note': '建立資料夾筆記',
+        'ignore_folder': '忽略此資料夾',
         'searching': '搜尋中...',
         'no_files': '沒有找到任何檔案',
         'filter_folders': '篩選資料夾...',
@@ -144,7 +155,8 @@ export const TRANSLATIONS: Translations = {
         'folder_mode': 'Folder',
         'search_results': 'Search results',
         'backlinks_mode': 'Backlinks',
-        'all_notes_mode': 'All files',
+        'all_files_mode': 'All files',
+        'random_note_mode': 'Random note',
 
         // Sort Options
         'sort_name_asc': 'Name (A → Z)',
@@ -193,7 +205,14 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default': 'Reset to default',
         'reset_to_default_desc': 'Reset all settings to default values',
         'settings_reset_notice': 'Settings have been reset to default values',
-        
+        'ignored_folders_settings': 'Ignore folders settings',
+        'display_mode_settings': 'Display mode settings',
+        'show_bookmarks_mode': 'Show bookmarks mode',
+        'show_search_mode': 'Show search results mode',
+        'show_backlinks_mode': 'Show backlinks mode',
+        'show_all_files_mode': 'Show all files mode',
+        'show_random_note_mode': 'Show random note mode',
+
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Show "Parent Folder" item',
         'show_parent_folder_item_desc': 'Show a "Parent Folder" item as the first item in the grid',
@@ -211,10 +230,13 @@ export const TRANSLATIONS: Translations = {
         // Select Folder Dialog
         'select_folders': 'Select folder',
         'open_grid_view': 'Open grid view',
-        'open_in_grid_view': 'Open in grid view',
-        'view_current_note_in_grid_view': 'View current note in grid view',
+        'open_note_in_grid_view': 'Open note in grid view',
+        'open_backlinks_in_grid_view': 'Open backlinks in grid view',
         'open_settings': 'Open settings',
         'delete_note': 'Delete file',
+        'open_folder_note': 'Open folder note',
+        'create_folder_note': 'Create folder note',
+        'ignore_folder': 'Ignore this folder',
         'searching': 'Searching...',
         'no_files': 'No files found',
         'filter_folders': 'Filter folders...',
@@ -244,7 +266,8 @@ export const TRANSLATIONS: Translations = {
         'folder_mode': '文件夹',
         'search_results': '搜索结果',
         'backlinks_mode': '反向链接',
-        'all_notes_mode': '所有文件',
+        'all_files_mode': '所有文件',
+        'random_note_mode': '随机笔记',
 
         // 排序选项
         'sort_name_asc': '名称 (A → Z)',
@@ -293,6 +316,13 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default': '重置为默认值',
         'reset_to_default_desc': '将所有设置重置为默认值',
         'settings_reset_notice': '设置值已重置为默认值',
+        'ignored_folders_settings': '忽略文件夹设置',
+        'display_mode_settings': '显示模式设置',
+        'show_bookmarks_mode': '显示书签模式',
+        'show_search_mode': '显示搜索结果模式',
+        'show_backlinks_mode': '显示反向链接模式',
+        'show_all_files_mode': '显示所有文件模式',
+        'show_random_note_mode': '显示随机笔记模式',
         
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
@@ -311,10 +341,13 @@ export const TRANSLATIONS: Translations = {
         // 选择文件夹对话框
         'select_folders': '选择文件夹',
         'open_grid_view': '打开网格视图',
-        'open_in_grid_view': '在网格视图中打开',
-        'view_current_note_in_grid_view': '在网格视图中查看当前笔记',
+        'open_note_in_grid_view': '在网格视图中打开当前笔记',
+        'open_backlinks_in_grid_view': '在网格视图中打开反向链接',
         'open_settings': '打开设置',
         'delete_note': '删除文件',
+        'open_folder_note': '打开文件夹笔记',
+        'create_folder_note': '创建文件夹笔记',
+        'ignore_folder': '忽略此文件夹',
         'searching': '搜索中...',
         'no_files': '没有找到任何文件',
         'filter_folders': '筛选文件夹...',
@@ -344,7 +377,8 @@ export const TRANSLATIONS: Translations = {
         'folder_mode': 'フォルダ',
         'search_results': '検索結果',
         'backlinks_mode': 'バックリンク',
-        'all_notes_mode': 'すべてのファイル',
+        'all_files_mode': 'すべてのファイル',
+        'random_note_mode': 'ランダムノート',
 
         // 並べ替えオプション
         'sort_name_asc': '名前 (A → Z)',
@@ -393,6 +427,13 @@ export const TRANSLATIONS: Translations = {
         'reset_to_default': 'デフォルトに戻す',
         'reset_to_default_desc': 'すべての設定をデフォルト値に戻',
         'settings_reset_notice': '設定値がデフォルト値にリセットされました',
+        'ignored_folders_settings': '無視するフォルダ設定',
+        'display_mode_settings': '表示モード設定',
+        'show_bookmarks_mode': 'ブックマークモードを表示',
+        'show_search_mode': '検索結果モードを表示',
+        'show_backlinks_mode': 'バックリンクモードを表示',
+        'show_all_files_mode': '全ファイルモードを表示',
+        'show_random_note_mode': 'ランダムノートモードを表示',
         
         // 「親フォルダ」オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
@@ -411,10 +452,13 @@ export const TRANSLATIONS: Translations = {
         // フォルダ選択ダイアログ
         'select_folders': 'フォルダを選択',
         'open_grid_view': 'グリッドビューを開く',
-        'open_in_grid_view': 'グリッドビューで開く',
-        'view_current_note_in_grid_view': '現在のノートをグリッドビューで表示',
+        'open_note_in_grid_view': 'グリッドビューで現在のノートを開く',
+        'open_backlinks_in_grid_view': 'グリッドビューでバックリンクを開く',
         'open_settings': '設定を開く',
         'delete_note': 'ファイルを削除',
+        'open_folder_note': 'フォルダノートを開く',
+        'create_folder_note': 'フォルダノートを作成',
+        'ignore_folder': 'このフォルダを無視',
         'searching': '検索中...',
         'no_files': 'ファイルが見つかりません',
         'filter_folders': 'フォルダをフィルタリング...',

@@ -3,22 +3,27 @@ import { t } from './translations';
 import GridExplorerPlugin from '../main';
 
 export interface GallerySettings {
-    ignoredFolders: string[];
-    ignoredFolderPatterns: string[];
-    defaultSortType: string;
-    gridItemWidth: number;
-    gridItemHeight: number;
-    imageAreaWidth: number;
-    imageAreaHeight: number;
-    titleFontSize: number;
-    summaryLength: number;
-    enableFileWatcher: boolean;
-    showMediaFiles: boolean;
-    searchMediaFiles: boolean;
-    showVideoThumbnails: boolean;
+    ignoredFolders: string[]; // 要忽略的資料夾路徑
+    ignoredFolderPatterns: string[]; // 要忽略的資料夾模式
+    defaultSortType: string; // 預設排序模式
+    gridItemWidth: number; // 網格項目寬度
+    gridItemHeight: number; // 網格項目高度
+    imageAreaWidth: number; // 圖片區域寬度
+    imageAreaHeight: number; // 圖片區域高度
+    titleFontSize: number; // 筆記標題的字型大小
+    summaryLength: number; // 筆記摘要的字數
+    enableFileWatcher: boolean; // 是否啟用檔案監控
+    showMediaFiles: boolean; // 是否顯示圖片和影片
+    searchMediaFiles: boolean; // 搜尋時是否包含圖片和影片
+    showVideoThumbnails: boolean; // 是否顯示影片縮圖
     defaultOpenLocation: string; // 預設開啟位置
     showParentFolderItem: boolean; // 是否显示"返回上级文件夹"选项
     reuseExistingLeaf: boolean; // 是否重用現有的網格視圖
+    showBookmarksMode: boolean; // 是否顯示書籤模式
+    showSearchMode: boolean; // 是否顯示搜尋結果模式
+    showBacklinksMode: boolean; // 是否顯示反向連結模式
+    showAllFilesMode: boolean; // 是否顯示所有檔案模式
+    showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
 }
 
 // 預設設定
@@ -39,6 +44,11 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
     showParentFolderItem: false, // 預設顯示"返回上级文件夹"選項
     reuseExistingLeaf: false, // 是否重用現有的網格視圖
+    showBookmarksMode: true, // 預設顯示書籤模式
+    showSearchMode: true, // 預設顯示搜尋結果模式
+    showBacklinksMode: true, // 預設顯示反向連結模式
+    showAllFilesMode: false, // 預設顯示所有檔案模式
+    showRandomNoteMode: false, // 預設顯示隨機筆記模式
 };
 
 // 設定頁面類別
@@ -66,6 +76,69 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     this.display();
                     new Notice(t('settings_reset_notice'));
                 }));
+
+        // 顯示模式設定區域
+        containerEl.createEl('h3', { text: t('display_mode_settings') });
+
+        // 設定是否顯示書籤模式
+        new Setting(containerEl)
+            .setName(t('show_bookmarks_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showBookmarksMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showBookmarksMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+        
+        // 設定是否顯示搜尋結果模式
+        new Setting(containerEl)
+            .setName(t('show_search_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showSearchMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showSearchMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+        
+        // 設定是否顯示反向連結模式
+        new Setting(containerEl)
+            .setName(t('show_backlinks_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showBacklinksMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showBacklinksMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 設定是否顯示所有檔案模式
+        new Setting(containerEl)
+            .setName(t('show_all_files_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showAllFilesMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showAllFilesMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 設定是否顯示隨機筆記模式
+        new Setting(containerEl)
+            .setName(t('show_random_note_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showRandomNoteMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showRandomNoteMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
 
         // 媒體檔案設定區域
         containerEl.createEl('h3', { text: t('media_files_settings') });
@@ -285,6 +358,11 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
+        
+        
+        // 忽略資料夾設定區域
+        containerEl.createEl('h3', { text: t('ignored_folders_settings') });
+
         // 忽略的資料夾設定
         const ignoredFoldersContainer = containerEl.createDiv('ignored-folders-container');
         
@@ -388,6 +466,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         this.renderIgnoredFolderPatternsList(ignoredFolderPatternsList);
         
         containerEl.appendChild(ignoredFolderPatternsContainer);
+
+        
     }
 
     // 渲染已忽略的資料夾列表

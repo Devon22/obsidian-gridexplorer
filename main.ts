@@ -22,7 +22,7 @@ export default class GridExplorerPlugin extends Plugin {
         // 註冊設定頁面
         this.addSettingTab(new GridExplorerSettingTab(this.app, this));
 
-        // 註冊指令
+        // 註冊開啟視圖指令
         this.addCommand({
             id: 'open-grid-view',
             name: t('open_grid_view'),
@@ -31,11 +31,33 @@ export default class GridExplorerPlugin extends Plugin {
             }
         });
 
+        // 註冊開啟當前筆記指令
         this.addCommand({
             id: 'view-current-note-in-grid-view',
-            name: t('view_current_note_in_grid_view'),
+            name: t('open_note_in_grid_view'),
             callback: () => {
-                this.viewCurrentNoteInGridView();
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile) {
+                    this.openInGridView(activeFile);
+                } else {
+                    // 如果沒有當前筆記，則打開根目錄
+                    this.openInGridView(this.app.vault.getRoot());
+                }
+            }
+        });
+
+        // 註冊開啟反向連結指令
+        this.addCommand({
+            id: 'view-backlinks-in-grid-view',
+            name: t('open_backlinks_in_grid_view'),
+            callback: () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile) {
+                    this.activateView('backlinks');
+                } else {
+                    // 如果沒有當前筆記，則打開根目錄
+                    this.openInGridView(this.app.vault.getRoot());
+                }
             }
         });
 
@@ -56,27 +78,25 @@ export default class GridExplorerPlugin extends Plugin {
                 if (file instanceof TFolder || file instanceof TFile) {
                     menu.addItem((item) => {
                         item
-                            .setTitle(t('open_in_grid_view'))
+                            .setTitle(t('open_note_in_grid_view'))
                             .setIcon('grid')
                             .onClick(() => {
                                 this.openInGridView(file);
                             });
                     });
+                    if (this.settings.showBacklinksMode) {
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('open_backlinks_in_grid_view'))
+                                .setIcon('grid')
+                                .onClick(() => {
+                                    this.activateView('backlinks');
+                                });
+                        });
+                    }
                 }
             })
         );
-    }
-
-    // 獲取當前頁面並嘗試打開
-    // 如果獲取失敗，打開根目錄
-    viewCurrentNoteInGridView() {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (activeFile) {
-            this.openInGridView(activeFile);
-        } else {
-            // 如果沒有當前筆記，則打開根目錄
-            this.openInGridView(this.app.vault.getRoot());
-        }
     }
 
     openInGridView(file: TFile | TFolder = this.app.vault.getRoot()) {
