@@ -22,6 +22,7 @@ export class GridView extends ItemView {
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
     keyboardNavigationEnabled: boolean = true; // 是否啟用鍵盤導航
     fileWatcher: FileWatcher;
+    randomNoteIncludeMedia: boolean = false; // 隨機筆記是否包含圖片和影片
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -32,6 +33,7 @@ export class GridView extends ItemView {
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
         this.searchQuery = ''; // 搜尋關鍵字
         this.searchAllFiles = true;
+        this.randomNoteIncludeMedia = this.plugin.settings.showMediaFiles;
         
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -193,7 +195,7 @@ export class GridView extends ItemView {
                 if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas') return true;
                 
                 // 如果是媒體檔案，根據設定決定是否包含
-                if (this.plugin.settings.showMediaFiles && this.isMediaFile(file)) {
+                if (this.randomNoteIncludeMedia && this.isMediaFile(file)) {
                     return true;
                 }
                 
@@ -493,6 +495,39 @@ export class GridView extends ItemView {
             }
         }
 
+        if (this.sourceMode === 'random-note' && this.plugin.settings.showMediaFiles) {
+            // 建立隨機筆記設定按鈕
+            const randomNoteSettingsButton = headerButtonsDiv.createEl('button', {
+                text: this.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only')
+            });
+
+            // 建立下拉選單
+            const menu = new Menu();
+            menu.addItem((item) => {
+                item.setTitle(t('random_note_notes_only'))
+                    .setIcon(this.randomNoteIncludeMedia ? '' : 'checkmark')
+                    .onClick(async () => {
+                        this.randomNoteIncludeMedia = false;
+                        randomNoteSettingsButton.textContent = t('random_note_notes_only');
+                        this.render();
+                    });
+            });
+            menu.addItem((item) => {
+                item.setTitle(t('random_note_include_media_files'))
+                    .setIcon(this.randomNoteIncludeMedia ? 'checkmark' : '')
+                    .onClick(async () => {
+                        this.randomNoteIncludeMedia = true;
+                        randomNoteSettingsButton.textContent = t('random_note_include_media_files');
+                        this.render();
+                    });
+            });
+
+            // 點擊按鈕時顯示下拉選單
+            randomNoteSettingsButton.addEventListener('click', (event) => {
+                menu.showAtMouseEvent(event);
+            });
+        }
+
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -672,7 +707,7 @@ export class GridView extends ItemView {
                         // 點擊圖示時開啟同名筆記
                         noteIcon.addEventListener('click', (e) => {
                             e.stopPropagation(); // 防止觸發資料夾的點擊事件
-                            this.app.workspace.getLeaf(false).openFile(noteFile);
+                            this.app.workspace.getLeaf().openFile(noteFile);
                         });
                     }
                     
@@ -972,6 +1007,22 @@ export class GridView extends ItemView {
                 }
             });
             
+            // 處理滑鼠中鍵點擊
+            fileEl.addEventListener('mousedown', (event) => {
+                if (event.button === 1) {
+                    event.preventDefault();
+                }
+            });
+
+            fileEl.addEventListener('mouseup', (event) => {
+                if (event.button === 1) {
+                    event.preventDefault();
+                    if (!this.isMediaFile(file)) {
+                        this.app.workspace.getLeaf(true).openFile(file);
+                    }
+                }
+            });
+
             if(Platform.isDesktop) {
                 // 添加拖曳功能
                 fileEl.setAttribute('draggable', 'true');

@@ -101,6 +101,8 @@ export const TRANSLATIONS: Translations = {
         'show_backlinks_mode': '顯示反向連結模式',
         'show_all_files_mode': '顯示所有檔案模式',
         'show_random_note_mode': '顯示隨機筆記模式',
+        'random_note_notes_only': '僅筆記',
+        'random_note_include_media_files': '包含圖片影片',
         
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
@@ -212,7 +214,9 @@ export const TRANSLATIONS: Translations = {
         'show_backlinks_mode': 'Show backlinks mode',
         'show_all_files_mode': 'Show all files mode',
         'show_random_note_mode': 'Show random note mode',
-
+        'random_note_notes_only': 'Notes Only',
+        'random_note_include_media_files': 'Include Media Files',
+        
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Show "Parent Folder" item',
         'show_parent_folder_item_desc': 'Show a "Parent Folder" item as the first item in the grid',
@@ -323,6 +327,8 @@ export const TRANSLATIONS: Translations = {
         'show_backlinks_mode': '显示反向链接模式',
         'show_all_files_mode': '显示所有文件模式',
         'show_random_note_mode': '显示随机笔记模式',
+        'random_note_notes_only': '仅笔记',
+        'random_note_include_media_files': '包含图片视频',
         
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
@@ -434,6 +440,8 @@ export const TRANSLATIONS: Translations = {
         'show_backlinks_mode': 'バックリンクモードを表示',
         'show_all_files_mode': '全ファイルモードを表示',
         'show_random_note_mode': 'ランダムノートモードを表示',
+        'random_note_notes_only': 'ノートのみ',
+        'random_note_include_media_files': 'メディアを含む',
         
         // 「親フォルダ」オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
