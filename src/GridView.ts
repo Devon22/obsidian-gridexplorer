@@ -1319,7 +1319,8 @@ export class GridView extends ItemView {
                 sourcePath: this.sourcePath,
                 sortType: this.sortType,
                 searchQuery: this.searchQuery,
-                searchAllFiles: this.searchAllFiles
+                searchAllFiles: this.searchAllFiles,
+                randomNoteIncludeMedia: this.randomNoteIncludeMedia
             }
         };
     }
@@ -1332,6 +1333,7 @@ export class GridView extends ItemView {
             this.sortType = state.state.sortType || 'mtime-desc';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;
+            this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? this.plugin.settings.showMediaFiles;
             this.render();
         }
     }

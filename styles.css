@@ -595,6 +595,10 @@
     max-height: 100vh;
 }
 
+.ge-media-container video {
+    margin: 0 auto;
+}
+
 .ge-media-close-button {
     position: fixed;
     top: 15px;
