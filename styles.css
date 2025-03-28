@@ -85,6 +85,10 @@
     color: var(--color-red);
 }
 
+.ge-icon-container.ge-audio {
+    color: var(--color-purple);
+}
+
 .ge-icon-container.ge-pdf {
     color: var(--color-orange);
 }
@@ -599,6 +603,20 @@
     margin: 0 auto;
 }
 
+.ge-fullscreen-file-name {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 1007;
+    white-space: nowrap;
+}
+
 .ge-media-close-button {
     position: fixed;
     top: 15px;
@@ -705,4 +723,78 @@
     background-color: var(--interactive-accent-hover);
     border: 2px dashed var(--interactive-accent);
     transform: scale(1.05);
+}
+
+/* 音樂播放器 */
+.ge-floating-audio-player {
+    position: fixed;
+    width: 300px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1100;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: box-shadow 0.3s ease;
+}
+
+.ge-floating-audio-player:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.ge-audio-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 24px;
+    cursor: default;
+    margin: 2px; 
+}
+
+.ge-floating-audio-player audio {
+    width: 100%;
+    outline: none;
+}
+
+.ge-audio-close-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    z-index: 1102; 
+}
+
+.ge-audio-close-button:hover {
+    background-color: var(--background-modifier-error-hover);
+    color: white;
+}
+
+.ge-audio-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    cursor: move;
+    border-radius: 8px 8px 0 0;
+    z-index: 1101; 
+}
+
+.ge-audio-dragging {
+    opacity: 0.9;
+    user-select: none;
 }

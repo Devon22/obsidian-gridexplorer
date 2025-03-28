@@ -3,6 +3,7 @@ import { GridView } from './src/GridView';
 import { showFolderSelectionModal } from './src/FolderSelectionModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
 import { t } from './src/translations';
+import { updateCustomDocumentExtensions } from './src/fileUtils';
 
 // 插件類型定義
 export default class GridExplorerPlugin extends Plugin {
@@ -149,10 +150,12 @@ export default class GridExplorerPlugin extends Plugin {
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        updateCustomDocumentExtensions(this.settings);
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
+        updateCustomDocumentExtensions(this.settings);
         
         // 當設定變更時，更新所有開啟的 GridView 實例
         const leaves = this.app.workspace.getLeavesOfType('grid-view');

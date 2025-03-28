@@ -7,6 +7,7 @@ import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
+import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile } from './fileUtils';
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -71,6 +72,8 @@ export class GridView extends ItemView {
             return t('backlinks_mode');
         } else if (this.sourceMode === 'all-files') {
             return t('all_files_mode');
+        } else if (this.sourceMode === 'random-note') {
+            return t('random_note_mode');
         } else {
             return '';
         }
@@ -94,10 +97,10 @@ export class GridView extends ItemView {
                     if (!(file instanceof TFile)) return false;
                     
                     // 如果是 Markdown 檔案，直接包含
-                    if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas') return true;
+                    if (isDocumentFile(file)) return true;
                     
                     // 如果是媒體檔案，根據設定決定是否包含
-                    if (this.plugin.settings.showMediaFiles && this.isMediaFile(file)) {
+                    if (this.plugin.settings.showMediaFiles && isMediaFile(file)) {
                         return true;
                     }
                     
@@ -157,8 +160,8 @@ export class GridView extends ItemView {
                     const file = this.app.vault.getAbstractFileByPath(item.path);
                     if (file instanceof TFile) {
                         // 根據設定決定是否包含媒體檔案
-                        if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas' ||
-                            (this.plugin.settings.showMediaFiles && this.isMediaFile(file))) {
+                        if (isDocumentFile(file) ||
+                            (this.plugin.settings.showMediaFiles && isMediaFile(file))) {
                             bookmarkedFiles.add(file);
                         }
                     }
@@ -176,10 +179,10 @@ export class GridView extends ItemView {
             // 根據設定過濾檔案
             const filteredFiles = allFiles.filter(file => {
                 // 如果是 Markdown 檔案，直接包含
-                if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas') return true;
+                if (isDocumentFile(file)) return true;
                 
                 // 如果是媒體檔案，根據設定決定是否包含
-                if (this.plugin.settings.showMediaFiles && this.isMediaFile(file)) {
+                if (this.plugin.settings.showMediaFiles && isMediaFile(file)) {
                     return true;
                 }
                 
@@ -192,10 +195,10 @@ export class GridView extends ItemView {
             const allFiles = this.app.vault.getFiles();
             const filteredFiles = allFiles.filter(file => {
                 // 如果是 Markdown 檔案，直接包含
-                if (file.extension === 'md' || file.extension === 'pdf' || file.extension === 'canvas') return true;
+                if (isDocumentFile(file)) return true;
                 
                 // 如果是媒體檔案，根據設定決定是否包含
-                if (this.randomNoteIncludeMedia && this.isMediaFile(file)) {
+                if (this.randomNoteIncludeMedia && isMediaFile(file)) {
                     return true;
                 }
                 
@@ -267,12 +270,6 @@ export class GridView extends ItemView {
             
             return true;
         });
-    }
-
-    // 判斷是否為媒體檔案
-    isMediaFile(file: TFile): boolean {
-        const mediaExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mov', 'avi', 'mkv'];
-        return mediaExtensions.includes(file.extension.toLowerCase());
     }
 
     async render() {
@@ -783,12 +780,12 @@ export class GridView extends ItemView {
 
             // 根據設定過濾檔案
             const filteredFiles = allFiles.filter(file => {
-                // 非媒體檔案（Markdown、PDF、Canvas）始終包含
-                if (['md', 'pdf', 'canvas'].includes(file.extension.toLowerCase())) {
+                // 文件檔案始終包含
+                if (isDocumentFile(file)) {
                     return true;
                 }
                 // 媒體檔案根據 searchMediaFiles 設定決定是否包含
-                if (this.isMediaFile(file)) {
+                if (isMediaFile(file)) {
                     return this.plugin.settings.searchMediaFiles;
                 }
                 return false;
@@ -896,14 +893,12 @@ export class GridView extends ItemView {
                     const imageArea = fileEl.querySelector('.ge-image-area');
                     if (imageArea && !imageArea.hasAttribute('data-loaded')) {
                         // 根據檔案類型處理
-                        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                        const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
-                        if (imageExtensions.includes(file.extension.toLowerCase())) {
+                        if (isImageFile(file)) {
                             // 直接顯示圖片
                             const img = imageArea.createEl('img');
                             img.src = this.app.vault.getResourcePath(file);
                             imageArea.setAttribute('data-loaded', 'true');
-                        } else if (videoExtensions.includes(file.extension.toLowerCase())) {
+                        } else if (isVideoFile(file)) {
                             // 根據設定決定是否顯示影片縮圖
                             if (this.plugin.settings.showVideoThumbnails) {
                                 // 顯示影片縮圖
@@ -952,26 +947,30 @@ export class GridView extends ItemView {
             
             // 創建標題容器
             const titleContainer = contentArea.createDiv('ge-title-container');
+            const extension = file.extension.toLowerCase();
 
             // 添加檔案類型圖示
-            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-            const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
-            
-            if (imageExtensions.includes(file.extension.toLowerCase())) {
+            if (isImageFile(file)) {
                 const iconContainer = titleContainer.createDiv('ge-icon-container ge-img');
                 setIcon(iconContainer, 'image');
-            } else if (videoExtensions.includes(file.extension.toLowerCase())) {
+            } else if (isVideoFile(file)) {
                 const iconContainer = titleContainer.createDiv('ge-icon-container ge-video');
                 setIcon(iconContainer, 'play-circle');
-            } else if (file.extension === 'pdf') {
+            } else if (isAudioFile(file)) {
+                const iconContainer = titleContainer.createDiv('ge-icon-container ge-audio');
+                setIcon(iconContainer, 'music');
+            } else if (extension === 'pdf') {
                 const iconContainer = titleContainer.createDiv('ge-icon-container ge-pdf');
                 setIcon(iconContainer, 'paperclip');
-            } else if (file.extension === 'canvas') {
+            } else if (extension === 'canvas') {
                 const iconContainer = titleContainer.createDiv('ge-icon-container ge-canvas');
                 setIcon(iconContainer, 'layout-dashboard');
-            } else {
+            } else if (extension === 'md' || extension === 'txt') {
                 const iconContainer = titleContainer.createDiv('ge-icon-container');
                 setIcon(iconContainer, 'file-text');
+            } else {
+                const iconContainer = titleContainer.createDiv('ge-icon-container');
+                setIcon(iconContainer, 'file');
             }
             
             // 創建標題（立即載入）
@@ -994,11 +993,15 @@ export class GridView extends ItemView {
                 }
 
                 // 根據檔案類型處理點擊事件
-                if (this.isMediaFile(file)) {
+                if (isMediaFile(file)) {
                     // 開啟媒體檔案
-                    this.openMediaFile(file, files);
+                    if (isAudioFile(file)) {
+                        this.openAudioFile(file);
+                    } else {
+                        this.openMediaFile(file, files);
+                    }
                 } else {
-                    // 開啟 Markdown 檔案、PDF 檔案和 Canvas 檔案
+                    // 開啟文件檔案
                     if (event.ctrlKey) {
                         this.app.workspace.getLeaf(true).openFile(file);
                     } else {
@@ -1017,7 +1020,7 @@ export class GridView extends ItemView {
             fileEl.addEventListener('mouseup', (event) => {
                 if (event.button === 1) {
                     event.preventDefault();
-                    if (!this.isMediaFile(file)) {
+                    if (!isMediaFile(file)) {
                         this.app.workspace.getLeaf(true).openFile(file);
                     }
                 }
@@ -1027,7 +1030,7 @@ export class GridView extends ItemView {
                 // 添加拖曳功能
                 fileEl.setAttribute('draggable', 'true');
                 fileEl.addEventListener('dragstart', (event) => {
-                    const isMedia = this.isMediaFile(file);
+                    const isMedia = isMediaFile(file);
                     const mdLink = isMedia
                         ? `![[${file.path}]]` // 媒體檔案使用 ![[]] 格式
                         : `[[${file.path}]]`;  // 一般檔案使用 [[]] 格式
@@ -1291,23 +1294,133 @@ export class GridView extends ItemView {
     openMediaFile(file: TFile, mediaFiles?: TFile[]) {
         // 如果沒有傳入媒體檔案列表，則獲取
         const getMediaFilesPromise = mediaFiles 
-            ? Promise.resolve(mediaFiles.filter(f => this.isMediaFile(f)))
-            : this.getFiles().then(allFiles => allFiles.filter(f => this.isMediaFile(f)));
+            ? Promise.resolve(mediaFiles.filter(f => isMediaFile(f)))
+            : this.getFiles().then(allFiles => allFiles.filter(f => isMediaFile(f)));
         
         getMediaFilesPromise.then(filteredMediaFiles => {
             // 找到當前檔案在媒體檔案列表中的索引
             const currentIndex = filteredMediaFiles.findIndex(f => f.path === file.path);
             if (currentIndex === -1) return;
-            
+
             // 使用 MediaModal 開啟媒體檔案，並傳入 this 作為 gridView 參數
             const mediaModal = new MediaModal(this.app, file, filteredMediaFiles, this);
             mediaModal.open();
         });
     }
+    
+    // 開啟音樂檔案
+    openAudioFile(file: TFile) {
+        // 移除所有已經存在的音樂播放器
+        const existingPlayers = document.querySelectorAll('.ge-floating-audio-player');
+        existingPlayers.forEach(player => player.remove());
+        
+        // 創建音樂播放器容器
+        const audioPlayerContainer = document.createElement('div');
+        audioPlayerContainer.className = 'ge-floating-audio-player';
+        
+        // 創建音樂元素
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = this.app.vault.getResourcePath(file);
+        
+        // 創建標題元素
+        const titleElement = document.createElement('div');
+        titleElement.className = 'ge-audio-title';
+        titleElement.textContent = file.basename;
+        
+        // 創建關閉按鈕
+        const closeButton = document.createElement('div');
+        closeButton.className = 'ge-audio-close-button';
+        setIcon(closeButton, 'x');
+        closeButton.addEventListener('click', () => {
+            // 移除音樂播放器
+            audioPlayerContainer.remove();
+        });
+        
+        // 創建拖曳控制元素
+        const handleElement = document.createElement('div');
+        handleElement.className = 'ge-audio-handle';
+        
+        // 將元素添加到容器中
+        audioPlayerContainer.appendChild(handleElement);
+        audioPlayerContainer.appendChild(titleElement);
+        audioPlayerContainer.appendChild(audio);
+        audioPlayerContainer.appendChild(closeButton);
+        
+        // 設定拖曳事件
+        let isDragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isTouchEvent = false;
+        
+        handleElement.addEventListener('mousedown', (e) => {
+            if (isTouchEvent) return; // 如果是觸控事件觸發的，則忽略滑鼠事件
+            isDragging = true;
+            offsetX = e.clientX - audioPlayerContainer.getBoundingClientRect().left;
+            offsetY = e.clientY - audioPlayerContainer.getBoundingClientRect().top;
+            audioPlayerContainer.classList.add('ge-audio-dragging');
+        });
+        
+        handleElement.addEventListener('touchstart', (e) => {
+            isTouchEvent = true;
+            isDragging = true;
+            const touch = e.touches[0];
+            offsetX = touch.clientX - audioPlayerContainer.getBoundingClientRect().left;
+            offsetY = touch.clientY - audioPlayerContainer.getBoundingClientRect().top;
+            audioPlayerContainer.classList.add('ge-audio-dragging');
+        }, { passive: true });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || isTouchEvent) return;
+            
+            const x = e.clientX - offsetX;
+            const y = e.clientY - offsetY;
+            
+            audioPlayerContainer.style.left = `${x}px`;
+            audioPlayerContainer.style.top = `${y}px`;
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            
+            const touch = e.touches[0];
+            const x = touch.clientX - offsetX;
+            const y = touch.clientY - offsetY;
+            
+            audioPlayerContainer.style.left = `${x}px`;
+            audioPlayerContainer.style.top = `${y}px`;
+            
+            // 防止頁面滾動
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('mouseup', () => {
+            if (isTouchEvent) return;
+            isDragging = false;
+            audioPlayerContainer.classList.remove('ge-audio-dragging');
+        });
+        
+        document.addEventListener('touchend', () => {
+            isDragging = false;
+            isTouchEvent = false;
+            audioPlayerContainer.classList.remove('ge-audio-dragging');
+        });
+
+        // 將音樂播放器添加到文檔中
+        document.body.appendChild(audioPlayerContainer);
+        
+        // 設定初始位置
+        const rect = audioPlayerContainer.getBoundingClientRect();
+        audioPlayerContainer.style.left = `${window.innerWidth - rect.width - 20}px`;
+        audioPlayerContainer.style.top = `${window.innerHeight - rect.height - 20}px`;
+        
+        // 播放音樂
+        audio.play();
+    }
 
     // 顯示搜尋 modal
     showSearchModal(defaultQuery = '') {
-        showSearchModal(this.app,this, defaultQuery);
+        showSearchModal(this.app, this, defaultQuery);
     }
 
     // 保存視圖狀態

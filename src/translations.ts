@@ -118,6 +118,10 @@ export const TRANSLATIONS: Translations = {
         'reuse_existing_leaf': '重複使用已開啟的視圖',
         'reuse_existing_leaf_desc': '開啟網格視圖時，優先使用已開啟的視圖而非建立新視圖',
 
+        'custom_document_extensions': '自訂文件檔案副檔名',
+        'custom_document_extensions_desc': '額外的文件副檔名（用逗號分隔，不含點號）',
+        'custom_document_extensions_placeholder': '例如：txt,doc,docx',
+
         // 選擇資料夾對話框
         'select_folders': '選擇資料夾',
         'open_grid_view': '開啟網格視圖',
@@ -230,6 +234,10 @@ export const TRANSLATIONS: Translations = {
         'open_in_new_tab': 'Open in new tab',
         'reuse_existing_leaf': 'Reuse existing view',
         'reuse_existing_leaf_desc': 'When opening Grid View, prioritize using an existing view instead of creating a new one',
+
+        'custom_document_extensions': 'Custom Document Extensions',
+        'custom_document_extensions_desc': 'Additional document extensions (comma-separated, without dots)',
+        'custom_document_extensions_placeholder': 'e.g., txt,doc,docx',
 
         // Select Folder Dialog
         'select_folders': 'Select folder',
@@ -344,6 +352,10 @@ export const TRANSLATIONS: Translations = {
         'reuse_existing_leaf': '重复使用已打开的视图',
         'reuse_existing_leaf_desc': '打开网格视图时，优先使用已打开的视图而非创建新视图',
 
+        'custom_document_extensions': '自定义文件扩展名',
+        'custom_document_extensions_desc': '额外的文件扩展名（用逗号分隔，不含点号）',
+        'custom_document_extensions_placeholder': '例如：txt,doc,docx',
+
         // 选择文件夹对话框
         'select_folders': '选择文件夹',
         'open_grid_view': '打开网格视图',
@@ -455,7 +467,11 @@ export const TRANSLATIONS: Translations = {
         'open_in_right_sidebar': '右サイドバーで開く',
         'open_in_new_tab': '新しいタブで開く',
         'reuse_existing_leaf': '既存のビューを再利用',
-        'reuse_existing_leaf_desc': 'グリッドビューを開くとき、新しいビューを作成せずに既存のビューを優先的に使用',
+        'reuse_existing_leaf_desc': 'グリッドビューを開くとき、新しいビューを作成せずに既存のビューを優先使用',
+
+        'custom_document_extensions': 'カスタム文書拡張子',
+        'custom_document_extensions_desc': '追加の文書拡張子（カンマ区切り、ドット無し）',
+        'custom_document_extensions_placeholder': '例：txt,doc,docx',
 
         // フォルダ選択ダイアログ
         'select_folders': 'フォルダを選択',

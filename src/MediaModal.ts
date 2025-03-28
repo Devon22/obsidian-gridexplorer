@@ -1,4 +1,5 @@
 import { App, Modal, TFile, setIcon } from 'obsidian';
+import { isImageFile, isVideoFile, isAudioFile } from './fileUtils';
 
 export class MediaModal extends Modal {
     private file: TFile;
@@ -153,10 +154,10 @@ export class MediaModal extends Modal {
         this.isZoomed = false;
         
         const mediaFile = this.mediaFiles[index];
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
         
-        if (imageExtensions.includes(mediaFile.extension.toLowerCase())) {
+        
+
+        if (isImageFile(mediaFile)) {
             // 創建圖片元素
             const img = document.createElement('img');
             img.className = 'ge-fullscreen-image';
@@ -184,8 +185,8 @@ export class MediaModal extends Modal {
                 this.toggleImageZoom(img);
             });
             
-        } else if (videoExtensions.includes(mediaFile.extension.toLowerCase())) {
-            // 對於影片，維持原有的處理方式
+        } else if (isVideoFile(mediaFile) || isAudioFile(mediaFile)) {
+            // 對於影片和音樂，維持原有的處理方式
             if (this.currentMediaElement) {
                 this.currentMediaElement.remove();
             }
@@ -194,8 +195,23 @@ export class MediaModal extends Modal {
             video.controls = true;
             video.autoplay = true;
             video.src = this.app.vault.getResourcePath(mediaFile);
+
             mediaContainer.appendChild(video);
             this.currentMediaElement = video;
+        }
+
+        const oldFileNameElement = mediaContainer.querySelector('.ge-fullscreen-file-name');
+        if (oldFileNameElement) {
+            oldFileNameElement.remove();
+        }
+
+        if(isAudioFile(mediaFile)) {
+            //顯示檔案名稱
+            const fileName = mediaFile.name;
+            const fileNameElement = document.createElement('div');
+            fileNameElement.className = 'ge-fullscreen-file-name';
+            fileNameElement.textContent = fileName;
+            mediaContainer.appendChild(fileNameElement);
         }
     }
 

@@ -24,6 +24,9 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
+                    if(this.gridView.sourceMode === 'random-note') {
+                        return;
+                    }
                     if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
                         const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                         if (fileDirPath === this.gridView.sourcePath) {
@@ -40,6 +43,9 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('delete', (file) => {
                 if (file instanceof TFile) {
+                    if(this.gridView.sourceMode === 'random-note') {
+                        return;
+                    }
                     if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
                         const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                         if (fileDirPath === this.gridView.sourcePath) {
@@ -56,6 +62,9 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('rename', (file, oldPath) => {
                 if (file instanceof TFile) {
+                    if(this.gridView.sourceMode === 'random-note') {
+                        return;
+                    }
                     if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
                         const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                         const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';

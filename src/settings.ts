@@ -24,6 +24,7 @@ export interface GallerySettings {
     showBacklinksMode: boolean; // 是否顯示反向連結模式
     showAllFilesMode: boolean; // 是否顯示所有檔案模式
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
+    customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
 }
 
 // 預設設定
@@ -42,13 +43,14 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     searchMediaFiles: false, // 預設搜尋時也包含圖片和影片
     showVideoThumbnails: false, // 預設不顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
-    showParentFolderItem: false, // 預設顯示"返回上级文件夹"選項
-    reuseExistingLeaf: false, // 是否重用現有的網格視圖
+    showParentFolderItem: false, // 預設不顯示"返回上级文件夹"選項
+    reuseExistingLeaf: false, // 預設不重用現有的網格視圖
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
     showBacklinksMode: true, // 預設顯示反向連結模式
-    showAllFilesMode: false, // 預設顯示所有檔案模式
-    showRandomNoteMode: false, // 預設顯示隨機筆記模式
+    showAllFilesMode: false, // 預設不顯示所有檔案模式
+    showRandomNoteMode: false, // 預設不顯示隨機筆記模式
+    customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
 };
 
 // 設定頁面類別
@@ -253,6 +255,20 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+
+        // 自訂文件副檔名設定
+        new Setting(containerEl)
+        .setName(t('custom_document_extensions'))
+        .setDesc(t('custom_document_extensions_desc'))
+        .addText(text => {
+            text
+                .setPlaceholder(t('custom_document_extensions_placeholder'))
+                .setValue(this.plugin.settings.customDocumentExtensions)
+                .onChange(async (value) => {
+                    this.plugin.settings.customDocumentExtensions = value;
+                    await this.plugin.saveSettings();
+                });
+        });
 
         // 顯示"返回上级文件夹"選項設定
         new Setting(containerEl)
