@@ -100,10 +100,34 @@ export default class GridExplorerPlugin extends Plugin {
         );
     }
 
-    openInGridView(file: TFile | TFolder = this.app.vault.getRoot()) {
+    async openInGridView(file: TFile | TFolder = this.app.vault.getRoot()) {
         // 如果是文件，使用其父資料夾路徑
         const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
-        this.activateView('folder', folderPath);
+        const view = await this.activateView('folder', folderPath) as GridView;
+        
+        // 如果是文件，等待視圖渲染完成後捲動到該文件位置
+        if (file instanceof TFile) {
+            // 等待下一個事件循環以確保視圖已完全渲染
+            setTimeout(() => {
+                const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
+                if (!gridContainer) return;
+                
+                // 找到對應的網格項目
+                const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
+                    item => (item as HTMLElement).dataset.filePath === file.path
+                ) as HTMLElement;
+                
+                if (gridItem) {
+                    // 捲動到該項目的位置
+                    gridItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 選中該項目
+                    const itemIndex = view.gridItems.indexOf(gridItem);
+                    if (itemIndex >= 0) {
+                        view.selectItem(itemIndex);
+                    }
+                }
+            }, 100);
+        }
     }
 
     async activateView(mode = 'bookmarks', path = '') {
@@ -146,6 +170,7 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 確保視圖是活躍的
         workspace.revealLeaf(leaf);
+        return leaf.view;
     }
 
     async loadSettings() {

@@ -290,6 +290,22 @@ export class GridView extends ItemView {
         // 創建頂部按鈕區域
         const headerButtonsDiv = this.containerEl.createDiv('ge-header-buttons');
 
+        // 為頂部按鈕區域添加點擊事件，點擊後網格容器捲動到最頂部
+        headerButtonsDiv.addEventListener('click', (event: MouseEvent) => {
+            // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
+            if (event.target === headerButtonsDiv) {
+                event.preventDefault();
+                // 取得網格容器（應該是在 grid_render 後建立的第二個子元素）
+                const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+                if (gridContainer) {
+                    gridContainer.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+            
         // 為頂部按鈕區域添加右鍵選單事件
         headerButtonsDiv.addEventListener('contextmenu', (event: MouseEvent) => {
             event.preventDefault();
@@ -868,7 +884,8 @@ export class GridView extends ItemView {
                             } else {
                                 contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
                             }
-                            let contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '').trim();
+                            let contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '');
+                            contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/```[\s\S]*$/,'').trim();
 
                             //把開頭的標題整行刪除
                             if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
