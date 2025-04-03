@@ -15,6 +15,7 @@ export class GridView extends ItemView {
     sourceMode: string;
     sourcePath: string;
     sortType: string;
+    folderSortType: string;
     searchQuery: string;
     searchAllFiles: boolean;
     searchType: string;
@@ -32,6 +33,7 @@ export class GridView extends ItemView {
         this.sourceMode = ''; // 預設為書籤模式
         this.sourcePath = ''; // 用於資料夾模式的路徑
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
+        this.folderSortType = ''; // 資料夾排序模式
         this.searchQuery = ''; // 搜尋關鍵字
         this.searchAllFiles = true;
         this.randomNoteIncludeMedia = this.plugin.settings.showMediaFiles;
@@ -79,7 +81,20 @@ export class GridView extends ItemView {
         }
     }
 
-    setSource(mode: string, path = '') {
+    async setSource(mode: string, path = '') {
+
+        this.folderSortType = '';
+        if(mode === 'folder') {
+            // 檢查是否有與資料夾同名的 md 檔案
+            const folderName = path.split('/').pop() || '';
+            const mdFilePath = `${path}/${folderName}.md`;
+            const mdFile = this.app.vault.getAbstractFileByPath(mdFilePath);
+            if (mdFile instanceof TFile) {
+                const metadata = this.app.metadataCache.getFileCache(mdFile)?.frontmatter;
+                this.folderSortType = metadata?.sort;
+            }
+        }
+
         this.sourceMode = mode;
         this.sourcePath = path;
         this.render();
@@ -198,7 +213,7 @@ export class GridView extends ItemView {
                 if (isDocumentFile(file)) return true;
                 
                 // 如果是媒體檔案，根據設定決定是否包含
-                if (this.randomNoteIncludeMedia && isMediaFile(file)) {
+                if (this.plugin.settings.showMediaFiles && this.randomNoteIncludeMedia && isMediaFile(file)) {
                     return true;
                 }
                 
@@ -214,19 +229,21 @@ export class GridView extends ItemView {
 
     //排序檔案
     sortFiles(files: TFile[]) {
-        if (this.sortType === 'name-asc') {
+        const sortType = this.folderSortType ? this.folderSortType : this.sortType;
+
+        if (sortType === 'name-asc') {
             return files.sort((a, b) => a.basename.localeCompare(b.basename));
-        } else if (this.sortType === 'name-desc') {
+        } else if (sortType === 'name-desc') {
             return files.sort((a, b) => b.basename.localeCompare(a.basename));
-        } else if (this.sortType === 'mtime-desc') {
+        } else if (sortType === 'mtime-desc') {
             return files.sort((a, b) => b.stat.mtime - a.stat.mtime);
-        } else if (this.sortType === 'mtime-asc') {
+        } else if (sortType === 'mtime-asc') {
             return files.sort((a, b) => a.stat.mtime - b.stat.mtime);
-        } else if (this.sortType === 'ctime-desc') {
+        } else if (sortType === 'ctime-desc') {
             return files.sort((a, b) => b.stat.ctime - a.stat.ctime);
-        } else if (this.sortType === 'ctime-asc') {
+        } else if (sortType === 'ctime-asc') {
             return files.sort((a, b) => a.stat.ctime - b.stat.ctime);
-        } else if (this.sortType === 'random') {
+        } else if (sortType === 'random') {
             return files.sort(() => Math.random() - 0.5);
         } else {
             return files;
@@ -454,9 +471,10 @@ export class GridView extends ItemView {
                         item
                             .setTitle(option.label)
                             .setIcon(option.icon)
-                            .setChecked(this.sortType === option.value)
+                            .setChecked((this.folderSortType || this.sortType) === option.value)
                             .onClick(() => {
                                 this.sortType = option.value;
+                                this.folderSortType = '';
                                 this.render();
                                 // 通知 Obsidian 保存視圖狀態
                                 this.app.workspace.requestSaveLayout();
@@ -1448,6 +1466,7 @@ export class GridView extends ItemView {
                 sourceMode: this.sourceMode,
                 sourcePath: this.sourcePath,
                 sortType: this.sortType,
+                folderSortType: this.folderSortType,
                 searchQuery: this.searchQuery,
                 searchAllFiles: this.searchAllFiles,
                 randomNoteIncludeMedia: this.randomNoteIncludeMedia
@@ -1461,6 +1480,7 @@ export class GridView extends ItemView {
             this.sourceMode = state.state.sourceMode || '';
             this.sourcePath = state.state.sourcePath || null;
             this.sortType = state.state.sortType || 'mtime-desc';
+            this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;
             this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? this.plugin.settings.showMediaFiles;

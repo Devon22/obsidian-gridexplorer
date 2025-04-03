@@ -29,13 +29,36 @@ This is a grid view plugin designed for Obsidian, aimed at providing a more intu
 - Use command to view the current note in the grid view (If there is no active note currently, open the root directory).
 - In the grid view, you can click on notes to open them or click on folders to enter them.
 
+## Folder Notes
+
+Create a folder note by using the right-click menu on a folder. After creation, you'll see an icon on the folder, and you can set the folder's sorting method in the note's Metadata.
+
+```
+---
+sort: name-desc
+---
+```
+
+Available sorting methods:
+
+- name-desc
+- name-asc
+- mtime-desc
+- mtime-asc
+- ctime-desc
+- ctime-asc
+- random
+
 ## Settings
 
 In the plugin's settings page, you can:
 
 - Set folders to ignore.
 - Choose the default sorting method.
-- Adjust the width of grid items.
+- Adjust the width, height, and other appearance settings of grid items.
+- Set whether to display images and videos.
+- Configure various display mode toggles.
+- Set whether to reuse an existing grid view and the opening position of the grid view.
 
 ## Contribution
 
@@ -43,4 +66,4 @@ If you have any suggestions or encounter issues, feel free to raise issues or su
 
 ## License
 
-This plugin follows the [MIT License](LICENSE). 
+This plugin follows the [MIT License](LICENSE).
