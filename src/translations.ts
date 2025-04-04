@@ -45,6 +45,7 @@ export const TRANSLATIONS: Translations = {
         'search_results': '搜尋結果',
         'backlinks_mode': '反向連結',
         'all_files_mode': '所有檔案',
+        'recent_files_mode': '最近檔案',
         'random_note_mode': '隨機筆記',
 
         // 排序選項
@@ -100,6 +101,7 @@ export const TRANSLATIONS: Translations = {
         'show_search_mode': '顯示搜尋結果模式',
         'show_backlinks_mode': '顯示反向連結模式',
         'show_all_files_mode': '顯示所有檔案模式',
+        'show_recent_files_mode': '顯示最近檔案模式',
         'show_random_note_mode': '顯示隨機筆記模式',
         'random_note_notes_only': '僅筆記',
         'random_note_include_media_files': '包含圖片影片',
@@ -162,6 +164,7 @@ export const TRANSLATIONS: Translations = {
         'search_results': 'Search results',
         'backlinks_mode': 'Backlinks',
         'all_files_mode': 'All files',
+        'recent_files_mode': 'Recent files',
         'random_note_mode': 'Random note',
 
         // Sort Options
@@ -217,6 +220,7 @@ export const TRANSLATIONS: Translations = {
         'show_search_mode': 'Show search results mode',
         'show_backlinks_mode': 'Show backlinks mode',
         'show_all_files_mode': 'Show all files mode',
+        'show_recent_files_mode': 'Show recent files mode',
         'show_random_note_mode': 'Show random note mode',
         'random_note_notes_only': 'Notes Only',
         'random_note_include_media_files': 'Include Media Files',
@@ -279,6 +283,7 @@ export const TRANSLATIONS: Translations = {
         'search_results': '搜索结果',
         'backlinks_mode': '反向链接',
         'all_files_mode': '所有文件',
+        'recent_files_mode': '最近文件',
         'random_note_mode': '随机笔记',
 
         // 排序选项
@@ -334,6 +339,7 @@ export const TRANSLATIONS: Translations = {
         'show_search_mode': '显示搜索结果模式',
         'show_backlinks_mode': '显示反向链接模式',
         'show_all_files_mode': '显示所有文件模式',
+        'show_recent_files_mode': '显示最近文件模式',
         'show_random_note_mode': '显示随机笔记模式',
         'random_note_notes_only': '仅笔记',
         'random_note_include_media_files': '包含图片视频',
@@ -396,6 +402,7 @@ export const TRANSLATIONS: Translations = {
         'search_results': '検索結果',
         'backlinks_mode': 'バックリンク',
         'all_files_mode': 'すべてのファイル',
+        'recent_files_mode': '最近のファイル',
         'random_note_mode': 'ランダムノート',
 
         // 並べ替えオプション
@@ -451,6 +458,7 @@ export const TRANSLATIONS: Translations = {
         'show_search_mode': '検索結果モードを表示',
         'show_backlinks_mode': 'バックリンクモードを表示',
         'show_all_files_mode': '全ファイルモードを表示',
+        'show_recent_files_mode': '最近ファイルモードを表示',
         'show_random_note_mode': 'ランダムノートモードを表示',
         'random_note_notes_only': 'ノートのみ',
         'random_note_include_media_files': 'メディアを含む',

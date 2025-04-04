@@ -12,31 +12,30 @@ import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile } fr
 // 定義網格視圖
 export class GridView extends ItemView {
     plugin: GridExplorerPlugin;
-    sourceMode: string;
-    sourcePath: string;
-    sortType: string;
-    folderSortType: string;
-    searchQuery: string;
-    searchAllFiles: boolean;
-    searchType: string;
+    sourceMode: string; // 模式選擇
+    sourcePath: string; // 用於資料夾模式的路徑
+    sortType: string; // 排序模式
+    folderSortType: string; // 資料夾排序模式
+    searchQuery: string; // 搜尋關鍵字
+    searchAllFiles: boolean; // 是否搜尋所有筆記
+    randomNoteIncludeMedia: boolean; // 隨機筆記是否包含圖片和影片
     selectedItemIndex: number = -1; // 當前選中的項目索引
     gridItems: HTMLElement[] = []; // 存儲所有網格項目的引用
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
     keyboardNavigationEnabled: boolean = true; // 是否啟用鍵盤導航
     fileWatcher: FileWatcher;
-    randomNoteIncludeMedia: boolean = false; // 隨機筆記是否包含圖片和影片
-
+    
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.containerEl.addClass('ge-grid-view-container');
-        this.sourceMode = ''; // 預設為書籤模式
+        this.sourceMode = ''; // 模式選擇
         this.sourcePath = ''; // 用於資料夾模式的路徑
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
         this.folderSortType = ''; // 資料夾排序模式
         this.searchQuery = ''; // 搜尋關鍵字
-        this.searchAllFiles = true;
-        this.randomNoteIncludeMedia = this.plugin.settings.showMediaFiles;
+        this.searchAllFiles = true; // 是否搜尋所有筆記
+        this.randomNoteIncludeMedia = this.plugin.settings.showMediaFiles; // 隨機筆記是否包含圖片和影片
         
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -66,16 +65,18 @@ export class GridView extends ItemView {
             return t('grid_view_title');
         } else if (this.sourceMode === 'bookmarks') {
             return t('bookmarks_mode');
-        } else if (this.sourceMode === 'folder') {
-            return this.sourcePath;
         } else if (this.sourceMode === 'search') {
             return t('search_results');
         } else if (this.sourceMode === 'backlinks') {
             return t('backlinks_mode');
-        } else if (this.sourceMode === 'all-files') {
-            return t('all_files_mode');
         } else if (this.sourceMode === 'random-note') {
             return t('random_note_mode');
+        } else if (this.sourceMode === 'recent-files') {
+            return t('recent_files_mode');
+        } else if (this.sourceMode === 'all-files') {
+            return t('all_files_mode');
+        } else if (this.sourceMode === 'folder') {
+            return this.sourcePath;
         } else {
             return '';
         }
@@ -112,10 +113,8 @@ export class GridView extends ItemView {
                     if (!(file instanceof TFile)) return false;
                     
                     // 如果是 Markdown 檔案，直接包含
-                    if (isDocumentFile(file)) return true;
-                    
-                    // 如果是媒體檔案，根據設定決定是否包含
-                    if (this.plugin.settings.showMediaFiles && isMediaFile(file)) {
+                    if (isDocumentFile(file) ||
+                        (this.plugin.settings.showMediaFiles && isMediaFile(file))) {
                         return true;
                     }
                     
@@ -189,39 +188,37 @@ export class GridView extends ItemView {
             return Array.from(bookmarkedFiles) as TFile[];
         } else if (this.sourceMode === 'all-files') {
             // 所有筆記模式
-            const allFiles = this.app.vault.getFiles();
-            
-            // 根據設定過濾檔案
-            const filteredFiles = allFiles.filter(file => {
-                // 如果是 Markdown 檔案，直接包含
-                if (isDocumentFile(file)) return true;
-                
-                // 如果是媒體檔案，根據設定決定是否包含
-                if (this.plugin.settings.showMediaFiles && isMediaFile(file)) {
+            const recentFiles = this.app.vault.getFiles().filter(file => {
+                // 根據設定決定是否包含媒體檔案
+                if (isDocumentFile(file) ||
+                    (this.plugin.settings.showMediaFiles && this.randomNoteIncludeMedia && isMediaFile(file))) {
                     return true;
                 }
-                
                 return false;
             });
-            
-            return this.sortFiles(filteredFiles);
+            return this.sortFiles(recentFiles);
+        } else if (this.sourceMode === 'recent-files') {
+            // 最近檔案模式
+            const recentFiles = this.app.vault.getFiles().filter(file => {
+                // 根據設定決定是否包含媒體檔案
+                if (isDocumentFile(file) ||
+                    (this.plugin.settings.showMediaFiles && this.randomNoteIncludeMedia && isMediaFile(file))) {
+                    return true;
+                }
+                return false;
+            }).sort((a, b) => b.stat.mtime - a.stat.mtime);
+            return recentFiles;
         } else if (this.sourceMode === 'random-note') {
             // 隨機筆記模式，從所有筆記中隨機選取10筆
-            const allFiles = this.app.vault.getFiles();
-            const filteredFiles = allFiles.filter(file => {
-                // 如果是 Markdown 檔案，直接包含
-                if (isDocumentFile(file)) return true;
-                
-                // 如果是媒體檔案，根據設定決定是否包含
-                if (this.plugin.settings.showMediaFiles && this.randomNoteIncludeMedia && isMediaFile(file)) {
+            const recentFiles = this.app.vault.getFiles().filter(file => {
+                // 根據設定決定是否包含媒體檔案
+                if (isDocumentFile(file) ||
+                    (this.plugin.settings.showMediaFiles && this.randomNoteIncludeMedia && isMediaFile(file))) {
                     return true;
                 }
-                
                 return false;
-            });
-            
-            // 隨機打亂並選取前10筆
-            return filteredFiles.sort(() => Math.random() - 0.5);
+            }).sort(() => Math.random() - 0.5);
+            return recentFiles;
         } else {
             return [];
         }
@@ -341,36 +338,31 @@ export class GridView extends ItemView {
         });
 
         // 添加新增筆記按鈕
-        if (this.sourceMode === 'folder' && this.searchQuery === '') {
-            const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
-            newNoteButton.addEventListener('click', async () => {
-                // 取得目前時間作為檔名的一部分
-                let newFileName = `${t('untitled')}.md`;
-                let newFilePath = this.sourcePath === '/' 
-                    ? newFileName 
-                    : `${this.sourcePath}/${newFileName}`;
+        //if ((this.sourceMode === 'folder' || this.sourceMode === 'all-files') && this.searchQuery === '') {
+        const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
+        newNoteButton.addEventListener('click', async () => {                
+            let newFileName = `${t('untitled')}.md`;
+            let newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
 
-                // 檢查檔案是否已存在，如果存在則遞增編號
-                let counter = 1;
-                while (this.app.vault.getAbstractFileByPath(newFilePath)) {
-                    newFileName = `${t('untitled')} ${counter}.md`;
-                    newFilePath = this.sourcePath === '/'
-                        ? newFileName
-                        : `${this.sourcePath}/${newFileName}`;
-                    counter++;
-                }
+            // 檢查檔案是否已存在，如果存在則遞增編號
+            let counter = 1;
+            while (this.app.vault.getAbstractFileByPath(newFilePath)) {
+                newFileName = `${t('untitled')} ${counter}.md`;
+                newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
+                counter++;
+            }
 
-                try {
-                    // 建立新筆記
-                    const newFile = await this.app.vault.create(newFilePath, '');
-                    // 開啟新筆記
-                    await this.app.workspace.getLeaf().openFile(newFile);
-                } catch (error) {
-                    console.error('An error occurred while creating a new note:', error);
-                }
-            });
-            setIcon(newNoteButton, 'square-pen');
-        }
+            try {
+                // 建立新筆記
+                const newFile = await this.app.vault.create(newFilePath, '');
+                // 開啟新筆記
+                await this.app.workspace.getLeaf().openFile(newFile);
+            } catch (error) {
+                console.error('An error occurred while creating a new note:', error);
+            }
+        });
+        setIcon(newNoteButton, 'square-pen');
+        //}
 
         // 添加回上層按鈕（僅在資料夾模式且不在根目錄時顯示）
         if (this.sourceMode === 'folder' && this.sourcePath !== '/' && this.searchQuery === '') {
@@ -452,7 +444,7 @@ export class GridView extends ItemView {
         setIcon(refreshButton, 'refresh-ccw');
 
         // 添加排序按鈕
-        if (this.sourceMode !== 'bookmarks' && this.sourceMode !== 'random-note') {
+        if (this.sourceMode !== 'bookmarks' && this.sourceMode !== 'recent-files' && this.sourceMode !== 'random-note') {
             const sortButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('sorting') }  });
             sortButton.addEventListener('click', (evt) => {
                 const menu = new Menu();
@@ -526,29 +518,35 @@ export class GridView extends ItemView {
             }
         }
 
-        if (this.sourceMode === 'random-note' && this.plugin.settings.showMediaFiles) {
-            // 建立隨機筆記設定按鈕
+        if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
+            this.plugin.settings.showMediaFiles && this.searchQuery === '') {
+            // 建立隨機筆記是否包含圖片和影片的設定按鈕
             const randomNoteSettingsButton = headerButtonsDiv.createEl('button', {
-                text: this.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only')
+                attr: { 'aria-label': this.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only') } 
             });
+            this.randomNoteIncludeMedia ? setIcon(randomNoteSettingsButton, 'file-image') : setIcon(randomNoteSettingsButton, 'file-text');
 
             // 建立下拉選單
             const menu = new Menu();
             menu.addItem((item) => {
                 item.setTitle(t('random_note_notes_only'))
-                    .setIcon(this.randomNoteIncludeMedia ? '' : 'checkmark')
+                    .setIcon('file-text')
+                    .setChecked(!this.randomNoteIncludeMedia)
                     .onClick(async () => {
                         this.randomNoteIncludeMedia = false;
                         randomNoteSettingsButton.textContent = t('random_note_notes_only');
+                        setIcon(randomNoteSettingsButton, 'file-text');
                         this.render();
                     });
             });
             menu.addItem((item) => {
                 item.setTitle(t('random_note_include_media_files'))
-                    .setIcon(this.randomNoteIncludeMedia ? 'checkmark' : '')
+                    .setIcon('file-image')
+                    .setChecked(this.randomNoteIncludeMedia)
                     .onClick(async () => {
                         this.randomNoteIncludeMedia = true;
                         randomNoteSettingsButton.textContent = t('random_note_include_media_files');
+                        setIcon(randomNoteSettingsButton, 'file-image')
                         this.render();
                     });
             });
@@ -855,6 +853,12 @@ export class GridView extends ItemView {
         //忽略檔案
         files = this.ignoredFiles(files)
 
+        //最近檔案模式，只取前30筆
+        if (this.sourceMode === 'recent-files') {
+            files = files.slice(0, 30);
+        }
+
+        // 隨機筆記模式，只取前10筆
         if (this.sourceMode === 'random-note') {
             files = files.slice(0, 10);
         }

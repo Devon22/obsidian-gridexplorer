@@ -24,6 +24,7 @@ export interface GallerySettings {
     showBacklinksMode: boolean; // 是否顯示反向連結模式
     showAllFilesMode: boolean; // 是否顯示所有檔案模式
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
+    showRecentFilesMode: boolean; // 是否顯示最近筆記模式
     customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
 }
 
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showBacklinksMode: true, // 預設顯示反向連結模式
     showAllFilesMode: false, // 預設不顯示所有檔案模式
     showRandomNoteMode: false, // 預設不顯示隨機筆記模式
+    showRecentFilesMode: true, // 預設不顯示最近筆記模式
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
 };
 
@@ -118,17 +120,29 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-        // 設定是否顯示所有檔案模式
+        // 設定是否顯示最近檔案模式
         new Setting(containerEl)
-            .setName(t('show_all_files_mode'))
+            .setName(t('show_recent_files_mode'))
             .addToggle(toggle => {
                 toggle
-                    .setValue(this.plugin.settings.showAllFilesMode)
+                    .setValue(this.plugin.settings.showRecentFilesMode)
                     .onChange(async (value) => {
-                        this.plugin.settings.showAllFilesMode = value;
+                        this.plugin.settings.showRecentFilesMode = value;
                         await this.plugin.saveSettings();
                     });
             });
+
+        // 設定是否顯示所有檔案模式
+        new Setting(containerEl)
+        .setName(t('show_all_files_mode'))
+        .addToggle(toggle => {
+            toggle
+                .setValue(this.plugin.settings.showAllFilesMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.showAllFilesMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
 
         // 設定是否顯示隨機筆記模式
         new Setting(containerEl)

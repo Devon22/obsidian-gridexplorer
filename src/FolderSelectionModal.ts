@@ -124,6 +124,24 @@ export class FolderSelectionModal extends Modal {
                 this.folderOptions.push(backlinksOption);
             }
         }
+        
+        // 建立最近檔案選項
+        if (this.plugin.settings.showRecentFilesMode) {
+            const recentFilesOption = this.folderOptionsContainer.createEl('div', {
+                cls: 'ge-grid-view-folder-option ge-special-option',
+                text: `📅 ${t('recent_files_mode')}`
+            });
+
+            recentFilesOption.addEventListener('click', () => {
+                if (this.activeView) {
+                    this.activeView.setSource('recent-files');
+                } else {
+                    this.plugin.activateView('recent-files');
+                }
+                this.close();
+            });
+            this.folderOptions.push(recentFilesOption);
+        }
 
         // 建立所有筆記選項
         if (this.plugin.settings.showAllFilesMode) {
@@ -160,7 +178,7 @@ export class FolderSelectionModal extends Modal {
             });
             this.folderOptions.push(randomNoteOption);
         }
-        
+
         // 建立根目錄選項
         const rootFolderOption = this.folderOptionsContainer.createEl('div', {
             cls: 'ge-grid-view-folder-option',
@@ -212,8 +230,9 @@ export class FolderSelectionModal extends Modal {
             });
         });
 
-        // 設置初始焦點到搜尋輸入框
-        //this.searchInput.focus();
+        if(this.activeView) {
+            this.activeView.disableKeyboardNavigation();
+        }
     }
 
     // 處理鍵盤事件
@@ -326,6 +345,9 @@ export class FolderSelectionModal extends Modal {
     }
 
     onClose() {
+        if(this.activeView) {
+            this.activeView.enableKeyboardNavigation();
+        }
         const { contentEl } = this;
         contentEl.empty();
     }
