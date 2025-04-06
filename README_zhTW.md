@@ -36,18 +36,30 @@
 ```
 ---
 sort: name-desc
+color: red
 ---
 ```
 
-可以用的排序方式為:
+可使用的排序方式為:
 
-- name-desc
 - name-asc
+- name-desc
 - mtime-desc
 - mtime-asc
 - ctime-desc
 - ctime-asc
 - random
+
+可以用的顏色為：
+
+- red
+- orange
+- yellow
+- green
+- cyan
+- blue
+- purple
+- pink
 
 ## 設定
 

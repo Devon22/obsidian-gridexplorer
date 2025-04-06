@@ -48,7 +48,7 @@
 
 .ge-grid-item:hover {
     transform: translateY(-2px);
-    background-color: var(--text-selection);
+    background-color: var(--text-selection) !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -720,7 +720,6 @@
 }
 
 .ge-folder-item.ge-dragover {
-    background-color: var(--interactive-accent-hover);
     border: 2px dashed var(--interactive-accent);
     transform: scale(1.05);
 }

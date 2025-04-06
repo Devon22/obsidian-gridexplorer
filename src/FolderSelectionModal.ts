@@ -25,7 +25,6 @@ export class FolderSelectionModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        new Setting(contentEl).setName(t('select_folders')).setHeading();
 
         // 添加搜尋輸入框
         const searchContainer = contentEl.createEl('div', { 
@@ -66,7 +65,7 @@ export class FolderSelectionModal extends Modal {
 
                 bookmarkOption.addEventListener('click', () => {
                     if (this.activeView) {
-                        this.activeView.setSource('bookmarks');
+                        this.activeView.setSource('bookmarks', '', true);
                     } else {
                         this.plugin.activateView('bookmarks');
                     }
@@ -91,7 +90,7 @@ export class FolderSelectionModal extends Modal {
 
                         searchOption.addEventListener('click', () => {
                             if (this.activeView) {
-                                this.activeView.setSource('search');
+                                this.activeView.setSource('search', '', true);
                             } else {
                                 this.plugin.activateView('search');
                             }
@@ -115,7 +114,7 @@ export class FolderSelectionModal extends Modal {
 
                 backlinksOption.addEventListener('click', () => {
                     if (this.activeView) {
-                        this.activeView.setSource('backlinks');
+                        this.activeView.setSource('backlinks', '', true);
                     } else {
                         this.plugin.activateView('backlinks');
                     }
@@ -134,7 +133,7 @@ export class FolderSelectionModal extends Modal {
 
             recentFilesOption.addEventListener('click', () => {
                 if (this.activeView) {
-                    this.activeView.setSource('recent-files');
+                    this.activeView.setSource('recent-files', '', true);
                 } else {
                     this.plugin.activateView('recent-files');
                 }
@@ -152,7 +151,7 @@ export class FolderSelectionModal extends Modal {
 
             allFilesOption.addEventListener('click', () => {
                 if (this.activeView) {
-                    this.activeView.setSource('all-files');
+                    this.activeView.setSource('all-files', '', true);
                 } else {
                     this.plugin.activateView('all-files');
                 }
@@ -170,7 +169,7 @@ export class FolderSelectionModal extends Modal {
 
             randomNoteOption.addEventListener('click', () => {
                 if (this.activeView) {
-                    this.activeView.setSource('random-note');
+                    this.activeView.setSource('random-note', '', true);
                 } else {
                     this.plugin.activateView('random-note');
                 }
@@ -187,7 +186,7 @@ export class FolderSelectionModal extends Modal {
 
         rootFolderOption.addEventListener('click', () => {
             if (this.activeView) {
-                this.activeView.setSource('folder', '/');
+                this.activeView.setSource('folder', '/', true);
             } else {
                 this.plugin.activateView('folder', '/');
             }
@@ -214,7 +213,7 @@ export class FolderSelectionModal extends Modal {
 
             folderOption.addEventListener('click', () => {
                 if (this.activeView) {
-                    this.activeView.setSource('folder', folder.path);
+                    this.activeView.setSource('folder', folder.path, true);
                 } else {
                     this.plugin.activateView('folder', folder.path);
                 }

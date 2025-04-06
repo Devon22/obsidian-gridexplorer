@@ -36,18 +36,30 @@ Create a folder note by using the right-click menu on a folder. After creation, 
 ```
 ---
 sort: name-desc
+color: red
 ---
 ```
 
 Available sorting methods:
 
-- name-desc
 - name-asc
+- name-desc
 - mtime-desc
 - mtime-asc
 - ctime-desc
 - ctime-asc
 - random
+
+Available colors:
+
+- red
+- orange
+- yellow
+- green
+- cyan
+- blue
+- purple
+- pink
 
 ## Settings
 

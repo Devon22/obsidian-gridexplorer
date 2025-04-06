@@ -36,18 +36,30 @@
 ```
 ---
 sort: name-desc
+color: red
 ---
 ```
 
 利用可能な並べ替え方法：
 
-- name-desc
 - name-asc
+- name-desc
 - mtime-desc
 - mtime-asc
 - ctime-desc
 - ctime-asc
 - random
+
+使える色:
+
+- red
+- orange
+- yellow
+- green
+- cyan
+- blue
+- purple
+- pink
 
 ## 設定
 

@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { DEFAULT_SETTINGS, type GallerySettings } from './settings';
+import { type GallerySettings } from './settings';
 
 let customDocumentExtensions: string[] = [];
 
