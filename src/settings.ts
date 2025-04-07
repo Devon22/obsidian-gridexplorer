@@ -57,8 +57,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showRecentFilesMode: true, // 預設不顯示最近筆記模式
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
-    modifiedDateField: 'date',
-    createdDateField: 'created'
+    modifiedDateField: '',
+    createdDateField: ''
 };
 
 // 設定頁面類別
