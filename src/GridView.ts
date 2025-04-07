@@ -3,7 +3,8 @@ import { setIcon, getFrontMatterInfo } from 'obsidian';
 import { showFolderSelectionModal } from './FolderSelectionModal';
 import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';
-import { showFolderNoteSettingsModal, FolderNoteSettings } from './FolderNoteSettingsModal';
+import { showFolderNoteSettingsModal } from './FolderNoteSettingsModal';
+import { showNoteColorSettingsModal } from './NoteColorSettingsModal';
 import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
 import { t } from './translations';
@@ -26,6 +27,7 @@ export class GridView extends ItemView {
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
     keyboardNavigationEnabled: boolean = true; // 是否啟用鍵盤導航
     fileWatcher: FileWatcher;
+    recentSources: string[] = []; // 歷史記錄
     
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -37,7 +39,7 @@ export class GridView extends ItemView {
         this.folderSortType = ''; // 資料夾排序模式
         this.searchQuery = ''; // 搜尋關鍵字
         this.searchAllFiles = true; // 是否搜尋所有筆記
-        this.randomNoteIncludeMedia = this.plugin.settings.showMediaFiles; // 隨機筆記是否包含圖片和影片
+        this.randomNoteIncludeMedia = false; // 隨機筆記是否包含圖片和影片
         
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -101,6 +103,16 @@ export class GridView extends ItemView {
     }
 
     async setSource(mode: string, path = '', resetScroll = false) {
+
+        // 記錄之前的狀態到歷史記錄中（如果有）
+        if (this.sourceMode) {
+            const previousState = JSON.stringify({ mode: this.sourceMode, path: this.sourcePath });
+            this.recentSources.unshift(previousState);
+            // 限制歷史記錄數量為10個
+            if (this.recentSources.length > 10) {
+                this.recentSources = this.recentSources.slice(0, 10);
+            }
+        }
 
         this.folderSortType = '';
         if(mode === 'folder') {
@@ -224,8 +236,13 @@ export class GridView extends ItemView {
                     return true;
                 }
                 return false;
-            }).sort((a, b) => b.stat.mtime - a.stat.mtime);
-            return recentFiles;
+            });
+            //臨時的排序類型
+            const sortType = this.sortType;
+            this.sortType = 'mtime-desc';
+            const sortedFiles = this.sortFiles(recentFiles);
+            this.sortType = sortType;
+            return sortedFiles;
         } else if (this.sourceMode === 'random-note') {
             // 隨機筆記模式，從所有筆記中隨機選取10筆
             const recentFiles = this.app.vault.getFiles().filter(file => {
@@ -246,20 +263,86 @@ export class GridView extends ItemView {
     sortFiles(files: TFile[]) {
         const sortType = this.folderSortType ? this.folderSortType : this.sortType;
 
-        if (sortType === 'name-asc') {
-            return files.sort((a, b) => a.basename.localeCompare(b.basename));
-        } else if (sortType === 'name-desc') {
-            return files.sort((a, b) => b.basename.localeCompare(a.basename));
-        } else if (sortType === 'mtime-desc') {
-            return files.sort((a, b) => b.stat.mtime - a.stat.mtime);
+        // 檢查排序類型是否為非日期相關
+        const isNonDateSort = ['name-asc', 'name-desc', 'random'].includes(sortType);
+
+        // 檢查是否有任何日期欄位的設定
+        const hasModifiedField = !!this.plugin.settings.modifiedDateField;
+        const hasCreatedField = !!this.plugin.settings.createdDateField;
+        const hasAnyDateField = hasModifiedField || hasCreatedField;
+        
+        // 符合以下任一條件就使用簡單排序：
+        // 1. 非日期排序類型 (name-asc, name-desc, random)
+        // 2. 沒有設定任何日期欄位
+        const shouldUseSimpleSort = isNonDateSort || !hasAnyDateField;
+        if (shouldUseSimpleSort) {
+            if (sortType === 'name-asc') {
+                return files.sort((a, b) => a.basename.localeCompare(b.basename));
+            } else if (sortType === 'name-desc') {
+                return files.sort((a, b) => b.basename.localeCompare(a.basename));
+            } else if (sortType === 'mtime-desc') {
+                return files.sort((a, b) => b.stat.mtime - a.stat.mtime);
+            } else if (sortType === 'mtime-asc') {
+                return files.sort((a, b) => a.stat.mtime - b.stat.mtime);
+            } else if (sortType === 'ctime-desc') {
+                return files.sort((a, b) => b.stat.ctime - a.stat.ctime);
+            } else if (sortType === 'ctime-asc') {
+                return files.sort((a, b) => a.stat.ctime - b.stat.ctime);
+            } else if (sortType === 'random') {
+                return files.sort(() => Math.random() - 0.5);
+            } else {
+                return files;
+            }
+        }
+
+        // 處理需要讀取metadata的日期排序情況
+        // 只有在以下條件都成立時才會執行：
+        // 1. 是日期排序類型 (mtime-desc, mtime-asc, ctime-desc, ctime-asc)
+        // 2. 至少設定了一個日期欄位 (modifiedDateField 或 createdDateField)
+        const filesWithDates = files.map(file => {
+            // 只對 .md 檔案讀取 metadata
+            const shouldReadMetadata = file.extension === 'md';
+            const metadata = shouldReadMetadata ? this.app.metadataCache.getFileCache(file) : null;
+            
+            return {
+                file,
+                mDate: (() => {
+                    if (metadata?.frontmatter) {
+                        const fieldName = this.plugin.settings.modifiedDateField;
+                        const dateStr = metadata.frontmatter[fieldName];
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                return date.getTime();
+                            }
+                        }
+                    }
+                    return file.stat.mtime;
+                })(),
+                cDate: (() => {
+                    if (metadata?.frontmatter) {
+                        const fieldName = this.plugin.settings.createdDateField;
+                        const dateStr = metadata.frontmatter[fieldName];
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                return date.getTime();
+                            }
+                        }
+                    }
+                    return file.stat.ctime;
+                })()
+            };
+        });
+
+        if (sortType === 'mtime-desc') {
+            return filesWithDates.sort((a, b) => b.mDate - a.mDate).map(item => item.file);
         } else if (sortType === 'mtime-asc') {
-            return files.sort((a, b) => a.stat.mtime - b.stat.mtime);
+            return filesWithDates.sort((a, b) => a.mDate - b.mDate).map(item => item.file);
         } else if (sortType === 'ctime-desc') {
-            return files.sort((a, b) => b.stat.ctime - a.stat.ctime);
+            return filesWithDates.sort((a, b) => b.cDate - a.cDate).map(item => item.file);
         } else if (sortType === 'ctime-asc') {
-            return files.sort((a, b) => a.stat.ctime - b.stat.ctime);
-        } else if (sortType === 'random') {
-            return files.sort(() => Math.random() - 0.5);
+            return filesWithDates.sort((a, b) => a.cDate - b.cDate).map(item => item.file);
         } else {
             return files;
         }
@@ -277,7 +360,7 @@ export class GridView extends ItemView {
                 return false;
             }
             
-            // 檢查是否符合忽略的資料夾模式
+            // 檢查資料夾是否符合忽略的模式
             if (this.plugin.settings.ignoredFolderPatterns && this.plugin.settings.ignoredFolderPatterns.length > 0) {
                 const matchesIgnoredPattern = this.plugin.settings.ignoredFolderPatterns.some(pattern => {
                     try {
@@ -340,52 +423,55 @@ export class GridView extends ItemView {
             
         // 為頂部按鈕區域添加右鍵選單事件
         headerButtonsDiv.addEventListener('contextmenu', (event: MouseEvent) => {
-            event.preventDefault();
-            const menu = new Menu();
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('open_new_grid_view'))
-                    .setIcon('grid')
-                    .onClick(() => {
-                        const { workspace } = this.app;
-                        let leaf = null;
-                        workspace.getLeavesOfType('grid-view');
-                        switch (this.plugin.settings.defaultOpenLocation) {
-                            case 'left':
-                                leaf = workspace.getLeftLeaf(false);
-                                break;
-                            case 'right':
-                                leaf = workspace.getRightLeaf(false);
-                                break;
-                            case 'tab':
-                            default:
+            // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
+            if (event.target === headerButtonsDiv) {
+                event.preventDefault();
+                const menu = new Menu();
+                menu.addItem((item) => {
+                    item
+                        .setTitle(t('open_new_grid_view'))
+                        .setIcon('grid')
+                        .onClick(() => {
+                            const { workspace } = this.app;
+                            let leaf = null;
+                            workspace.getLeavesOfType('grid-view');
+                            switch (this.plugin.settings.defaultOpenLocation) {
+                                case 'left':
+                                    leaf = workspace.getLeftLeaf(false);
+                                    break;
+                                case 'right':
+                                    leaf = workspace.getRightLeaf(false);
+                                    break;
+                                case 'tab':
+                                default:
+                                    leaf = workspace.getLeaf('tab');
+                                    break;
+                            }
+                            if (!leaf) {
+                                // 如果無法獲取指定位置的 leaf，則回退到新分頁
                                 leaf = workspace.getLeaf('tab');
-                                break;
-                        }
-                        if (!leaf) {
-                            // 如果無法獲取指定位置的 leaf，則回退到新分頁
-                            leaf = workspace.getLeaf('tab');
-                        }
-                        leaf.setViewState({ type: 'grid-view', active: true });
-                        // 設定資料來源
-                        if (leaf.view instanceof GridView) {
-                            leaf.view.setSource('folder', '/');
-                        }
-                        // 確保視圖是活躍的
-                        workspace.revealLeaf(leaf);
-                    });
-            });
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('open_settings'))
-                    .setIcon('settings')
-                    .onClick(() => {
-                        // 打開插件設定頁面
-                        (this.app as any).setting.open();
-                        (this.app as any).setting.openTabById(this.plugin.manifest.id);
-                    });
-            });
-            menu.showAtMouseEvent(event);
+                            }
+                            leaf.setViewState({ type: 'grid-view', active: true });
+                            // 設定資料來源
+                            if (leaf.view instanceof GridView) {
+                                leaf.view.setSource('folder', '/');
+                            }
+                            // 確保視圖是活躍的
+                            workspace.revealLeaf(leaf);
+                        });
+                });
+                menu.addItem((item) => {
+                    item
+                        .setTitle(t('open_settings'))
+                        .setIcon('settings')
+                        .onClick(() => {
+                            // 打開插件設定頁面
+                            (this.app as any).setting.open();
+                            (this.app as any).setting.openTabById(this.plugin.manifest.id);
+                        });
+                });
+                menu.showAtMouseEvent(event);
+            }
         });
 
         // 添加新增筆記按鈕
@@ -510,6 +596,77 @@ export class GridView extends ItemView {
             showFolderSelectionModal(this.app, this.plugin, this);
         });
         setIcon(reselectButton, "grid");
+
+        // 添加右鍵選單支援
+        reselectButton.addEventListener('contextmenu', (event) => {
+            // 只有在有歷史記錄時才顯示右鍵選單
+            if (this.recentSources.length > 0) {
+                event.preventDefault();
+                
+                const menu = new Menu();
+                
+                // 添加歷史記錄
+                this.recentSources.forEach((sourceInfoStr, index) => {
+                    try {
+                        const sourceInfo = JSON.parse(sourceInfoStr);
+                        const { mode, path } = sourceInfo;
+                        
+                        // 根據模式顯示圖示和文字
+                        let displayText = '';
+                        let icon = '';
+                        
+                        switch (mode) {
+                            case 'folder':
+                                displayText = path || '/';
+                                icon = 'folder';
+                                break;
+                            case 'bookmarks':
+                                displayText = t('bookmarks_mode');
+                                icon = 'bookmark';
+                                break;
+                            case 'search':
+                                displayText = t('search_results');
+                                icon = 'search';
+                                break;
+                            case 'backlinks':
+                                displayText = t('backlinks_mode');
+                                icon = 'paperclip';
+                                break;
+                            case 'recent-files':
+                                displayText = t('recent_files_mode');
+                                icon = 'calendar-days';
+                                break;
+                            case 'all-files':
+                                displayText = t('all_files_mode');
+                                icon = 'book-text';
+                                break;
+                            case 'random-note':
+                                displayText = t('random_note_mode');
+                                icon = 'dice';
+                                break;
+                            default:
+                                displayText = mode;
+                                icon = 'grid';
+                        }
+                        
+                        // 添加歷史記錄到選單
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(`${displayText}`)
+                                .setIcon(`${icon}`)
+                                .onClick(() => {
+                                    this.setSource(mode, path, true);
+                                });
+                        });
+                    } catch (error) {
+                        console.error('Failed to parse source info:', error);
+                    }
+                });
+                
+                // 顯示歷史選單
+                menu.showAtMouseEvent(event);
+            }
+        });
 
         // 添加重新整理按鈕
         const refreshButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('refresh') }  });
@@ -694,24 +851,22 @@ export class GridView extends ItemView {
             return;
         }
 
-        // 如果是資料夾模式，且不是在搜索状态，且设置中启用了显示"返回上级文件夹"选项，且不是根目录
+        // 如果啟用了顯示"回上層資料夾"選項
         if (this.sourceMode === 'folder' && this.searchQuery === '' && 
             this.plugin.settings.showParentFolderItem && this.sourcePath !== '/') {
-            // 创建"返回上级文件夹"项目
+            // 創建"回上層資料夾"
             const parentFolderEl = container.createDiv('ge-grid-item ge-folder-item');
             this.gridItems.push(parentFolderEl); // 添加到網格項目數組
-            
-            // 获取父文件夹路径
+            // 獲取父資料夾路徑
             const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-            
-            // 设置文件夹路径属性
+            // 設置資料夾路徑屬性
             parentFolderEl.dataset.folderPath = parentPath;
             
             const contentArea = parentFolderEl.createDiv('ge-content-area');
             const titleContainer = contentArea.createDiv('ge-title-container');
             titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ..` });
             
-            // 点击事件 - 返回上级文件夹
+            // 回上層資料夾事件
             parentFolderEl.addEventListener('click', () => {
                 this.setSource('folder', parentPath, true);
                 this.clearSelection();
@@ -727,8 +882,8 @@ export class GridView extends ItemView {
                         if (!(child instanceof TFolder)) return false;
                         
                         // 檢查資料夾是否在忽略清單中
-                        const isInIgnoredFolders = this.plugin.settings.ignoredFolders.some(
-                            ignoredPath => child.path === ignoredPath || child.path.startsWith(ignoredPath + '/')
+                        const isInIgnoredFolders = this.plugin.settings.ignoredFolders.some(folder => 
+                            child.path === folder || child.path.startsWith(folder + '/')
                         );
                         
                         if (isInIgnoredFolders) {
@@ -837,6 +992,7 @@ export class GridView extends ItemView {
                             });
                             //刪除資料夾筆記
                             menu.addItem((item) => {
+                                (item as any).setWarning(true);
                                 item
                                     .setTitle(t('delete_folder_note'))
                                     .setIcon('trash')
@@ -1252,8 +1408,7 @@ export class GridView extends ItemView {
                 
                 if (selectedFiles.length > 1) {
                     // 多個檔案被選中，使用 files-menu
-                    this.app.workspace.trigger(
-                        'files-menu', menu, selectedFiles);
+                    this.app.workspace.trigger('files-menu', menu, selectedFiles);
                     
                     // 檢查是否所有選中的檔案都是 md 檔案
                     const allMdFiles = selectedFiles.every(file => file.extension === 'md');
@@ -1263,36 +1418,19 @@ export class GridView extends ItemView {
                                 .setTitle(t('set_note_color'))
                                 .setIcon('palette')
                                 .onClick(() => {
-                                    // 為每個選中的 md 檔案設定相同的顏色
-                                    const { showNoteColorSettingsModal } = require('./NoteColorSettingsModal');
-                                    // 使用第一個檔案開啟設定視窗，設定完後會套用到所有選中的檔案
                                     showNoteColorSettingsModal(this.app, this.plugin, selectedFiles);
                                 });
                         });
                     }
                 } else {
-                    this.app.workspace.trigger(
-                        'file-menu', menu, file);
-                        
-                    // 如果是單個 md 檔案，添加設定顏色選項
-                    if (file.extension === 'md') {
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('set_note_color'))
-                                .setIcon('palette')
-                                .onClick(() => {
-                                    // 引入 NoteColorSettingsModal
-                                    const { showNoteColorSettingsModal } = require('./NoteColorSettingsModal');
-                                    showNoteColorSettingsModal(this.app, this.plugin, file);
-                                });
-                        });
-                    }
+                    this.app.workspace.trigger('file-menu', menu, file);
                 }
                 // 新增在新分頁開啟選項
                 menu.addItem((item) => {
                     item
                         .setTitle(t('open_in_new_tab'))
                         .setIcon('external-link')
+                        .setSection?.("open")
                         .onClick(() => {
                             if (selectedFiles.length > 1) {
                                 // 如果多個檔案被選中，開啟所有文件檔案
@@ -1308,6 +1446,7 @@ export class GridView extends ItemView {
 
                 // 刪除選項
                 menu.addItem((item) => {
+                    (item as any).setWarning(true);
                     item
                         .setTitle(t('delete_note'))
                         .setIcon('trash')
@@ -1825,7 +1964,7 @@ export class GridView extends ItemView {
             this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;
-            this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? this.plugin.settings.showMediaFiles;
+            this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
             this.render();
         }
     }

@@ -1,6 +1,7 @@
-import { Plugin, TFolder, TFile, App } from 'obsidian';
+import { Plugin, TFolder, TFile, App, Menu } from 'obsidian';
 import { GridView } from './src/GridView';
 import { showFolderSelectionModal } from './src/FolderSelectionModal';
+import { showNoteColorSettingsModal } from './src/NoteColorSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
 import { t } from './src/translations';
 import { updateCustomDocumentExtensions } from './src/fileUtils';
@@ -39,10 +40,10 @@ export default class GridExplorerPlugin extends Plugin {
             callback: () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (activeFile) {
-                    this.openInGridView(activeFile);
+                    this.openNoteInFolder(activeFile);
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openInGridView(this.app.vault.getRoot());
+                    this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -57,7 +58,22 @@ export default class GridExplorerPlugin extends Plugin {
                     this.activateView('backlinks');
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openInGridView(this.app.vault.getRoot());
+                    this.openNoteInFolder(this.app.vault.getRoot());
+                }
+            }
+        });
+
+        // 註冊開啟最近筆記指令
+        this.addCommand({
+            id: 'view-recent-files-in-grid-view',
+            name: t('open_recent_files_in_grid_view'),
+            callback: () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile) {
+                    this.openNoteInRecentFiles(activeFile);
+                } else {
+                    // 如果沒有當前筆記，則打開根目錄
+                    this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -75,32 +91,97 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 註冊資料夾的右鍵選單
         this.registerEvent(
-            this.app.workspace.on('file-menu', (menu, file) => {
-                if (file instanceof TFolder || file instanceof TFile) {
-                    menu.addItem((item) => {
+            this.app.workspace.on('file-menu', (menu: Menu, file) => {
+                if (file instanceof TFolder) {
+                    menu.addItem(item => {
                         item
-                            .setTitle(t('open_note_in_grid_view'))
+                            .setTitle(t('open_in_grid_view'))
                             .setIcon('grid')
+                            .setSection?.("open")
                             .onClick(() => {
-                                this.openInGridView(file);
+                                this.openNoteInFolder(file);
                             });
                     });
-                    if (this.settings.showBacklinksMode) {
-                        menu.addItem((item) => {
+                }
+                if (file instanceof TFile) {
+                    menu.addItem(item => {
+                        item.setTitle(t('open_in_grid_view'));
+                        item.setIcon('grid');
+                        item.setSection?.("open");
+                        const ogSubmenu: Menu = (item as any).setSubmenu();
+                        ogSubmenu.addItem((item) => {
                             item
-                                .setTitle(t('open_backlinks_in_grid_view'))
-                                .setIcon('grid')
+                                .setTitle(t('open_note_in_grid_view'))
+                                .setIcon('folder')
                                 .onClick(() => {
-                                    this.activateView('backlinks');
+                                    this.openNoteInFolder(file);
                                 });
                         });
-                    }
+                        if (this.settings.showBacklinksMode) {
+                            ogSubmenu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_backlinks_in_grid_view'))
+                                    .setIcon('paperclip')
+                                    .onClick(() => {
+                                        this.app.workspace.getLeaf().openFile(file);
+                                        setTimeout(() => {
+                                            this.activateView('backlinks');
+                                        }, 100);
+                                    });
+                            });
+                        }
+                        if (this.settings.showRecentFilesMode && file instanceof TFile) {
+                            ogSubmenu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_recent_files_in_grid_view'))
+                                    .setIcon('calendar-days')
+                                    .onClick(() => {
+                                        this.openNoteInRecentFiles(file);
+                                    });
+                            });
+                        }
+                    });
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('set_note_color'))
+                            .setIcon('palette')
+                            .onClick(() => {
+                                showNoteColorSettingsModal(this.app, this, file);
+                            });
+                    });
                 }
             })
         );
     }
 
-    async openInGridView(file: TFile | TFolder = this.app.vault.getRoot()) {
+    async openNoteInRecentFiles(file: TFile) {
+        const view = await this.activateView('recent-files') as GridView;
+        // 如果是文件，等待視圖渲染完成後捲動到該文件位置
+        if (file instanceof TFile) {
+            // 等待下一個事件循環以確保視圖已完全渲染
+            setTimeout(() => {
+                const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
+                if (!gridContainer) return;
+                
+                // 找到對應的網格項目
+                const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
+                    item => (item as HTMLElement).dataset.filePath === file.path
+                ) as HTMLElement;
+                
+                if (gridItem) {
+                    // 捲動到該項目的位置
+                    gridItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 選中該項目
+                    const itemIndex = view.gridItems.indexOf(gridItem);
+                    if (itemIndex >= 0) {
+                        view.selectItem(itemIndex);
+                    }
+                }
+            }, 100);
+        }
+    }
+
+    async openNoteInFolder(file: TFile | TFolder = this.app.vault.getRoot()) {
         // 如果是文件，使用其父資料夾路徑
         const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
         const view = await this.activateView('folder', folderPath) as GridView;
@@ -165,7 +246,7 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 設定資料來源
         if (leaf.view instanceof GridView) {
-            leaf.view.setSource(mode, path);
+            await leaf.view.setSource(mode, path);
         }
 
         // 確保視圖是活躍的
@@ -178,17 +259,19 @@ export default class GridExplorerPlugin extends Plugin {
         updateCustomDocumentExtensions(this.settings);
     }
 
-    async saveSettings() {
+    async saveSettings(update = true) {
         await this.saveData(this.settings);
         updateCustomDocumentExtensions(this.settings);
         
         // 當設定變更時，更新所有開啟的 GridView 實例
-        const leaves = this.app.workspace.getLeavesOfType('grid-view');
-        leaves.forEach(leaf => {
-            if (leaf.view instanceof GridView) {
-                // 重新渲染視圖以套用新設定
-                leaf.view.render();
-            }
-        });
+        if (update) {
+            const leaves = this.app.workspace.getLeavesOfType('grid-view');
+            leaves.forEach(leaf => {
+                if (leaf.view instanceof GridView) {
+                    // 重新渲染視圖以套用新設定
+                    leaf.view.render();
+                }
+            });
+        }
     }
 }

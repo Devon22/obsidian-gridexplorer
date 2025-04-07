@@ -26,6 +26,9 @@ export interface GallerySettings {
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
     showRecentFilesMode: boolean; // 是否顯示最近筆記模式
     customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
+    recentSources: string[]; // 最近的瀏覽記錄
+    modifiedDateField: string;  // 修改時間的欄位名稱
+    createdDateField: string;   // 建立時間的欄位名稱
 }
 
 // 預設設定
@@ -53,6 +56,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showRandomNoteMode: false, // 預設不顯示隨機筆記模式
     showRecentFilesMode: true, // 預設不顯示最近筆記模式
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
+    recentSources: [], // 預設最近的瀏覽記錄
+    modifiedDateField: 'date',
+    createdDateField: 'created'
 };
 
 // 設定頁面類別
@@ -256,6 +262,30 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+
+        // 修改時間欄位名稱設定
+        new Setting(containerEl)
+        .setName(t('modified_date_field'))
+        .setDesc(t('modified_date_field_desc'))
+        .addText(text => text
+            .setPlaceholder('modified_date')
+            .setValue(this.plugin.settings.modifiedDateField)
+            .onChange(async (value) => {
+                this.plugin.settings.modifiedDateField = value;
+                await this.plugin.saveSettings(false);
+            }));
+
+        // 建立時間欄位名稱設定
+        new Setting(containerEl)
+        .setName(t('created_date_field'))
+        .setDesc(t('created_date_field_desc'))
+        .addText(text => text
+            .setPlaceholder('created_date')
+            .setValue(this.plugin.settings.createdDateField)
+            .onChange(async (value) => {
+                this.plugin.settings.createdDateField = value;
+                await this.plugin.saveSettings(false);
+            }));
 
         // 檔案監控功能設定
         new Setting(containerEl)
