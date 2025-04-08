@@ -34,6 +34,8 @@ export const TRANSLATIONS: Translations = {
         'search_current_location_only': '僅搜尋目前位置',
         'cancel': '取消',
         'new_note': '新增筆記',
+        'new_folder': '新增資料夾',
+        'delete_folder': '刪除資料夾',
         'untitled': '未命名',
         'files': '個檔案',
         'add': '新增',
@@ -168,6 +170,8 @@ export const TRANSLATIONS: Translations = {
         'note_color': '筆記顏色',
         'note_color_desc': '設定此筆記的顯示顏色',
         'set_note_color': '設定筆記顏色',
+        'rename_folder': '重新命名資料夾',
+        'enter_new_folder_name': '輸入新資料夾名稱',
     },
     'en': {
         // Notifications
@@ -184,6 +188,8 @@ export const TRANSLATIONS: Translations = {
         'search_current_location_only': 'Search current location only',
         'cancel': 'Cancel',
         'new_note': 'New note',
+        'new_folder': 'New folder',
+        'delete_folder': 'Delete folder',
         'untitled': 'Untitled',
         'files': 'files',
         'add': 'Add',
@@ -318,6 +324,8 @@ export const TRANSLATIONS: Translations = {
         'note_color': 'Note color',
         'note_color_desc': 'Set the display color for this note',
         'set_note_color': 'Set note color',
+        'rename_folder': 'Rename folder',
+        'enter_new_folder_name': 'Enter new folder name',
     },
     'zh': {
         // 通知信息
@@ -334,6 +342,8 @@ export const TRANSLATIONS: Translations = {
         'search_current_location_only': '仅搜索当前位置',
         'cancel': '取消',
         'new_note': '新建笔记',
+        'new_folder': '新建文件夹',
+        'delete_folder': '删除文件夹',
         'untitled': '未命名',
         'files': '个文件',
         'add': '添加',
@@ -468,6 +478,8 @@ export const TRANSLATIONS: Translations = {
         'note_color': '笔记颜色',
         'note_color_desc': '设置此笔记的显示颜色',
         'set_note_color': '设置笔记颜色',
+        'rename_folder': '重新命名文件夹',
+        'enter_new_folder_name': '输入新文件夹名称',
     },
     'ja': {
         // 通知メッジ
@@ -484,6 +496,8 @@ export const TRANSLATIONS: Translations = {
         'search_current_location_only': '現在の場所のみ検索',
         'cancel': 'キャンセル',
         'new_note': '新規ノート',
+        'new_folder': '新規フォルダ',
+        'delete_folder': '削除フォルダ',
         'untitled': '無題',
         'files': 'ファイル',
         'add': '追加',
@@ -618,5 +632,7 @@ export const TRANSLATIONS: Translations = {
         'note_color': 'ノート色',
         'note_color_desc': 'このノートの表示色を設定',
         'set_note_color': 'ノート色を設定',
+        'rename_folder': 'フォルダを再命名',
+        'enter_new_folder_name': '新しいフォルダ名を入力',
     }
 }

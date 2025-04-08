@@ -86,6 +86,17 @@ export class FileWatcher {
                 }
             })
         );
+
+        // 監聽當前開啟的檔案變更，讀取反向連結
+        this.plugin.registerEvent(
+            this.app.workspace.on('file-open', (file) => {
+                if (file instanceof TFile) {
+                    if (this.gridView.sourceMode === 'backlinks' && this.gridView.searchQuery === '') {
+                        this.gridView.render();
+                    }
+                }
+            })
+        );
     }
     
 }

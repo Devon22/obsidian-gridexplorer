@@ -257,6 +257,22 @@
     align-items: center;
 }
 
+/* .ge-foldername-content {
+    margin-top: 5px;
+    flex-basis: 100%;
+    order: 1;
+    display: flex;
+    justify-content: center;
+    background-color: var(--background-secondary);
+    border-radius: var(--button-radius);
+}
+
+.ge-foldername-content span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+} */
+
 /* 搜尋對話框樣式 */
 .ge-search-container {
     margin-bottom: 8px;

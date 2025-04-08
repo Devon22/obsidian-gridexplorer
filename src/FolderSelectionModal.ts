@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Platform } from 'obsidian';
+import { App, Modal, Platform } from 'obsidian';
 import { GridView } from './GridView';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';

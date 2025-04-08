@@ -5,6 +5,7 @@ import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';
 import { showFolderNoteSettingsModal } from './FolderNoteSettingsModal';
 import { showNoteColorSettingsModal } from './NoteColorSettingsModal';
+import { showFolderRenameModal } from './FolderRenameModal';
 import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
 import { t } from './translations';
@@ -102,10 +103,10 @@ export class GridView extends ItemView {
         }
     }
 
-    async setSource(mode: string, path = '', resetScroll = false) {
+    async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
 
         // 記錄之前的狀態到歷史記錄中（如果有）
-        if (this.sourceMode) {
+        if (this.sourceMode && recordHistory) {
             const previousState = JSON.stringify({ mode: this.sourceMode, path: this.sourcePath });
             this.recentSources.unshift(previousState);
             // 限制歷史記錄數量為10個
@@ -170,6 +171,11 @@ export class GridView extends ItemView {
             }
             return [];
         } else if (this.sourceMode === 'backlinks') {
+
+            if(this.searchQuery !== '') {
+                return [];
+            }
+            
             // 反向連結模式：找出所有引用當前筆記的檔案
             const activeFile = this.app.workspace.getActiveFile();
             if (!activeFile) {
@@ -188,7 +194,7 @@ export class GridView extends ItemView {
                     }
                 }
 
-            return this.sortFiles(this.ignoredFiles(Array.from(backlinks) as TFile[]));
+            return this.sortFiles(Array.from(backlinks) as TFile[]);
         } else if(this.sourceMode === 'bookmarks') {
             // 書籤模式
             const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
@@ -499,6 +505,64 @@ export class GridView extends ItemView {
         });
         setIcon(newNoteButton, 'square-pen');
 
+        newNoteButton.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            const menu = new Menu();
+            // 新增筆記
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('new_note'))
+                    .setIcon('square-pen')
+                    .onClick(async () => {
+                        let newFileName = `${t('untitled')}.md`;
+                        let newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
+
+                        // 檢查檔案是否已存在，如果存在則遞增編號
+                        let counter = 1;
+                        while (this.app.vault.getAbstractFileByPath(newFilePath)) {
+                            newFileName = `${t('untitled')} ${counter}.md`;
+                            newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
+                            counter++;
+                        }
+
+                        try {
+                            // 建立新筆記
+                            const newFile = await this.app.vault.create(newFilePath, '');
+                            // 開啟新筆記
+                            await this.app.workspace.getLeaf().openFile(newFile);
+                        } catch (error) {
+                            console.error('An error occurred while creating a new note:', error);
+                        }
+                    });
+            });
+            // 新增資料夾
+            menu.addItem((item) => {
+                item.setTitle(t('new_folder'))
+                .setIcon('folder')
+                .onClick(async () => {
+                    let newFolderName = `${t('untitled')}`;
+                    let newFolderPath = !this.sourcePath || this.sourcePath === '/' ? newFolderName : `${this.sourcePath}/${newFolderName}`;
+                    
+                    // 檢查資料夾是否已存在，如果存在則遞增編號
+                    let counter = 1;
+                    while (this.app.vault.getAbstractFileByPath(newFolderPath)) {
+                        newFolderName = `${t('untitled')} ${counter}`;
+                        newFolderPath = !this.sourcePath || this.sourcePath === '/' ? newFolderName : `${this.sourcePath}/${newFolderName}`;
+                        counter++;
+                    }
+                    
+                    try {
+                        // 建立新資料夾
+                        await this.app.vault.createFolder(newFolderPath);
+                        this.render(false);
+                    } catch (error) {
+                        console.error('An error occurred while creating a new folder:', error);
+                    }
+                });
+            });
+            menu.showAtMouseEvent(event);
+        });
+
         // 添加回上層按鈕（僅在資料夾模式且不在根目錄時顯示）
         if (this.sourceMode === 'folder' && this.sourcePath !== '/' && this.searchQuery === '') {
             const upButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('go_up') } });
@@ -655,7 +719,18 @@ export class GridView extends ItemView {
                                 .setTitle(`${displayText}`)
                                 .setIcon(`${icon}`)
                                 .onClick(() => {
-                                    this.setSource(mode, path, true);
+                                    // 找出當前點擊的紀錄索引
+                                    const clickedIndex = this.recentSources.findIndex(source => {
+                                        const parsed = JSON.parse(source);
+                                        return parsed.mode === mode && parsed.path === path;
+                                    });
+                                    
+                                    // 如果找到點擊的紀錄，清除它之上的紀錄
+                                    if (clickedIndex !== -1) {
+                                        this.recentSources = this.recentSources.slice(clickedIndex + 1);
+                                    }
+
+                                    this.setSource(mode, path, true, false);
                                 });
                         });
                     } catch (error) {
@@ -792,6 +867,9 @@ export class GridView extends ItemView {
             });
         }
 
+        // 創建資料夾夾名稱區域
+        // headerButtonsDiv.createDiv('ge-foldername-content');
+
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -850,6 +928,21 @@ export class GridView extends ItemView {
             new Notice(t('no_backlinks'));
             return;
         }
+
+        // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
+        // if (this.sourceMode === 'folder' && this.searchQuery === '' && this.sourcePath !== '/') {
+        //     const folderName = this.sourcePath.split('/').pop();
+        //     const folderNameContainer = this.containerEl.querySelector('.ge-foldername-content') as HTMLElement;
+        //     if (folderNameContainer) {
+        //         folderNameContainer.createEl('span', { text: `📁 ${folderName}` });
+        //     }
+        // } else {
+        //     const folderNameContainer = this.containerEl.querySelector('.ge-foldername-content') as HTMLElement;
+        //     if (folderNameContainer) {
+        //         folderNameContainer.empty();
+        //         folderNameContainer.style.display = 'none';
+        //     }
+        // }
 
         // 如果啟用了顯示"回上層資料夾"選項
         if (this.sourceMode === 'folder' && this.searchQuery === '' && 
@@ -992,10 +1085,9 @@ export class GridView extends ItemView {
                             });
                             //刪除資料夾筆記
                             menu.addItem((item) => {
-                                (item as any).setWarning(true);
                                 item
                                     .setTitle(t('delete_folder_note'))
-                                    .setIcon('trash')
+                                    .setIcon('folder-x')
                                     .onClick(() => {
                                         this.app.fileManager.trashFile(noteFile as TFile);
                                         // 重新渲染視圖
@@ -1025,7 +1117,33 @@ export class GridView extends ItemView {
                                 .onClick(() => {
                                     this.plugin.settings.ignoredFolders.push(folder.path);
                                     this.plugin.saveSettings();
-                                    this.render();
+                                });
+                        });
+                        // 重新命名資料夾
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('rename_folder'))
+                                .setIcon('file-cog')
+                                .onClick(() => {
+                                    if (folder instanceof TFolder) {
+                                        showFolderRenameModal(this.app, this.plugin, folder, this);
+                                    }
+                                });
+                        });
+                        //刪除資料夾
+                        menu.addItem((item) => {
+                            (item as any).setWarning(true);
+                            item
+                                .setTitle(t('delete_folder'))
+                                .setIcon('trash')
+                                .onClick(async () => {
+                                    if (folder instanceof TFolder) {
+                                        await this.app.fileManager.trashFile(folder);
+                                        // 重新渲染視圖
+                                        setTimeout(() => {
+                                            this.render();
+                                        }, 100);
+                                    }
                                 });
                         });
                         menu.showAtMouseEvent(event);
