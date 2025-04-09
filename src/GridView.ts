@@ -8,9 +8,9 @@ import { showNoteColorSettingsModal } from './NoteColorSettingsModal';
 import { showFolderRenameModal } from './FolderRenameModal';
 import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
+import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile } from './fileUtils';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
-import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile } from './fileUtils';
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -21,6 +21,7 @@ export class GridView extends ItemView {
     folderSortType: string; // 資料夾排序模式
     searchQuery: string; // 搜尋關鍵字
     searchAllFiles: boolean; // 是否搜尋所有筆記
+    searchMediaFiles: boolean; // 是否搜尋媒體檔案
     randomNoteIncludeMedia: boolean; // 隨機筆記是否包含圖片和影片
     selectedItemIndex: number = -1; // 當前選中的項目索引
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
@@ -40,6 +41,7 @@ export class GridView extends ItemView {
         this.folderSortType = ''; // 資料夾排序模式
         this.searchQuery = ''; // 搜尋關鍵字
         this.searchAllFiles = true; // 是否搜尋所有筆記
+        this.searchMediaFiles = false; // 是否搜尋媒體檔案
         this.randomNoteIncludeMedia = false; // 隨機筆記是否包含圖片和影片
         
         // 根據設定決定是否註冊檔案變更監聽器
@@ -819,7 +821,6 @@ export class GridView extends ItemView {
                 clearButton.addEventListener('click', (e) => {
                     e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
                     this.searchQuery = '';
-                    this.searchAllFiles = true;
                     this.clearSelection();
                     this.render();
                     // 通知 Obsidian 保存視圖狀態
@@ -925,7 +926,11 @@ export class GridView extends ItemView {
 
         // 如果是反向連結模式，但沒有活動中的檔案
         if (this.sourceMode === 'backlinks' && !this.app.workspace.getActiveFile()) {
-            new Notice(t('no_backlinks'));
+            const noFilesDiv = container.createDiv('ge-no-files');
+            noFilesDiv.setText(t('no_backlinks'));
+            if (this.plugin.statusBarItem) {
+                this.plugin.statusBarItem.setText('');
+            }
             return;
         }
 
@@ -1174,7 +1179,7 @@ export class GridView extends ItemView {
                 }
                 // 媒體檔案根據 searchMediaFiles 設定決定是否包含
                 if (isMediaFile(file)) {
-                    return this.plugin.settings.searchMediaFiles;
+                    return this.searchMediaFiles;
                 }
                 return false;
             });
@@ -1196,6 +1201,7 @@ export class GridView extends ItemView {
                     }
                 })
             );
+            
             // 根據設定的排序方式排序檔案
             files = this.sortFiles(files);
             
@@ -1211,12 +1217,12 @@ export class GridView extends ItemView {
 
         //最近檔案模式，只取前30筆
         if (this.sourceMode === 'recent-files') {
-            files = files.slice(0, 30);
+            files = files.slice(0, this.plugin.settings.recentFilesCount);
         }
 
         // 隨機筆記模式，只取前10筆
         if (this.sourceMode === 'random-note') {
-            files = files.slice(0, 10);
+            files = files.slice(0, this.plugin.settings.randomNoteCount);
         }
 
         // 如果沒有檔案，顯示提示訊息
@@ -2068,6 +2074,7 @@ export class GridView extends ItemView {
                 folderSortType: this.folderSortType,
                 searchQuery: this.searchQuery,
                 searchAllFiles: this.searchAllFiles,
+                searchMediaFiles: this.searchMediaFiles,
                 randomNoteIncludeMedia: this.randomNoteIncludeMedia
             }
         };
@@ -2082,6 +2089,7 @@ export class GridView extends ItemView {
             this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;
+            this.searchMediaFiles = state.state.searchMediaFiles ?? false;
             this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
             this.render();
         }

@@ -49,8 +49,10 @@ export class SearchModal extends Modal {
             searchInput.focus();
         });
 
+        const searchOptionsContainer = contentEl.createDiv('ge-search-options-container');
+
         // 創建搜尋範圍設定
-        const searchScopeContainer = contentEl.createDiv('ge-search-scope-container');
+        const searchScopeContainer = searchOptionsContainer.createDiv('ge-search-scope-container');
         const searchScopeCheckbox = searchScopeContainer.createEl('input', {
             type: 'checkbox',
             cls: 'ge-search-scope-checkbox'
@@ -61,6 +63,18 @@ export class SearchModal extends Modal {
             cls: 'ge-search-scope-label'
         });
 
+        // 創建搜尋媒體檔案設定
+        const searchMediaFilesContainer = searchOptionsContainer.createDiv('ge-search-media-files-container');
+        const searchMediaFilesCheckbox = searchMediaFilesContainer.createEl('input', {
+            type: 'checkbox',
+            cls: 'ge-search-media-files-checkbox'
+        });
+        searchMediaFilesCheckbox.checked = this.gridView.searchMediaFiles;
+        const searchMediaFilesLabel = searchMediaFilesContainer.createEl('span', {
+            text: t('search_media_files'),
+            cls: 'ge-search-media-files-label'
+        });
+
         // 點擊容器時切換勾選框狀態
         searchScopeContainer.addEventListener('click', (e) => {
             if (e.target !== searchScopeCheckbox) {
@@ -68,10 +82,20 @@ export class SearchModal extends Modal {
                 this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
             }
         });
+        searchMediaFilesContainer.addEventListener('click', (e) => {
+            if (e.target !== searchMediaFilesCheckbox) {
+                searchMediaFilesCheckbox.checked = !searchMediaFilesCheckbox.checked;
+                this.gridView.searchMediaFiles = !searchMediaFilesCheckbox.checked;
+            }
+        });
 
         // 勾選框變更時更新搜尋範圍
         searchScopeCheckbox.addEventListener('change', () => {
             this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+        });
+
+        searchMediaFilesCheckbox.addEventListener('change', () => {
+            this.gridView.searchMediaFiles = !searchMediaFilesCheckbox.checked;
         });
 
         // 創建按鈕容器
@@ -91,6 +115,7 @@ export class SearchModal extends Modal {
         const performSearch = () => {
             this.gridView.searchQuery = searchInput.value;
             this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+            this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
             this.gridView.render(true);
             // 通知 Obsidian 保存視圖狀態

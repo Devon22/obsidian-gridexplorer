@@ -14,7 +14,6 @@ export interface GallerySettings {
     summaryLength: number; // 筆記摘要的字數
     enableFileWatcher: boolean; // 是否啟用檔案監控
     showMediaFiles: boolean; // 是否顯示圖片和影片
-    searchMediaFiles: boolean; // 搜尋時是否包含圖片和影片
     showVideoThumbnails: boolean; // 是否顯示影片縮圖
     defaultOpenLocation: string; // 預設開啟位置
     showParentFolderItem: boolean; // 是否显示"返回上级文件夹"选项
@@ -29,6 +28,8 @@ export interface GallerySettings {
     recentSources: string[]; // 最近的瀏覽記錄
     modifiedDateField: string;  // 修改時間的欄位名稱
     createdDateField: string;   // 建立時間的欄位名稱
+    recentFilesCount: number; // 最近筆記模式顯示的筆數
+    randomNoteCount: number; // 隨機筆記模式顯示的筆數
 }
 
 // 預設設定
@@ -44,7 +45,6 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     summaryLength: 100, // 筆記摘要的字數，預設 100
     enableFileWatcher: true, // 預設啟用檔案監控
     showMediaFiles: true, // 預設顯示圖片和影片
-    searchMediaFiles: false, // 預設搜尋時也包含圖片和影片
     showVideoThumbnails: false, // 預設不顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
     showParentFolderItem: false, // 預設不顯示"返回上级文件夹"選項
@@ -55,6 +55,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showAllFilesMode: false, // 預設不顯示所有檔案模式
     showRandomNoteMode: false, // 預設不顯示隨機筆記模式
     showRecentFilesMode: true, // 預設不顯示最近筆記模式
+    recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
+    randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
     modifiedDateField: '',
@@ -126,18 +128,6 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-        // 設定是否顯示最近檔案模式
-        new Setting(containerEl)
-            .setName(t('show_recent_files_mode'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showRecentFilesMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showRecentFilesMode = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
         // 設定是否顯示所有檔案模式
         new Setting(containerEl)
         .setName(t('show_all_files_mode'))
@@ -150,6 +140,30 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 });
         });
 
+        // 設定是否顯示最近檔案模式
+        new Setting(containerEl)
+            .setName(t('show_recent_files_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showRecentFilesMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showRecentFilesMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 最近檔案模式的顯示資料筆數
+        new Setting(containerEl)
+            .setName(t('recent_files_count'))
+            .addText(text => {
+                text
+                    .setValue(this.plugin.settings.recentFilesCount.toString())
+                    .onChange(async (value) => {
+                        this.plugin.settings.recentFilesCount = parseInt(value);
+                        await this.plugin.saveSettings();
+                    });
+            });
+
         // 設定是否顯示隨機筆記模式
         new Setting(containerEl)
             .setName(t('show_random_note_mode'))
@@ -158,6 +172,18 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showRandomNoteMode)
                     .onChange(async (value) => {
                         this.plugin.settings.showRandomNoteMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 隨機筆記模式的顯示資料筆數
+        new Setting(containerEl)
+            .setName(t('random_note_count'))
+            .addText(text => {
+                text
+                    .setValue(this.plugin.settings.randomNoteCount.toString())
+                    .onChange(async (value) => {
+                        this.plugin.settings.randomNoteCount = parseInt(value);
                         await this.plugin.saveSettings();
                     });
             });
@@ -174,27 +200,6 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showMediaFiles)
                     .onChange(async (value) => {
                         this.plugin.settings.showMediaFiles = value;
-                        
-                        // 如果關閉了顯示媒體檔案，也自動關閉搜尋媒體檔案
-                        if (!value) {
-                            this.plugin.settings.searchMediaFiles = false;
-                            // 重新載入設定頁面以更新 UI
-                            this.display();
-                        }
-                        
-                        await this.plugin.saveSettings();
-                    });
-            });
-
-        // 搜尋圖片和影片設定
-        new Setting(containerEl)
-            .setName(t('search_media_files'))
-            .setDesc(t('search_media_files_desc'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.searchMediaFiles)
-                    .onChange(async (value) => {
-                        this.plugin.settings.searchMediaFiles = value;
                         await this.plugin.saveSettings();
                     });
             });

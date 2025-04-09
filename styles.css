@@ -302,11 +302,17 @@
     color: var(--text-muted);
 }
 
+/* 搜尋選項容器 */
+.ge-search-options-container {
+    display: flex;
+    gap: 16px;
+    margin: 4px;
+}
+
 /* 搜尋範圍設定樣式 */
 .ge-search-scope-container {
     display: flex;
     align-items: center;
-    margin: 4px 0;
     cursor: pointer;
     padding: 4px;
 }
@@ -316,6 +322,24 @@
 }
 
 .ge-search-scope-label {
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-normal);
+}
+
+/* 搜尋媒體檔案設定樣式 */
+.ge-search-media-files-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.ge-search-media-files-checkbox {
+    cursor: pointer;
+}
+
+.ge-search-media-files-label {
     cursor: pointer;
     user-select: none;
     color: var(--text-normal);

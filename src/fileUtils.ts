@@ -37,7 +37,7 @@ export function isVideoFile(file: TFile): boolean {
 
 // 檢查檔案是否為音樂檔案
 export function isAudioFile(file: TFile): boolean {
-    const audioExtensions = ['flac', 'm4a', 'mp3', 'ogg', 'wav', 'webm', '3gp'];
+    const audioExtensions = ['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp'];
     return audioExtensions.includes(file.extension.toLowerCase());
 }
 
