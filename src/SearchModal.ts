@@ -58,7 +58,7 @@ export class SearchModal extends Modal {
             cls: 'ge-search-scope-checkbox'
         });
         searchScopeCheckbox.checked = !this.gridView.searchAllFiles;
-        const searchScopeLabel = searchScopeContainer.createEl('span', {
+        searchScopeContainer.createEl('span', {
             text: t('search_current_location_only'),
             cls: 'ge-search-scope-label'
         });
@@ -70,7 +70,7 @@ export class SearchModal extends Modal {
             cls: 'ge-search-media-files-checkbox'
         });
         searchMediaFilesCheckbox.checked = this.gridView.searchMediaFiles;
-        const searchMediaFilesLabel = searchMediaFilesContainer.createEl('span', {
+        searchMediaFilesContainer.createEl('span', {
             text: t('search_media_files'),
             cls: 'ge-search-media-files-label'
         });

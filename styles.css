@@ -38,7 +38,7 @@
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--button-radius);
-    padding: 12px;
+    padding: 10px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
@@ -132,7 +132,7 @@
 }
 
 .ge-content-area p {
-    margin: 8px 0 0 0;
+    margin: 5px 0 0 0;
     color: var(--text-faint);
     font-size: 0.85em;
     line-height: 1.4;

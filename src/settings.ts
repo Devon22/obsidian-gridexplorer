@@ -160,7 +160,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.recentFilesCount.toString())
                     .onChange(async (value) => {
                         this.plugin.settings.recentFilesCount = parseInt(value);
-                        await this.plugin.saveSettings();
+                        await this.plugin.saveSettings(false);
                     });
             });
 
@@ -184,7 +184,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.randomNoteCount.toString())
                     .onChange(async (value) => {
                         this.plugin.settings.randomNoteCount = parseInt(value);
-                        await this.plugin.saveSettings();
+                        await this.plugin.saveSettings(false);
                     });
             });
 

@@ -6,7 +6,6 @@ import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src
 import { t } from './src/translations';
 import { updateCustomDocumentExtensions } from './src/fileUtils';
 
-// 插件類型定義
 export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings;
     statusBarItem: HTMLElement;
@@ -147,6 +146,39 @@ export default class GridExplorerPlugin extends Plugin {
                             .setIcon('palette')
                             .onClick(() => {
                                 showNoteColorSettingsModal(this.app, this, file);
+                            });
+                    });
+                }
+            })
+        );
+
+        // 註冊編輯器選單
+        this.registerEvent(
+            this.app.workspace.on('editor-menu', (menu: Menu, editor) => {
+                if (editor.somethingSelected()) {
+                    const selectedText = editor.getSelection();
+                    // 截斷過長的文字，最多顯示 20 個字元
+                    const truncatedText = selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText;
+                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
+
+                    menu.addItem(item => {
+                        item
+                            .setTitle(menuItemTitle)
+                            .setIcon('search')
+                            .setSection?.("view")
+                            .onClick(async () => {
+                                const selectedText = editor.getSelection();
+                                // 取得或啟用 GridView
+                                const view = await this.activateView('folder','/');
+                                if (view instanceof GridView) {
+                                    // 設定搜尋模式和關鍵字
+                                    view.searchQuery = selectedText;
+                                    // 設定搜尋範圍 (預設搜尋所有檔案，不含媒體)
+                                    view.searchAllFiles = true;
+                                    view.searchMediaFiles = false;
+                                    // 重新渲染視圖
+                                    view.render(true); // resetScroll = true
+                                }
                             });
                     });
                 }

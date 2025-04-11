@@ -173,6 +173,7 @@ export const TRANSLATIONS: Translations = {
         'set_note_color': '設定筆記顏色',
         'rename_folder': '重新命名資料夾',
         'enter_new_folder_name': '輸入新資料夾名稱',
+        'search_selection_in_grid_view': '在網格視圖中搜尋...',
     },
     'en': {
         // Notifications
@@ -328,6 +329,7 @@ export const TRANSLATIONS: Translations = {
         'set_note_color': 'Set note color',
         'rename_folder': 'Rename folder',
         'enter_new_folder_name': 'Enter new folder name',
+        'search_selection_in_grid_view': 'Search ... in grid view',
     },
     'zh': {
         // 通知信息
@@ -483,6 +485,7 @@ export const TRANSLATIONS: Translations = {
         'set_note_color': '设置笔记颜色',
         'rename_folder': '重新命名文件夹',
         'enter_new_folder_name': '输入新文件夹名称',
+        'search_selection_in_grid_view': '在网格视图中搜寻...',
     },
     'ja': {
         // 通知メッジ
@@ -638,5 +641,6 @@ export const TRANSLATIONS: Translations = {
         'set_note_color': 'ノート色を設定',
         'rename_folder': 'フォルダを再命名',
         'enter_new_folder_name': '新しいフォルダ名を入力',
+        'search_selection_in_grid_view': '... をグリッドビューで検索',
     }
 }
