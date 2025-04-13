@@ -143,6 +143,10 @@
     height: 100%;
 }
 
+.ge-grid-item:hover p {
+    color: var(--text-muted);
+}
+
 .ge-content-area p:empty {
     margin: 0;
 }
@@ -165,6 +169,30 @@
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
+}
+
+/* 標籤樣式 */
+.ge-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.ge-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 0.8em;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
+    background-color: var(--background-secondary-alt);
+    color: var(--text-accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* 資料夾項目的特殊樣式 */
@@ -208,6 +236,18 @@
 
 .ge-grid-item.ge-folder-item .ge-title-container {
     align-items: center;
+}
+
+/* 日期分隔器樣式 */
+.ge-date-divider {
+    width: 100%;
+    text-align: left;
+    color: var(--text-normal);
+    margin-left: 8px;
+    grid-column: 1 / -1;
+    pointer-events: none;
+    user-select: none;
+    background-color: var(--background-secondary);
 }
 
 /* 頂部按鈕區域樣式 */

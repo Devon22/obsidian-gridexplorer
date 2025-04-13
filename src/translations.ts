@@ -63,10 +63,12 @@ export const TRANSLATIONS: Translations = {
         // 設定
         'grid_view_settings': '網格視圖設定',
         'media_files_settings': '媒體檔案設定',
-        'show_media_files': '顯示圖片和影片',
-        'show_media_files_desc': '在網格視圖中顯示圖片和影片檔案',
+        'show_media_files': '顯示媒體檔案',
+        'show_media_files_desc': '在網格視圖中顯示媒體檔案',
         'show_video_thumbnails': '顯示影片縮圖',
         'show_video_thumbnails_desc': '在網格視圖中顯示影片的縮圖，關閉時將顯示播放圖示',
+        'show_note_tags': '顯示筆記標籤',
+        'show_note_tags_desc': '在網格視圖中顯示筆記的標籤',
         'ignored_folders': '忽略的資料夾',
         'ignored_folders_desc': '在這裡設定要忽略的資料夾',
         'add_ignored_folder': '新增忽略資料夾',
@@ -111,7 +113,7 @@ export const TRANSLATIONS: Translations = {
         'show_random_note_mode': '顯示隨機筆記模式',
         'random_note_count': '隨機筆記模式顯示筆數',
         'random_note_notes_only': '僅筆記',
-        'random_note_include_media_files': '包含圖片影片',
+        'random_note_include_media_files': '包含媒體檔案',
         
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
@@ -174,6 +176,15 @@ export const TRANSLATIONS: Translations = {
         'rename_folder': '重新命名資料夾',
         'enter_new_folder_name': '輸入新資料夾名稱',
         'search_selection_in_grid_view': '在網格視圖中搜尋...',
+        'show_date_dividers': '顯示日期分隔器',
+        'show_date_dividers_desc': '在日期相關排序時，在不同天的第一筆之前顯示日期分隔器',
+        'date_divider_format': '日期分隔器格式',
+        'date_divider_mode': '日期分隔器',
+        'date_divider_mode_desc': '選擇日期分隔器的顯示模式',
+        'date_divider_mode_none': '不使用',
+        'date_divider_mode_year': '年',
+        'date_divider_mode_month': '月',
+        'date_divider_mode_day': '日',
     },
     'en': {
         // Notifications
@@ -219,10 +230,12 @@ export const TRANSLATIONS: Translations = {
         // Settings
         'grid_view_settings': 'Grid view settings',
         'media_files_settings': 'Media files settings',
-        'show_media_files': 'Show images and videos',
-        'show_media_files_desc': 'Display image and video files in the grid view',
+        'show_media_files': 'Show media files',
+        'show_media_files_desc': 'Display media files in the grid view',
         'show_video_thumbnails': 'Show video thumbnails',
         'show_video_thumbnails_desc': 'Display thumbnails for videos in the grid view, shows a play icon when disabled',
+        'show_note_tags': 'Show note tags',
+        'show_note_tags_desc': 'Display tags for notes in the grid view',
         'ignored_folders': 'Ignored folders',
         'ignored_folders_desc': 'Set folders to ignore here',
         'add_ignored_folder': 'Add ignored folder',
@@ -330,6 +343,15 @@ export const TRANSLATIONS: Translations = {
         'rename_folder': 'Rename folder',
         'enter_new_folder_name': 'Enter new folder name',
         'search_selection_in_grid_view': 'Search ... in grid view',
+        'show_date_dividers': 'Show date dividers',
+        'show_date_dividers_desc': 'Show date dividers before the first item of each different day when using date-related sorting',
+        'date_divider_format': 'Date divider format',
+        'date_divider_mode': 'Date divider',
+        'date_divider_mode_desc': 'Select the display mode for date dividers',
+        'date_divider_mode_none': 'None',
+        'date_divider_mode_year': 'Year',
+        'date_divider_mode_month': 'Month',
+        'date_divider_mode_day': 'Day',
     },
     'zh': {
         // 通知信息
@@ -375,10 +397,12 @@ export const TRANSLATIONS: Translations = {
         // 设置
         'grid_view_settings': '网格视图设置',
         'media_files_settings': '媒体文件设置',
-        'show_media_files': '显示图片和视频',
-        'show_media_files_desc': '在网格视图中显示图片和视频文件',
+        'show_media_files': '显示媒体文件',
+        'show_media_files_desc': '在网格视图中显示媒体文件',
         'show_video_thumbnails': '显示视频缩略图',
         'show_video_thumbnails_desc': '在网格视图中显示视频的缩略图，关闭时将显示播放图标',
+        'show_note_tags': '显示笔记标签',
+        'show_note_tags_desc': '在网格视图中显示笔记的标签',
         'ignored_folders': '忽略的文件夹',
         'ignored_folders_desc': '在这里设置要忽略的文件夹',
         'add_ignored_folder': '添加忽略文件夹',
@@ -423,7 +447,7 @@ export const TRANSLATIONS: Translations = {
         'show_random_note_mode': '显示随机笔记模式',
         'random_note_count': '随机笔记模式显示笔数',
         'random_note_notes_only': '仅笔记',
-        'random_note_include_media_files': '包含图片视频',
+        'random_note_include_media_files': '包含媒体文件',
         
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
@@ -486,6 +510,15 @@ export const TRANSLATIONS: Translations = {
         'rename_folder': '重新命名文件夹',
         'enter_new_folder_name': '输入新文件夹名称',
         'search_selection_in_grid_view': '在网格视图中搜寻...',
+        'show_date_dividers': '显示日期分隔器',
+        'show_date_dividers_desc': '在日期相关排序时，在不同天的第一条之前显示日期分隔器',
+        'date_divider_format': '日期分隔器格式',
+        'date_divider_mode': '日期分隔器',
+        'date_divider_mode_desc': '选择日期分隔器的显示模式',
+        'date_divider_mode_none': '不使用',
+        'date_divider_mode_year': '年',
+        'date_divider_mode_month': '月',
+        'date_divider_mode_day': '日',
     },
     'ja': {
         // 通知メッジ
@@ -531,10 +564,12 @@ export const TRANSLATIONS: Translations = {
         // 設定
         'grid_view_settings': 'グリッドビュー設定',
         'media_files_settings': 'メディアファイル設定',
-        'show_media_files': '画像と動画を表示',
-        'show_media_files_desc': 'グリッドビューで画像と動画ファイルを表示する',
+        'show_media_files': 'メディアファイルを表示',
+        'show_media_files_desc': 'グリッドビューでメディアファイルを表示する',
         'show_video_thumbnails': '動画のサムネイルを表示',
         'show_video_thumbnails_desc': 'グリッドビューで動画のサムネイルを表示する、無効の場合は再生アイコンを表示',
+        'show_note_tags': 'ノートのタグを表示',
+        'show_note_tags_desc': 'グリッドビューでノートのタグを表示する',
         'ignored_folders': '無視するフォルダ',
         'ignored_folders_desc': '無視するフォルダを設定する',
         'add_ignored_folder': '無視するフォルダを追加',
@@ -579,9 +614,9 @@ export const TRANSLATIONS: Translations = {
         'show_random_note_mode': 'ランダムノートモードを表示',
         'random_note_count': 'ランダムノートモード表示筆数',
         'random_note_notes_only': 'ノートのみ',
-        'random_note_include_media_files': 'メディアを含む',
+        'random_note_include_media_files': 'メディアファイルを含む',
         
-        // 「親フォルダ」オプション設定を表示
+        // "親フォルダ"オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
         'show_parent_folder_item_desc': 'グリッドの最初の項目として「親フォルダ」項目を表示します',
         'parent_folder': '親フォルダ',
@@ -642,5 +677,14 @@ export const TRANSLATIONS: Translations = {
         'rename_folder': 'フォルダを再命名',
         'enter_new_folder_name': '新しいフォルダ名を入力',
         'search_selection_in_grid_view': '... をグリッドビューで検索',
+        'show_date_dividers': '日付区切りを表示',
+        'show_date_dividers_desc': '日付関連の並び替え時、各日の最初のアイテムの前に日付区切りを表示する',
+        'date_divider_format': '日付区切りフォーマット',
+        'date_divider_mode': '日付区切り',
+        'date_divider_mode_desc': '日付区切りの表示モードを選択',
+        'date_divider_mode_none': '使用しない',
+        'date_divider_mode_year': '年',
+        'date_divider_mode_month': '月',
+        'date_divider_mode_day': '日',
     }
 }

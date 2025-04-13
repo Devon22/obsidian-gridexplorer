@@ -30,6 +30,8 @@ export interface GallerySettings {
     createdDateField: string;   // 建立時間的欄位名稱
     recentFilesCount: number; // 最近筆記模式顯示的筆數
     randomNoteCount: number; // 隨機筆記模式顯示的筆數
+    showNoteTags: boolean; // 是否顯示筆記標籤
+    dateDividerMode: string; // 日期分隔器模式：none, year, month, day
 }
 
 // 預設設定
@@ -60,7 +62,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
     modifiedDateField: '',
-    createdDateField: ''
+    createdDateField: '',
+    showNoteTags: false, // 預設不顯示筆記標籤
+    dateDividerMode: 'none', // 預設不使用日期分隔器
 };
 
 // 設定頁面類別
@@ -292,6 +296,23 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 await this.plugin.saveSettings(false);
             }));
 
+        // 日期分隔器模式設定
+        new Setting(containerEl)
+        .setName(t('date_divider_mode'))
+        .setDesc(t('date_divider_mode_desc'))
+        .addDropdown(dropdown => {
+            dropdown
+                .addOption('none', t('date_divider_mode_none'))
+                .addOption('year', t('date_divider_mode_year'))
+                .addOption('month', t('date_divider_mode_month'))
+                .addOption('day', t('date_divider_mode_day'))
+                .setValue(this.plugin.settings.dateDividerMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.dateDividerMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
         // 檔案監控功能設定
         new Setting(containerEl)
             .setName(t('enable_file_watcher'))
@@ -319,7 +340,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 });
         });
 
-        // 顯示"返回上级文件夹"選項設定
+        // 顯示"回上層資料夾"選項設定
         new Setting(containerEl)
             .setName(t('show_parent_folder_item'))
             .setDesc(t('show_parent_folder_item_desc'))
@@ -332,6 +353,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
             
+        // 顯示筆記標籤設定
+        new Setting(containerEl)
+            .setName(t('show_note_tags'))
+            .setDesc(t('show_note_tags_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showNoteTags)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showNoteTags = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
         // 網格項目寬度設定
         new Setting(containerEl)
             .setName(t('grid_item_width'))

@@ -62,6 +62,11 @@ export class SearchModal extends Modal {
             text: t('search_current_location_only'),
             cls: 'ge-search-scope-label'
         });
+        // 隨機筆記模式下，搜尋範圍設定不顯示
+        if (this.gridView.sourceMode === 'random-note') {
+            searchScopeContainer.style.display = 'none';
+            searchScopeCheckbox.checked = false;
+        }
 
         // 創建搜尋媒體檔案設定
         const searchMediaFilesContainer = searchOptionsContainer.createDiv('ge-search-media-files-container');
@@ -74,6 +79,12 @@ export class SearchModal extends Modal {
             text: t('search_media_files'),
             cls: 'ge-search-media-files-label'
         });
+        // 如果設定中的顯示媒體檔案為false，或在反向連結模式下，則隱藏搜尋媒體檔案設定
+        if (!this.gridView.plugin.settings.showMediaFiles || this.gridView.sourceMode === 'backlinks') {
+            searchMediaFilesContainer.style.display = 'none';
+            searchMediaFilesCheckbox.checked = false;
+            this.gridView.searchMediaFiles = false;
+        }
 
         // 點擊容器時切換勾選框狀態
         searchScopeContainer.addEventListener('click', (e) => {

@@ -532,43 +532,41 @@ export class GridView extends ItemView {
             setIcon(sortButton, 'arrow-up-narrow-wide');
         }
 
-        if (this.sourceMode !== 'random-note') {
-            // 添加搜尋按鈕
-            const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
-            const searchButton = searchButtonContainer.createEl('button', {
-                cls: 'search-button',
-                attr: { 'aria-label': t('search') }
+        // 添加搜尋按鈕
+        const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
+        const searchButton = searchButtonContainer.createEl('button', {
+            cls: 'search-button',
+            attr: { 'aria-label': t('search') }
+        });
+        setIcon(searchButton, 'search');
+        searchButton.addEventListener('click', () => {
+            showSearchModal(this.app, this, '');
+        });
+
+        // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
+        if (this.searchQuery) {
+            searchButton.style.display = 'none';
+            const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
+
+            // 創建搜尋文字
+            const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: this.searchQuery });
+            // 讓搜尋文字可點選
+            searchText.style.cursor = 'pointer';
+            searchText.addEventListener('click', () => {
+                showSearchModal(this.app, this, this.searchQuery);
             });
-            setIcon(searchButton, 'search');
-            searchButton.addEventListener('click', () => {
-                showSearchModal(this.app, this, '');
+
+            // 創建取消按鈕
+            const clearButton = searchTextContainer.createDiv('ge-clear-button');
+            setIcon(clearButton, 'x');
+            clearButton.addEventListener('click', (e) => {
+                e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
+                this.searchQuery = '';
+                this.clearSelection();
+                this.render();
+                // 通知 Obsidian 保存視圖狀態
+                this.app.workspace.requestSaveLayout();
             });
-
-            // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
-            if (this.searchQuery) {
-                searchButton.style.display = 'none';
-                const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
-
-                // 創建搜尋文字
-                const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: this.searchQuery });
-                // 讓搜尋文字可點選
-                searchText.style.cursor = 'pointer';
-                searchText.addEventListener('click', () => {
-                    showSearchModal(this.app, this, this.searchQuery);
-                });
-
-                // 創建取消按鈕
-                const clearButton = searchTextContainer.createDiv('ge-clear-button');
-                setIcon(clearButton, 'x');
-                clearButton.addEventListener('click', (e) => {
-                    e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
-                    this.searchQuery = '';
-                    this.clearSelection();
-                    this.render();
-                    // 通知 Obsidian 保存視圖狀態
-                    this.app.workspace.requestSaveLayout();
-                });
-            }
         }
 
         if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
@@ -901,7 +899,9 @@ export class GridView extends ItemView {
         }
 
         let files: TFile[] = [];
-        if (this.searchQuery && this.sourceMode !== 'random-note') {
+        // 使用 Map 來記錄原始順序
+        let fileIndexMap = new Map<TFile, number>();
+        if (this.searchQuery) {
             // 顯示搜尋中的提示
             const loadingDiv = container.createDiv('ge-loading-indicator');
             loadingDiv.setText(t('searching'));
@@ -909,63 +909,101 @@ export class GridView extends ItemView {
             // 取得 vault 中所有支援的檔案
             let allFiles: TFile[] = [];
             if (this.searchAllFiles) {
-                allFiles = this.app.vault.getFiles();
+                // 全部檔案
+                allFiles = this.app.vault.getFiles().filter(file => 
+                    isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
+                );
             } else {
+                // 當前位置檔案
+                const randomNoteIncludeMedia = this.randomNoteIncludeMedia;
+                this.randomNoteIncludeMedia = this.searchMediaFiles;
                 allFiles = await getFiles(this);
+                this.randomNoteIncludeMedia = randomNoteIncludeMedia;
+
+                if (this.sourceMode === 'recent-files') {
+                    // 搜尋"最近檔案"的當前位置時，先作忽略檔案和只取前n筆
+                    allFiles = ignoredFiles(allFiles, this).slice(0, this.plugin.settings.recentFilesCount);
+                } else if (this.sourceMode === 'bookmarks') {
+                    allFiles = allFiles.filter(file => 
+                        isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
+                    );
+                    // 使用 Map 來記錄原始順序
+                    allFiles.forEach((file, index) => {
+                        fileIndexMap.set(file, index);
+                    });
+                } else if (this.sourceMode === 'search') {
+                    allFiles = allFiles.filter(file =>
+                        isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
+                    );
+                }
             }
 
-            // 根據設定過濾檔案
-            const filteredFiles = allFiles.filter(file => {
-                // 文件檔案始終包含
-                if (isDocumentFile(file)) {
-                    return true;
-                }
-                // 媒體檔案根據 searchMediaFiles 設定決定是否包含
-                if (isMediaFile(file)) {
-                    return this.searchMediaFiles;
-                }
-                return false;
-            });
-            
             // 根據搜尋關鍵字進行過濾（不分大小寫）
-            const lowerCaseSearchQuery = this.searchQuery.toLowerCase();
+            const searchTerms = this.searchQuery.toLowerCase().split(/\s+/).filter(term => term.trim() !== '');
             // 使用 Promise.all 來非同步地讀取所有檔案內容
             await Promise.all(
-                filteredFiles.map(async file => {
+                allFiles.map(async file => {
                     const fileName = file.name.toLowerCase();
-                    if (fileName.includes(lowerCaseSearchQuery)) {
+                    // 檢查檔案名稱是否包含所有搜尋字串
+                    const matchesFileName = searchTerms.every(term => fileName.includes(term));
+                    if (matchesFileName) {
                         files.push(file);
                     } else if (file.extension === 'md') {
                         // 只對 Markdown 檔案進行內容搜尋
                         const content = (await this.app.vault.cachedRead(file)).toLowerCase();
-                        if (content.includes(lowerCaseSearchQuery)) {
+                        // 檢查檔案內容是否包含所有搜尋字串
+                        const matchesContent = searchTerms.every(term => content.includes(term));
+                        if (matchesContent) {
                             files.push(file);
                         }
                     }
                 })
             );
             
-            // 根據設定的排序方式排序檔案
-            files = sortFiles(files, this);
-            
+            // 排序檔案
+            if (this.sourceMode === 'recent-files') {
+                // 臨時的排序類型
+                const sortType = this.sortType;
+                this.sortType = 'mtime-desc';
+                files = sortFiles(files, this);
+                this.sortType = sortType;
+            } else if (this.sourceMode === 'bookmarks') {
+                // 保持原始順序
+                files.sort((a, b) => {
+                    const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+                    const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+                    return indexA - indexB;
+                });
+            } else if (this.sourceMode === 'random-note') {
+                const sortType = this.sortType;
+                this.sortType = 'random';
+                files = sortFiles(files, this);
+                this.sortType = sortType;
+            } else {
+                files = sortFiles(files, this);
+            }
+
+            // 忽略檔案
+            files = ignoredFiles(files, this);
+
             // 移除搜尋中的提示
             loadingDiv.remove();
         } else {
-            // 獲取檔案列表並根據搜尋關鍵字過濾
+            // 無搜尋關鍵字的情況
             files = await getFiles(this);
-        }
 
-        //忽略檔案
-        files = ignoredFiles(files, this)
+            // 忽略檔案
+            files = ignoredFiles(files, this)
 
-        //最近檔案模式，只取前30筆
-        if (this.sourceMode === 'recent-files') {
-            files = files.slice(0, this.plugin.settings.recentFilesCount);
-        }
+            // 最近檔案模式，只取前n筆
+            if (this.sourceMode === 'recent-files') {
+                files = files.slice(0, this.plugin.settings.recentFilesCount);
+            }
 
-        // 隨機筆記模式，只取前10筆
-        if (this.sourceMode === 'random-note') {
-            files = files.slice(0, this.plugin.settings.randomNoteCount);
+            // 隨機筆記模式，只取前n筆
+            if (this.sourceMode === 'random-note') {
+                files = files.slice(0, this.plugin.settings.randomNoteCount);
+            }
         }
 
         // 如果沒有檔案，顯示提示訊息
@@ -1048,6 +1086,78 @@ export class GridView extends ItemView {
                             // 其他檔案顯示副檔名
                             contentArea.createEl('p', { text: file.extension.toUpperCase() });
                         }   
+                        
+                        // 顯示標籤（僅限 Markdown 檔案）
+                        if (file.extension === 'md' && this.plugin.settings.showNoteTags) {
+                            const fileCache = this.app.metadataCache.getFileCache(file);
+                            const allTags = new Set<string>();
+                            
+                            // 從 frontmatter 獲取標籤
+                            let frontmatterTags = fileCache?.frontmatter?.tags || [];
+                            
+                            // 處理不同的標籤格式
+                            if (typeof frontmatterTags === 'string') {
+                                // 如果是字符串，按逗號或空格分割
+                                frontmatterTags.split(/[,\s]+/).filter(tag => tag.trim() !== '')
+                                    .forEach(tag => allTags.add(tag));
+                            } else if (Array.isArray(frontmatterTags)) {
+                                frontmatterTags.forEach(tag => {
+                                    // 處理陣列中的每個標籤，可能是字符串或包含空格的字符串
+                                    if (typeof tag === 'string') {
+                                        // 檢查標籤是否包含空格（可能是未被正確分割的多個標籤）
+                                        if (tag.includes(' ')) {
+                                            // 按空格分割並添加每個子標籤
+                                            tag.split(/\s+/).filter(subTag => subTag.trim() !== '')
+                                                .forEach(subTag => allTags.add(subTag));
+                                        } else {
+                                            allTags.add(tag);
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // 從檔案 cache 中獲取內文標籤
+                            const cacheTags = fileCache?.tags || [];
+                            cacheTags.forEach(tagObj => {
+                                const tag = tagObj.tag.startsWith('#') ? tagObj.tag.substring(1) : tagObj.tag;
+                                allTags.add(tag);
+                            });
+                            
+                            if (allTags.size > 0) {
+                                // 創建標籤容器
+                                const tagsContainer = contentArea.createDiv('ge-tags-container');
+                                
+                                // 根據區塊寬度動態計算可顯示的標籤數量
+                                const containerWidth = tagsContainer.getBoundingClientRect().width;
+                                const tagWidth = 70;
+                                const maxTags = Math.floor(containerWidth / tagWidth);
+
+                                // 取得要顯示的標籤
+                                const displayTags = Array.from(allTags).slice(0, maxTags);
+                            
+                                displayTags.forEach(tag => {
+                                    const tagEl = tagsContainer.createEl('span', { 
+                                        cls: 'ge-tag',
+                                        text: tag.startsWith('#') ? tag : `#${tag}`
+                                    });
+                                    
+                                    // 添加點擊事件，點擊後設置搜尋關鍵字並重新渲染
+                                    tagEl.addEventListener('click', (e) => {
+                                        e.stopPropagation(); // 防止事件冒泡到卡片
+                                        const tagText = tag.startsWith('#') ? tag.substring(1) : tag;
+                                        if (this.searchQuery === tagText) {
+                                            return;
+                                        }
+                                        this.searchQuery = tagText;
+                                        this.searchAllFiles = true; 
+                                        this.searchMediaFiles = false;
+                                        this.render(true);
+                                        return false;
+                                    });
+                                });
+                            }
+                        }
+                        
                         contentArea.setAttribute('data-loaded', 'true');
                     }
                     
@@ -1099,66 +1209,167 @@ export class GridView extends ItemView {
         });
         
         // 顯示檔案
-        for (const file of files) {
-            const fileEl = container.createDiv('ge-grid-item');
-            this.gridItems.push(fileEl); // 添加到網格項目數組
-            fileEl.dataset.filePath = file.path;
-            
-            // 創建左側內容區，包含圖示和標題
-            const contentArea = fileEl.createDiv('ge-content-area');
-            
-            // 創建標題容器
-            const titleContainer = contentArea.createDiv('ge-title-container');
-            const extension = file.extension.toLowerCase();
+        if (files.length > 0) {
+            // 檢查是否應該顯示日期分隔器
+            const dateDividerMode = this.plugin.settings.dateDividerMode || 'none';
+            const sortType = this.folderSortType ? this.folderSortType : this.sortType;
+            const shouldShowDateDividers = dateDividerMode !== 'none' && 
+                (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) &&
+                this.sourceMode !== 'random-note' &&
+                this.sourceMode !== 'bookmarks';
 
-            // 添加檔案類型圖示
-            if (isImageFile(file)) {
-                const iconContainer = titleContainer.createDiv('ge-icon-container ge-img');
-                setIcon(iconContainer, 'image');
-            } else if (isVideoFile(file)) {
-                const iconContainer = titleContainer.createDiv('ge-icon-container ge-video');
-                setIcon(iconContainer, 'play-circle');
-            } else if (isAudioFile(file)) {
-                const iconContainer = titleContainer.createDiv('ge-icon-container ge-audio');
-                setIcon(iconContainer, 'music');
-            } else if (extension === 'pdf') {
-                const iconContainer = titleContainer.createDiv('ge-icon-container ge-pdf');
-                setIcon(iconContainer, 'paperclip');
-            } else if (extension === 'canvas') {
-                const iconContainer = titleContainer.createDiv('ge-icon-container ge-canvas');
-                setIcon(iconContainer, 'layout-dashboard');
-            } else if (extension === 'md' || extension === 'txt') {
-                const iconContainer = titleContainer.createDiv('ge-icon-container');
-                setIcon(iconContainer, 'file-text');
-            } else {
-                const iconContainer = titleContainer.createDiv('ge-icon-container');
-                setIcon(iconContainer, 'file');
-            }
+            let lastDateString = '';
             
-            // 創建標題（立即載入）
-            const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: file.basename });
-            titleEl.setAttribute('title', file.basename);
-            
-            // 創建圖片區域，但先不載入圖片
-            fileEl.createDiv('ge-image-area');
-            
-            // 開始觀察這個元素
-            observer.observe(fileEl);
-            
-            // 點擊時開啟檔案
-            fileEl.addEventListener('click', (event) => {
-                // 獲取項目索引
-                const index = this.gridItems.indexOf(fileEl);
-                if (index < 0) return;
-
-                // 處理多選邏輯
-                if (event.ctrlKey || event.metaKey) {
-                    if (this.selectedItemIndex !== -1) {
-                        // 如果已有選中狀態，則繼續選中
-                        this.selectItem(index, true);
-                        this.hasKeyboardFocus = true;
+            for (const file of files) {
+                // 如果啟用日期分隔器，檢查是否需要添加新的日期分隔器
+                if (shouldShowDateDividers) {
+                    let timestamp = 0;
+                    
+                    // 根據排序類型獲取日期時間戳
+                    if (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) {
+                        const isModifiedTime = sortType.startsWith('mtime-');
+                        
+                        // 檢查是否是 Markdown 文件，且有設定對應的 frontmatter 字段
+                        let frontMatterDate = null;
+                        if (file.extension === 'md') {
+                            const metadata = this.app.metadataCache.getFileCache(file);
+                            if (metadata?.frontmatter) {
+                                const fieldName = isModifiedTime 
+                                    ? this.plugin.settings.modifiedDateField 
+                                    : this.plugin.settings.createdDateField;
+                                
+                                if (fieldName && metadata.frontmatter[fieldName]) {
+                                    const dateStr = metadata.frontmatter[fieldName];
+                                    const date = new Date(dateStr);
+                                    if (!isNaN(date.getTime())) {
+                                        frontMatterDate = date;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 使用 frontmatter 中的日期或檔案的狀態日期
+                        if (frontMatterDate) {
+                            timestamp = frontMatterDate.getTime();
+                        } else {
+                            timestamp = isModifiedTime ? file.stat.mtime : file.stat.ctime;
+                        }
+                    }
+                    
+                    // 創建日期物件並格式化
+                    const fileDate = new Date(timestamp);
+                    
+                    // 根據日期分隔器模式設定格式化
+                    let currentDateString = '';
+                    
+                    if (dateDividerMode === 'year') {
+                        // 年分隔器：只顯示年份
+                        currentDateString = fileDate.getFullYear().toString();
+                    } else if (dateDividerMode === 'month') {
+                        // 月分隔器：顯示年-月
+                        const year = fileDate.getFullYear();
+                        const month = fileDate.getMonth() + 1; // getMonth() 回傳 0-11
+                        currentDateString = `${year}-${month.toString().padStart(2, '0')}`;
                     } else {
-                        // 沒有選中狀態則開啟新分頁
+                        // 日分隔器：顯示完整日期（預設行為）
+                        currentDateString = fileDate.toLocaleDateString();
+                    }
+                    
+                    // 如果日期不同於上一個檔案的日期，添加分隔器
+                    if (currentDateString !== lastDateString) {
+                        lastDateString = currentDateString;
+                        
+                        // 創建日期分隔器
+                        const dateDivider = container.createDiv('ge-date-divider');
+                        dateDivider.textContent = currentDateString;
+                    }
+                }
+                
+                const fileEl = container.createDiv('ge-grid-item');
+                this.gridItems.push(fileEl); // 添加到網格項目數組
+                fileEl.dataset.filePath = file.path;
+                
+                // 創建左側內容區，包含圖示和標題
+                const contentArea = fileEl.createDiv('ge-content-area');
+                
+                // 創建標題容器
+                const titleContainer = contentArea.createDiv('ge-title-container');
+                const extension = file.extension.toLowerCase();
+
+                // 添加檔案類型圖示
+                if (isImageFile(file)) {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-img');
+                    setIcon(iconContainer, 'image');
+                } else if (isVideoFile(file)) {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-video');
+                    setIcon(iconContainer, 'play-circle');
+                } else if (isAudioFile(file)) {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-audio');
+                    setIcon(iconContainer, 'music');
+                } else if (extension === 'pdf') {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-pdf');
+                    setIcon(iconContainer, 'paperclip');
+                } else if (extension === 'canvas') {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-canvas');
+                    setIcon(iconContainer, 'layout-dashboard');
+                } else if (extension === 'md' || extension === 'txt') {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container');
+                    setIcon(iconContainer, 'file-text');
+                } else {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container');
+                    setIcon(iconContainer, 'file');
+                }
+                
+                // 創建標題（立即載入）
+                const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: file.basename });
+                titleEl.setAttribute('title', file.basename);
+                
+                // 創建圖片區域，但先不載入圖片
+                fileEl.createDiv('ge-image-area');
+                
+                // 開始觀察這個元素
+                observer.observe(fileEl);
+                
+                // 點擊時開啟檔案
+                fileEl.addEventListener('click', (event) => {
+                    // 獲取項目索引
+                    const index = this.gridItems.indexOf(fileEl);
+                    if (index < 0) return;
+
+                    // 處理多選邏輯
+                    if (event.ctrlKey || event.metaKey) {
+                        if (this.selectedItemIndex !== -1) {
+                            // 如果已有選中狀態，則繼續選中
+                            this.selectItem(index, true);
+                            this.hasKeyboardFocus = true;
+                        } else {
+                            // 沒有選中狀態則開啟新分頁
+                            if (isMediaFile(file)) {
+                                // 開啟媒體檔案
+                                if (isAudioFile(file)) {
+                                    FloatingAudioPlayer.open(this.app, file);
+                                } else {
+                                    this.openMediaFile(file, files);
+                                }
+                            } else {
+                                // 開啟文件檔案
+                                this.app.workspace.getLeaf().openFile(file);
+                            }
+                        }
+                        event.preventDefault();
+                        return;
+                    } else if (event.shiftKey) {
+                        // Shift 鍵：範圍選擇
+                        this.handleRangeSelection(index);
+                        this.hasKeyboardFocus = true;
+                        event.preventDefault();
+                        return;
+                    } else {
+                        // 一般點擊：選中單個項目並開啟
+                        this.selectItem(index);
+                        this.hasKeyboardFocus = true;
+
+                        // 根據檔案類型處理點擊事件
                         if (isMediaFile(file)) {
                             // 開啟媒體檔案
                             if (isAudioFile(file)) {
@@ -1168,57 +1379,87 @@ export class GridView extends ItemView {
                             }
                         } else {
                             // 開啟文件檔案
+                            this.app.workspace.getLeaf().openFile(file);
+                        }
+                    }
+                });
+                
+                // 處理滑鼠中鍵點擊
+                fileEl.addEventListener('mousedown', (event) => {
+                    if (event.button === 1) {
+                        event.preventDefault();
+                    }
+                });
+
+                fileEl.addEventListener('mouseup', (event) => {
+                    if (event.button === 1) {
+                        event.preventDefault();
+                        if (!isMediaFile(file)) {
                             this.app.workspace.getLeaf(true).openFile(file);
                         }
                     }
-                    event.preventDefault();
-                    return;
-                } else if (event.shiftKey) {
-                    // Shift 鍵：範圍選擇
-                    this.handleRangeSelection(index);
-                    this.hasKeyboardFocus = true;
-                    event.preventDefault();
-                    return;
-                } else {
-                    // 一般點擊：選中單個項目並開啟
-                    this.selectItem(index);
-                    this.hasKeyboardFocus = true;
+                });
 
-                    // 根據檔案類型處理點擊事件
-                    if (isMediaFile(file)) {
-                        // 開啟媒體檔案
-                        if (isAudioFile(file)) {
-                            FloatingAudioPlayer.open(this.app, file);
-                        } else {
-                            this.openMediaFile(file, files);
+                if(Platform.isDesktop) {
+                    // 添加拖曳功能
+                    fileEl.setAttribute('draggable', 'true');
+                    fileEl.addEventListener('dragstart', (event) => {
+                        // 獲取項目索引
+                        const index = this.gridItems.indexOf(fileEl);
+                        if (index >= 0) {
+                            // 如果項目未被選中，則選中它
+                            if (!this.selectedItems.has(index)) {
+                                this.selectItem(index);
+                            }
                         }
-                    } else {
-                        // 開啟文件檔案
-                        this.app.workspace.getLeaf().openFile(file);
-                    }
-                }
-            });
-            
-            // 處理滑鼠中鍵點擊
-            fileEl.addEventListener('mousedown', (event) => {
-                if (event.button === 1) {
-                    event.preventDefault();
-                }
-            });
 
-            fileEl.addEventListener('mouseup', (event) => {
-                if (event.button === 1) {
-                    event.preventDefault();
-                    if (!isMediaFile(file)) {
-                        this.app.workspace.getLeaf(true).openFile(file);
-                    }
-                }
-            });
+                        // 獲取選中的檔案
+                        const selectedFiles = this.getSelectedFiles();
+                        
+                        // 添加拖曳資料
+                        if (selectedFiles.length > 1) {
+                            // 如果多個檔案被選中，使用 files-menu
+                            const fileList = selectedFiles.map(f => {
+                                const isMedia = isMediaFile(f);
+                                return isMedia ? `![[${f.path}]]` : `[[${f.path}]]`;
+                            }).join('\n');
+                            event.dataTransfer?.setData('text/plain', fileList);
+                            
+                            // 添加檔案路徑列表
+                            event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
+                                JSON.stringify(selectedFiles.map(f => f.path)));
+                        } else {
+                            // 如果只有單個檔案被選中，使用檔案路徑
+                            const isMedia = isMediaFile(file);
+                            const mdLink = isMedia
+                                ? `![[${file.path}]]` // 媒體檔案使用 ![[]] 格式
+                                : `[[${file.path}]]`;  // 一般檔案使用 [[]] 格式
 
-            if(Platform.isDesktop) {
-                // 添加拖曳功能
-                fileEl.setAttribute('draggable', 'true');
-                fileEl.addEventListener('dragstart', (event) => {
+                            // 添加拖曳資料
+                            event.dataTransfer?.setData('text/plain', mdLink);
+                            
+                            // 添加檔案路徑列表
+                            event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
+                                JSON.stringify([file.path]));
+                        }
+                        
+                        // 設定拖曳效果
+                        event.dataTransfer!.effectAllowed = 'all';
+                        // 添加拖曳中的視覺效果
+                        fileEl.addClass('ge-dragging');
+                    });
+                    
+                    fileEl.addEventListener('dragend', () => {
+                        // 移除拖曳中的視覺效果
+                        fileEl.removeClass('ge-dragging');
+                    });
+                }
+                
+                // 添加右鍵選單
+                fileEl.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    const menu = new Menu();
+                    
                     // 獲取項目索引
                     const index = this.gridItems.indexOf(fileEl);
                     if (index >= 0) {
@@ -1231,122 +1472,67 @@ export class GridView extends ItemView {
                     // 獲取選中的檔案
                     const selectedFiles = this.getSelectedFiles();
                     
-                    // 添加拖曳資料
                     if (selectedFiles.length > 1) {
-                        // 如果多個檔案被選中，使用 files-menu
-                        const fileList = selectedFiles.map(f => {
-                            const isMedia = isMediaFile(f);
-                            return isMedia ? `![[${f.path}]]` : `[[${f.path}]]`;
-                        }).join('\n');
-                        event.dataTransfer?.setData('text/plain', fileList);
+                        // 多個檔案被選中，使用 files-menu
+                        this.app.workspace.trigger('files-menu', menu, selectedFiles);
                         
-                        // 添加檔案路徑列表
-                        event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
-                            JSON.stringify(selectedFiles.map(f => f.path)));
+                        // 檢查是否所有選中的檔案都是 md 檔案
+                        const allMdFiles = selectedFiles.every(file => file.extension === 'md');
+                        if (allMdFiles) {
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('set_note_color'))
+                                    .setIcon('palette')
+                                    .onClick(() => {
+                                        showNoteColorSettingsModal(this.app, this.plugin, selectedFiles);
+                                    });
+                            });
+                        }
                     } else {
-                        // 如果只有單個檔案被選中，使用檔案路徑
-                        const isMedia = isMediaFile(file);
-                        const mdLink = isMedia
-                            ? `![[${file.path}]]` // 媒體檔案使用 ![[]] 格式
-                            : `[[${file.path}]]`;  // 一般檔案使用 [[]] 格式
-
-                        // 添加拖曳資料
-                        event.dataTransfer?.setData('text/plain', mdLink);
-                        
-                        // 添加檔案路徑列表
-                        event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
-                            JSON.stringify([file.path]));
+                        this.app.workspace.trigger('file-menu', menu, file);
                     }
-                    
-                    // 設定拖曳效果
-                    event.dataTransfer!.effectAllowed = 'all';
-                    // 添加拖曳中的視覺效果
-                    fileEl.addClass('ge-dragging');
-                });
-                
-                fileEl.addEventListener('dragend', () => {
-                    // 移除拖曳中的視覺效果
-                    fileEl.removeClass('ge-dragging');
+                    // 新增在新分頁開啟選項
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('open_in_new_tab'))
+                            .setIcon('external-link')
+                            .setSection?.("open")
+                            .onClick(() => {
+                                if (selectedFiles.length > 1) {
+                                    // 如果多個檔案被選中，開啟所有文件檔案
+                                    const documentFiles = selectedFiles.filter(f => isDocumentFile(f));
+                                    for (const docFile of documentFiles) {
+                                        this.app.workspace.getLeaf(true).openFile(docFile);
+                                    }
+                                } else {
+                                    this.app.workspace.getLeaf(true).openFile(file);
+                                }
+                            });
+                    });
+
+                    // 刪除選項
+                    menu.addItem((item) => {
+                        (item as any).setWarning(true);
+                        item
+                            .setTitle(t('delete_note'))
+                            .setIcon('trash')
+                            .onClick(async () => {
+                                if (selectedFiles.length > 1) {
+                                    // 刪除多個檔案
+                                    for (const f of selectedFiles) {
+                                        await this.app.fileManager.trashFile(f);
+                                    }
+                                    // 清除選中狀態
+                                    this.clearSelection();
+                                } else {
+                                    // 刪除單個檔案
+                                    await this.app.fileManager.trashFile(file);
+                                }
+                            });
+                    });
+                    menu.showAtMouseEvent(event);
                 });
             }
-            
-            // 添加右鍵選單
-            fileEl.addEventListener('contextmenu', (event) => {
-                event.preventDefault();
-                const menu = new Menu();
-                
-                // 獲取項目索引
-                const index = this.gridItems.indexOf(fileEl);
-                if (index >= 0) {
-                    // 如果項目未被選中，則選中它
-                    if (!this.selectedItems.has(index)) {
-                        this.selectItem(index);
-                    }
-                }
-
-                // 獲取選中的檔案
-                const selectedFiles = this.getSelectedFiles();
-                
-                if (selectedFiles.length > 1) {
-                    // 多個檔案被選中，使用 files-menu
-                    this.app.workspace.trigger('files-menu', menu, selectedFiles);
-                    
-                    // 檢查是否所有選中的檔案都是 md 檔案
-                    const allMdFiles = selectedFiles.every(file => file.extension === 'md');
-                    if (allMdFiles) {
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('set_note_color'))
-                                .setIcon('palette')
-                                .onClick(() => {
-                                    showNoteColorSettingsModal(this.app, this.plugin, selectedFiles);
-                                });
-                        });
-                    }
-                } else {
-                    this.app.workspace.trigger('file-menu', menu, file);
-                }
-                // 新增在新分頁開啟選項
-                menu.addItem((item) => {
-                    item
-                        .setTitle(t('open_in_new_tab'))
-                        .setIcon('external-link')
-                        .setSection?.("open")
-                        .onClick(() => {
-                            if (selectedFiles.length > 1) {
-                                // 如果多個檔案被選中，開啟所有文件檔案
-                                const documentFiles = selectedFiles.filter(f => isDocumentFile(f));
-                                for (const docFile of documentFiles) {
-                                    this.app.workspace.getLeaf(true).openFile(docFile);
-                                }
-                            } else {
-                                this.app.workspace.getLeaf(true).openFile(file);
-                            }
-                        });
-                });
-
-                // 刪除選項
-                menu.addItem((item) => {
-                    (item as any).setWarning(true);
-                    item
-                        .setTitle(t('delete_note'))
-                        .setIcon('trash')
-                        .onClick(async () => {
-                            if (selectedFiles.length > 1) {
-                                // 刪除多個檔案
-                                for (const f of selectedFiles) {
-                                    await this.app.fileManager.trashFile(f);
-                                }
-                                // 清除選中狀態
-                                this.clearSelection();
-                            } else {
-                                // 刪除單個檔案
-                                await this.app.fileManager.trashFile(file);
-                            }
-                        });
-                });
-                menu.showAtMouseEvent(event);
-            });
         }
 
         if(Platform.isDesktop) {

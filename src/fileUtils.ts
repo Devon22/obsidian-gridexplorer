@@ -184,7 +184,6 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
     const settings = gridView.plugin.settings;
     const sourceMode = gridView.sourceMode;
     const sourcePath = gridView.sourcePath;
-    const searchQuery = gridView.searchQuery;
     const randomNoteIncludeMedia = gridView.randomNoteIncludeMedia;
 
     if (sourceMode === 'folder' && sourcePath) {
@@ -200,10 +199,8 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
                     (settings.showMediaFiles && isMediaFile(file))) {
                     return true;
                 }
-                
                 return false;
             });
-            
             return sortFiles(files, gridView);
         }
         return [];
@@ -222,11 +219,7 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
             }
         }
         return [];
-    } else if (sourceMode === 'backlinks') {
-        if(searchQuery !== '') {
-            return [];
-        }
-        
+    } else if (sourceMode === 'backlinks') {        
         // 反向連結模式：找出所有引用當前筆記的檔案
         const activeFile = app.workspace.getActiveFile();
         if (!activeFile) {
