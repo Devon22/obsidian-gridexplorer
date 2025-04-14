@@ -1282,6 +1282,11 @@ export class GridView extends ItemView {
                         // 創建日期分隔器
                         const dateDivider = container.createDiv('ge-date-divider');
                         dateDivider.textContent = currentDateString;
+                        
+                        // 針對 iOS 設備進行特殊處理
+                        if (Platform.isIosApp) {
+                            dateDivider.style.width = 'calc(100% - 16px)';
+                        }
                     }
                 }
                 
@@ -1353,7 +1358,7 @@ export class GridView extends ItemView {
                                 }
                             } else {
                                 // 開啟文件檔案
-                                this.app.workspace.getLeaf().openFile(file);
+                                this.app.workspace.getLeaf(true).openFile(file);
                             }
                         }
                         event.preventDefault();

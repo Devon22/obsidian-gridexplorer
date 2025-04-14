@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from './GridView';
-
+import { isDocumentFile, isMediaFile } from './fileUtils';
 //檔案監聽器
 export class FileWatcher {
     private plugin: GridExplorerPlugin;
@@ -24,14 +24,19 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note') {
+                    if(this.gridView.sourceMode === 'random-note' || this.gridView.sourceMode === 'bookmarks') {
                         return;
-                    }
-                    if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
-                        const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
-                        if (fileDirPath === this.gridView.sourcePath) {
+                    } else if (this.gridView.sourceMode === 'recent-files') {
+                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
                             this.gridView.render();
-                        } 
+                        }
+                    } else if (this.gridView.sourceMode === 'folder') {
+                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
+                            const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
+                            if (fileDirPath === this.gridView.sourcePath) {
+                                this.gridView.render();
+                            } 
+                        }
                     } else {
                         this.gridView.render();
                     }
@@ -43,14 +48,19 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('delete', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note') {
+                    if(this.gridView.sourceMode === 'random-note' || this.gridView.sourceMode === 'bookmarks') {
                         return;
-                    }
-                    if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
-                        const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
-                        if (fileDirPath === this.gridView.sourcePath) {
+                    } else if (this.gridView.sourceMode === 'recent-files') {
+                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
                             this.gridView.render();
-                        } 
+                        }
+                    } else if (this.gridView.sourceMode === 'folder') {
+                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
+                            const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
+                            if (fileDirPath === this.gridView.sourcePath) {
+                                this.gridView.render();
+                            } 
+                        }
                     } else {
                         this.gridView.render();
                     }
@@ -64,13 +74,14 @@ export class FileWatcher {
                 if (file instanceof TFile) {
                     if(this.gridView.sourceMode === 'random-note') {
                         return;
-                    }
-                    if (this.gridView.sourceMode === 'folder' && this.gridView.sourcePath && this.gridView.searchQuery === '') {
-                        const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
-                        const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
-                        if (fileDirPath === this.gridView.sourcePath || oldDirPath === this.gridView.sourcePath) {
-                            this.gridView.render();
-                        } 
+                    } else if (this.gridView.sourceMode === 'folder') {
+                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
+                            const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
+                            const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
+                            if (fileDirPath === this.gridView.sourcePath || oldDirPath === this.gridView.sourcePath) {
+                                this.gridView.render();
+                            } 
+                        }
                     } else {
                         this.gridView.render();
                     }
