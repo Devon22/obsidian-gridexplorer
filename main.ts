@@ -62,6 +62,21 @@ export default class GridExplorerPlugin extends Plugin {
             }
         });
 
+        // 註冊開啟外部連結指令
+        this.addCommand({
+            id: 'view-outgoinglinks-in-grid-view',
+            name: t('open_outgoinglinks_in_grid_view'),
+            callback: () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile) {
+                    this.activateView('outgoinglinks');
+                } else {
+                    // 如果沒有當前筆記，則打開根目錄
+                    this.openNoteInFolder(this.app.vault.getRoot());
+                }
+            }
+        });
+
         // 註冊開啟最近筆記指令
         this.addCommand({
             id: 'view-recent-files-in-grid-view',
@@ -120,11 +135,24 @@ export default class GridExplorerPlugin extends Plugin {
                             ogSubmenu.addItem((item) => {
                                 item
                                     .setTitle(t('open_backlinks_in_grid_view'))
-                                    .setIcon('paperclip')
+                                    .setIcon('links-coming-in')
                                     .onClick(() => {
                                         this.app.workspace.getLeaf().openFile(file);
                                         setTimeout(() => {
                                             this.activateView('backlinks');
+                                        }, 100);
+                                    });
+                            });
+                        }
+                        if (this.settings.showOutgoinglinksMode) {
+                            ogSubmenu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_outgoinglinks_in_grid_view'))
+                                    .setIcon('links-going-out')
+                                    .onClick(() => {
+                                        this.app.workspace.getLeaf().openFile(file);
+                                        setTimeout(() => {
+                                            this.activateView('outgoinglinks');
                                         }, 100);
                                     });
                             });

@@ -123,6 +123,28 @@ export class FolderSelectionModal extends Modal {
                 this.folderOptions.push(backlinksOption);
             }
         }
+
+        // 建立外部連結選項
+        if (this.plugin.settings.showOutgoinglinksMode) {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) {
+                const activeFileName = activeFile ? `: ${activeFile.basename}` : '';
+                const outgoinglinksOption = this.folderOptionsContainer.createEl('div', {
+                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    text: `🔗 ${t('outgoinglinks_mode')}${activeFileName}`
+                });
+
+                outgoinglinksOption.addEventListener('click', () => {
+                    if (this.activeView) {
+                        this.activeView.setSource('outgoinglinks', '', true);
+                    } else {
+                        this.plugin.activateView('outgoinglinks');
+                    }
+                    this.close();
+                });
+                this.folderOptions.push(outgoinglinksOption);
+            }
+        }
         
         // 建立最近檔案選項
         if (this.plugin.settings.showRecentFilesMode) {

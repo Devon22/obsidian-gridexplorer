@@ -21,6 +21,7 @@ export interface GallerySettings {
     showBookmarksMode: boolean; // 是否顯示書籤模式
     showSearchMode: boolean; // 是否顯示搜尋結果模式
     showBacklinksMode: boolean; // 是否顯示反向連結模式
+    showOutgoinglinksMode: boolean; // 是否顯示外部連結模式
     showAllFilesMode: boolean; // 是否顯示所有檔案模式
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
     showRecentFilesMode: boolean; // 是否顯示最近筆記模式
@@ -54,9 +55,10 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
     showBacklinksMode: true, // 預設顯示反向連結模式
+    showOutgoinglinksMode: false, // 預設不顯示外部連結模式
     showAllFilesMode: false, // 預設不顯示所有檔案模式
     showRandomNoteMode: false, // 預設不顯示隨機筆記模式
-    showRecentFilesMode: true, // 預設不顯示最近筆記模式
+    showRecentFilesMode: true, // 預設顯示最近筆記模式
     recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
     randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
@@ -128,6 +130,18 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showBacklinksMode)
                     .onChange(async (value) => {
                         this.plugin.settings.showBacklinksMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 設定是否顯示外部連結模式
+        new Setting(containerEl)
+            .setName(t('show_outgoinglinks_mode'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showOutgoinglinksMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showOutgoinglinksMode = value;
                         await this.plugin.saveSettings();
                     });
             });

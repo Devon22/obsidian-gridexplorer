@@ -24,7 +24,9 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note' || this.gridView.sourceMode === 'bookmarks') {
+                    if(this.gridView.sourceMode === 'random-note' || 
+                        this.gridView.sourceMode === 'bookmarks' ||
+                        this.gridView.sourceMode === 'outgoinglinks') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
                         if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
@@ -36,6 +38,10 @@ export class FileWatcher {
                             if (fileDirPath === this.gridView.sourcePath) {
                                 this.gridView.render();
                             } 
+                        }
+                    } else if (this.gridView.sourceMode === 'backlinks') {
+                        if(isDocumentFile(file)) {
+                            this.gridView.render();
                         }
                     } else {
                         this.gridView.render();
@@ -102,7 +108,8 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.workspace.on('file-open', (file) => {
                 if (file instanceof TFile) {
-                    if (this.gridView.sourceMode === 'backlinks' && this.gridView.searchQuery === '') {
+                    if ((this.gridView.sourceMode === 'backlinks' || this.gridView.sourceMode === 'outgoinglinks') 
+                        && this.gridView.searchQuery === '') {
                         this.gridView.render();
                     }
                 }

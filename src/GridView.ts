@@ -70,7 +70,9 @@ export class GridView extends ItemView {
         } else if (this.sourceMode === 'search') {
             return 'search';
         } else if (this.sourceMode === 'backlinks') {
-            return 'paperclip';
+            return 'links-coming-in';
+        } else if (this.sourceMode === 'outgoinglinks') {
+            return 'links-going-out';
         } else if (this.sourceMode === 'random-note') {
             return 'dice';
         } else if (this.sourceMode === 'recent-files') {
@@ -93,6 +95,8 @@ export class GridView extends ItemView {
             return t('search_results');
         } else if (this.sourceMode === 'backlinks') {
             return t('backlinks_mode');
+        } else if (this.sourceMode === 'outgoinglinks') {
+            return t('outgoinglinks_mode');
         } else if (this.sourceMode === 'random-note') {
             return t('random_note_mode');
         } else if (this.sourceMode === 'recent-files') {
@@ -438,7 +442,11 @@ export class GridView extends ItemView {
                                 break;
                             case 'backlinks':
                                 displayText = t('backlinks_mode');
-                                icon = 'paperclip';
+                                icon = 'links-coming-in';
+                                break;
+                            case 'outgoinglinks':
+                                displayText = t('outgoinglinks_mode');
+                                icon = 'links-going-out';
                                 break;
                             case 'recent-files':
                                 displayText = t('recent_files_mode');

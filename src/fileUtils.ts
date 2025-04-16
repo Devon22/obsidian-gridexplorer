@@ -67,9 +67,9 @@ export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
     const shouldUseSimpleSort = isNonDateSort || !hasAnyDateField;
     if (shouldUseSimpleSort) {
         if (sortType === 'name-asc') {
-            return files.sort((a, b) => a.basename.localeCompare(b.basename));
+            return files.sort((a, b) => a.basename.localeCompare(b.basename, undefined, { numeric: true, sensitivity: 'base' }));
         } else if (sortType === 'name-desc') {
-            return files.sort((a, b) => b.basename.localeCompare(a.basename));
+            return files.sort((a, b) => b.basename.localeCompare(a.basename, undefined, { numeric: true, sensitivity: 'base' }));
         } else if (sortType === 'mtime-desc') {
             return files.sort((a, b) => b.stat.mtime - a.stat.mtime);
         } else if (sortType === 'mtime-asc') {
@@ -239,6 +239,29 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
             }
 
         return sortFiles(Array.from(backlinks) as TFile[], gridView);
+    } else if (sourceMode === 'outgoinglinks') {
+        // 外部連結模式：找出當前筆記所引用的檔案
+        const activeFile = app.workspace.getActiveFile();
+        if (!activeFile) {
+            return [];
+        }
+
+        const outgoingLinks = new Set<TFile>();
+        // 使用 resolvedLinks 來找出外部連結
+        const resolvedLinks = app.metadataCache.resolvedLinks;
+        const fileLinks = resolvedLinks[activeFile.path];
+        
+        if (fileLinks) {
+            for (const targetPath of Object.keys(fileLinks)) {
+                const targetFile = app.vault.getAbstractFileByPath(targetPath) as TFile;
+                if (targetFile && (isDocumentFile(targetFile) || 
+                    (settings.showMediaFiles && isMediaFile(targetFile)))) {
+                    outgoingLinks.add(targetFile);
+                }
+            }
+        }
+
+        return sortFiles(Array.from(outgoingLinks), gridView);
     } else if(sourceMode === 'bookmarks') {
         // 書籤模式
         const bookmarksPlugin = (app as any).internalPlugins.plugins.bookmarks;
