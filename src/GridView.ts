@@ -1,5 +1,4 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform } from 'obsidian';
-import { setIcon, getFrontMatterInfo } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo } from 'obsidian';
 import { showFolderSelectionModal } from './FolderSelectionModal';
 import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';

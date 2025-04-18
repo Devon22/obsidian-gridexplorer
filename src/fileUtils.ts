@@ -1,4 +1,4 @@
-import { TFile, TFolder } from 'obsidian';
+import { TFile, TFolder, getFrontMatterInfo } from 'obsidian';
 import { type GallerySettings } from './settings';
 import { GridView } from './GridView';
 
@@ -240,7 +240,7 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
 
         return sortFiles(Array.from(backlinks) as TFile[], gridView);
     } else if (sourceMode === 'outgoinglinks') {
-        // 外部連結模式：找出當前筆記所引用的檔案
+        // 外部連結模式：找出當前筆記所引用的檔案，並包含所有媒體連結
         const activeFile = app.workspace.getActiveFile();
         if (!activeFile) {
             return [];
@@ -258,6 +258,34 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
                     (settings.showMediaFiles && isMediaFile(targetFile)))) {
                     outgoingLinks.add(targetFile);
                 }
+            }
+        }
+
+        // 讀取目前筆記內容，找出所有媒體連結
+        if (settings.showMediaFiles) {
+            try {
+                const content = await app.vault.cachedRead(activeFile);
+                // 去除 frontmatter
+                const frontMatterInfo = getFrontMatterInfo(content);
+                const contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart);
+
+                // 正則找出所有媒體連結
+                const mediaMatches = Array.from(contentWithoutFrontmatter.matchAll(/(?:!\[\[(.*?)(?:\|.*?)?\]\]|!\[(.*?)\]\((.*?)\))/g));
+                for (const match of mediaMatches) {
+                    // 內部連結 ![[xxx]]
+                    let mediaPath = match[1] || match[3];
+                    if (mediaPath) {
+                        // 處理內部連結路徑（去除 | 之後的部分）
+                        mediaPath = mediaPath.split('|')[0].trim();
+                        // 取得對應的 TFile
+                        const mediaFile = app.metadataCache.getFirstLinkpathDest(mediaPath, activeFile.path);
+                        if (mediaFile && isMediaFile(mediaFile)) {
+                            outgoingLinks.add(mediaFile);
+                        }
+                    }
+                }
+            } catch (e) {
+                // 忽略讀取錯誤
             }
         }
 
