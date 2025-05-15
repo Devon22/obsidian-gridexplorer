@@ -902,6 +902,11 @@ export class GridView extends ItemView {
                         menu.showAtMouseEvent(event);
                     });
                 }
+                
+                // 資料夾渲染完插入 break（僅當有資料夾時）
+                if (subfolders.length > 0) {
+                    container.createDiv('ge-break');
+                }
             }
         }
 

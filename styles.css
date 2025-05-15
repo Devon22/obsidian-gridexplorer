@@ -60,6 +60,15 @@
     justify-content: flex-start;
 }
 
+.ge-break {
+    grid-column: 1 / -1;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-primary);
+}
+
 .ge-title-container {
     display: flex;
     align-items: center;
