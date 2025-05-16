@@ -1091,6 +1091,18 @@ export class GridView extends ItemView {
                                     // 設置預覽內容文字顏色
                                     pEl.style.color = `rgba(var(--color-${colorValue}-rgb), 0.7)`;
                                 }
+                                const hasTitleField = !!this.plugin.settings.noteTitleField;
+                                if (hasTitleField) {
+                                    const titleField = this.plugin.settings.noteTitleField;
+                                    const titleValue = metadata?.[titleField];
+                                    if (titleValue) {
+                                        // 將標題文字設為 frontmatter 的 title
+                                        const titleEl = fileEl.querySelector('.ge-title');
+                                        if (titleEl) {
+                                            titleEl.textContent = titleValue;
+                                        }
+                                    }
+                                }
                             }
 
                             imageUrl = await findFirstImageInNote(this.app, content);

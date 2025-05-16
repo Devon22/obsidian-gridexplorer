@@ -27,6 +27,7 @@ export interface GallerySettings {
     showRecentFilesMode: boolean; // 是否顯示最近筆記模式
     customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
     recentSources: string[]; // 最近的瀏覽記錄
+    noteTitleField: string; // 筆記標題的欄位名稱
     modifiedDateField: string;  // 修改時間的欄位名稱
     createdDateField: string;   // 建立時間的欄位名稱
     recentFilesCount: number; // 最近筆記模式顯示的筆數
@@ -63,8 +64,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
-    modifiedDateField: '',
-    createdDateField: '',
+    noteTitleField: 'title', // 筆記標題的欄位名稱
+    modifiedDateField: '', // 修改時間的欄位名稱
+    createdDateField: '', // 建立時間的欄位名稱
     showNoteTags: false, // 預設不顯示筆記標籤
     dateDividerMode: 'none', // 預設不使用日期分隔器
 };
@@ -285,6 +287,18 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+
+        // 筆記標題欄位名稱設定
+        new Setting(containerEl)
+        .setName(t('note_title_field'))
+        .setDesc(t('note_title_field_desc'))
+        .addText(text => text
+            .setPlaceholder('title')
+            .setValue(this.plugin.settings.noteTitleField)
+            .onChange(async (value) => {
+                this.plugin.settings.noteTitleField = value;
+                await this.plugin.saveSettings(false);
+            }));
 
         // 修改時間欄位名稱設定
         new Setting(containerEl)
