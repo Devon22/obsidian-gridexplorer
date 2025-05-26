@@ -213,6 +213,22 @@ export class GridView extends ItemView {
                             workspace.revealLeaf(leaf);
                         });
                 });
+                //如果目前是資料夾模式且有資料夾筆記，則增加"打開資料夾筆記"選項
+                if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
+                    const folderName = this.sourcePath.split('/').pop() || '';
+                    const notePath = `${this.sourcePath}/${folderName}.md`;
+                    const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+                    if (noteFile instanceof TFile) {
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('open_folder_note'))
+                                .setIcon('panel-left-open') 
+                                .onClick(() => {
+                                    this.app.workspace.getLeaf().openFile(noteFile);
+                                });
+                        });
+                    }
+                }
                 menu.addItem((item) => {
                     item
                         .setTitle(t('open_settings'))
@@ -615,9 +631,6 @@ export class GridView extends ItemView {
             });
         }
 
-        // 創建資料夾夾名稱區域
-        // headerButtonsDiv.createDiv('ge-foldername-content');
-
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -684,15 +697,9 @@ export class GridView extends ItemView {
         // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
         // if (this.sourceMode === 'folder' && this.searchQuery === '' && this.sourcePath !== '/') {
         //     const folderName = this.sourcePath.split('/').pop();
-        //     const folderNameContainer = this.containerEl.querySelector('.ge-foldername-content') as HTMLElement;
+        //     const folderNameContainer = container.createDiv('ge-foldername-content');
         //     if (folderNameContainer) {
-        //         folderNameContainer.createEl('span', { text: `📁 ${folderName}` });
-        //     }
-        // } else {
-        //     const folderNameContainer = this.containerEl.querySelector('.ge-foldername-content') as HTMLElement;
-        //     if (folderNameContainer) {
-        //         folderNameContainer.empty();
-        //         folderNameContainer.style.display = 'none';
+        //         folderNameContainer.createEl('span', { text: `/ ${folderName}` });
         //     }
         // }
 
@@ -1251,7 +1258,8 @@ export class GridView extends ItemView {
                     
                     // 根據排序類型獲取日期時間戳
                     if (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) {
-                        const isModifiedTime = sortType.startsWith('mtime-');
+                        // 判斷是否以修改日期排序，最近檔案模式使用修改日期排序
+                        const isModifiedTime = sortType.startsWith('mtime-') || this.sourceMode === 'recent-files';
                         
                         // 檢查是否是 Markdown 文件，且有設定對應的 frontmatter 字段
                         let frontMatterDate = null;
