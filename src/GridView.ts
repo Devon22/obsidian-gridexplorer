@@ -808,6 +808,15 @@ export class GridView extends ItemView {
                                 border-color: rgba(var(--color-${colorValue}-rgb), 0.5);
                             `);
                         }
+                        const iconValue = metadata?.icon;
+                        if (iconValue) {
+                            // 修改原本的title文字
+                            const title = folderEl.querySelector('.ge-title');
+                            if (title) {
+                                title.textContent = `${iconValue} ${folder.name}`;
+                            }
+                        }
+                        
                     }
                     
                     // 點擊時進入子資料夾
@@ -839,7 +848,7 @@ export class GridView extends ItemView {
                                     .setIcon('settings-2')
                                     .onClick(() => {
                                         if (folder instanceof TFolder) {
-                                            showFolderNoteSettingsModal(this.app, this.plugin, folder);
+                                            showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
                                         }
                                     });
                             });
@@ -864,7 +873,7 @@ export class GridView extends ItemView {
                                     .setIcon('file-cog')
                                     .onClick(() => {
                                         if (folder instanceof TFolder) {
-                                            showFolderNoteSettingsModal(this.app, this.plugin, folder);
+                                            showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
                                         }
                                     });
                             });
@@ -1073,14 +1082,16 @@ export class GridView extends ItemView {
                             } else {
                                 contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
                             }
-                            let contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '');
-                            contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/```[\s\S]*$/,'').trim();
+                            let contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '')
+                                                                                    .replace(/```[\s\S]*$/,'');
 
                             //把開頭的標題整行刪除
                             if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
                                 contentWithoutMediaLinks = contentWithoutMediaLinks.split('\n').slice(1).join('\n');
                             }
                             
+                            contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
+
                             // 只取前 summaryLength 個字符作為預覽
                             const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
                             // 創建預覽內容

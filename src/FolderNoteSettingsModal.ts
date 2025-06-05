@@ -6,25 +6,29 @@ import { GridView } from './GridView';
 export interface FolderNoteSettings {
     sort: string;
     color: string;
+    icon: string;
 }
 
-export function showFolderNoteSettingsModal(app: App, plugin: GridExplorerPlugin, folder: TFolder) {
-    new FolderNoteSettingsModal(app, plugin, folder).open();
+export function showFolderNoteSettingsModal(app: App, plugin: GridExplorerPlugin, folder: TFolder, gridView: GridView) {
+    new FolderNoteSettingsModal(app, plugin, folder, gridView).open();
 }
 
 export class FolderNoteSettingsModal extends Modal {
     plugin: GridExplorerPlugin;
     folder: TFolder;
+    gridView: GridView;
     settings: FolderNoteSettings = {
         sort: '',
-        color: ''
+        color: '',
+        icon: '📁'
     };
     existingFile: TFile | null = null;
     
-    constructor(app: App, plugin: GridExplorerPlugin, folder: TFolder) {
+    constructor(app: App, plugin: GridExplorerPlugin, folder: TFolder, gridView: GridView) {
         super(app);
         this.plugin = plugin;
         this.folder = folder;
+        this.gridView = gridView;
         
         // 檢查同名筆記是否存在
         const notePath = `${folder.path}/${folder.name}.md`;
@@ -37,6 +41,12 @@ export class FolderNoteSettingsModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         contentEl.empty();
+
+        // 如果有 GridView 實例，禁用其鍵盤導航
+        if (this.gridView) {
+            this.gridView.disableKeyboardNavigation();
+        }
+        
 
         // 如果筆記已存在，讀取其設定
         if (this.existingFile) {
@@ -87,6 +97,19 @@ export class FolderNoteSettingsModal extends Modal {
                     });
             });
 
+        // 圖示選項
+        new Setting(contentEl)
+            .setName(t('folder_icon'))
+            .setDesc(t('folder_icon_desc'))
+            .addText(text => {
+                text
+                    .setPlaceholder('📁')
+                    .setValue(this.settings.icon || '📁')
+                    .onChange(value => {
+                        this.settings.icon = value || '📁';
+                    });
+            });
+
         // 按鈕區域
         const buttonSetting = new Setting(contentEl);
 
@@ -119,6 +142,11 @@ export class FolderNoteSettingsModal extends Modal {
                 if ('color' in fileCache.frontmatter) {
                     this.settings.color = fileCache.frontmatter.color || '';
                 }
+                
+                // 讀取圖示設定
+                if ('icon' in fileCache.frontmatter) {
+                    this.settings.icon = fileCache.frontmatter.icon || '📁';
+                }            
             }
         } catch (error) {
             console.error('無法讀取資料夾筆記設定', error);
@@ -148,6 +176,7 @@ export class FolderNoteSettingsModal extends Modal {
             await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
                 frontmatter['sort'] = this.settings.sort;
                 frontmatter['color'] = this.settings.color;
+                frontmatter['icon'] = this.settings.icon;
             });
 
             // 強制更新 metadata cache
@@ -170,5 +199,10 @@ export class FolderNoteSettingsModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
+
+        // 如果有 GridView 實例，重新啟用其鍵盤導航
+        if (this.gridView) {
+            this.gridView.enableKeyboardNavigation();
+        }
     }
 }
