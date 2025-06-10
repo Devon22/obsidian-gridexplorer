@@ -15,34 +15,27 @@ import GridExplorerPlugin from '../main';
 // 定義網格視圖
 export class GridView extends ItemView {
     plugin: GridExplorerPlugin;
-    sourceMode: string; // 模式選擇
-    sourcePath: string; // 用於資料夾模式的路徑
+    sourceMode: string = ''; // 模式選擇
+    sourcePath: string = ''; // 用於資料夾模式的路徑
     sortType: string; // 排序模式
-    folderSortType: string; // 資料夾排序模式
-    searchQuery: string; // 搜尋關鍵字
-    searchAllFiles: boolean; // 是否搜尋所有筆記
-    searchMediaFiles: boolean; // 是否搜尋媒體檔案
-    randomNoteIncludeMedia: boolean; // 隨機筆記是否包含圖片和影片
+    folderSortType: string = ''; // 資料夾排序模式
+    searchQuery: string = ''; // 搜尋關鍵字
+    searchAllFiles: boolean = true; // 是否搜尋所有筆記
+    searchMediaFiles: boolean = false; // 是否搜尋媒體檔案
+    randomNoteIncludeMedia: boolean = false; // 隨機筆記是否包含圖片和影片
     selectedItemIndex: number = -1; // 當前選中的項目索引
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
     gridItems: HTMLElement[] = []; // 存儲所有網格項目的引用
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
-    keyboardNavigationEnabled: boolean = true; // 是否啟用鍵盤導航
     fileWatcher: FileWatcher;
     recentSources: string[] = []; // 歷史記錄
+    minMode: boolean = false; // 最小模式
     
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.containerEl.addClass('ge-grid-view-container');
-        this.sourceMode = ''; // 模式選擇
-        this.sourcePath = ''; // 用於資料夾模式的路徑
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
-        this.folderSortType = ''; // 資料夾排序模式
-        this.searchQuery = ''; // 搜尋關鍵字
-        this.searchAllFiles = true; // 是否搜尋所有筆記
-        this.searchMediaFiles = false; // 是否搜尋媒體檔案
-        this.randomNoteIncludeMedia = false; // 隨機筆記是否包含圖片和影片
         
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -229,6 +222,20 @@ export class GridView extends ItemView {
                         });
                     }
                 }
+                menu.addItem((item) => {
+                    item
+                        .setTitle(t(this.minMode ? 'close_min_mode' : 'min_mode'))
+                        .setIcon(this.minMode ? 'maximize-2' : 'minimize-2')
+                        .onClick(() => {
+                            this.minMode = !this.minMode;
+                            const titleElement = this.containerEl.querySelector('.ge-header-buttons')?.querySelector('.ge-title');
+                            if (titleElement) {
+                                titleElement.textContent = this.minMode ? t('min_mode') : t('close_min_mode');
+                            }
+                            this.app.workspace.requestSaveLayout();
+                            this.render();
+                        });
+                });
                 menu.addItem((item) => {
                     item
                         .setTitle(t('open_settings'))
@@ -657,7 +664,7 @@ export class GridView extends ItemView {
         container.empty();
         container.addClass('ge-grid-container');
         container.style.setProperty('--grid-item-width', this.plugin.settings.gridItemWidth + 'px');
-        if (this.plugin.settings.gridItemHeight === 0) {
+        if (this.plugin.settings.gridItemHeight === 0 || this.minMode) {
             container.style.setProperty('--grid-item-height', '100%');
         } else {
             container.style.setProperty('--grid-item-height', this.plugin.settings.gridItemHeight + 'px');
@@ -1076,26 +1083,41 @@ export class GridView extends ItemView {
                             const content = await this.app.vault.cachedRead(file);
                             const frontMatterInfo = getFrontMatterInfo(content);
                             
-                            let contentWithoutFrontmatter = '';
-                            if (summaryLength < 500) {
-                                contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, 500);
-                            } else {
-                                contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
-                            }
-                            let contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '')
-                                                                                    .replace(/```[\s\S]*$/,'');
+                            let pEl: HTMLElement | null = null;
+                            if (!this.minMode) {
 
-                            //把開頭的標題整行刪除
-                            if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
-                                contentWithoutMediaLinks = contentWithoutMediaLinks.split('\n').slice(1).join('\n');
-                            }
-                            
-                            contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
+                                let contentWithoutFrontmatter = '';
+                                if (summaryLength < 500) {
+                                    contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, 500);
+                                } else {
+                                    contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
+                                }
 
-                            // 只取前 summaryLength 個字符作為預覽
-                            const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
-                            // 創建預覽內容
-                            const pEl = contentArea.createEl('p', { text: preview.trim() });
+                                let contentWithoutMediaLinks = '';
+                                if (this.plugin.settings.showCodeBlocksInSummary) {
+                                    // 不過濾code block
+                                    contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '');
+                                } else {
+                                    contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '')
+                                                                                        .replace(/```[\s\S]*$/,'');                                                 
+                                }
+
+                                //把開頭的標題整行刪除
+                                if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
+                                    contentWithoutMediaLinks = contentWithoutMediaLinks.split('\n').slice(1).join('\n');
+                                }
+                                
+                                if (!this.plugin.settings.showCodeBlocksInSummary) {
+                                    // 不過濾code block的情況下，包含這些特殊符號
+                                    contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
+                                }
+
+                                // 只取前 summaryLength 個字符作為預覽
+                                const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
+                                
+                                // 創建預覽內容
+                                pEl = contentArea.createEl('p', { text: preview.trim() });
+                            } 
 
                             if (frontMatterInfo.exists) {
                                 const metadata = this.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -1107,7 +1129,9 @@ export class GridView extends ItemView {
                                         border-color: rgba(var(--color-${colorValue}-rgb), 0.5);
                                     `);
                                     // 設置預覽內容文字顏色
-                                    pEl.style.color = `rgba(var(--color-${colorValue}-rgb), 0.7)`;
+                                    if (pEl) {
+                                        pEl.style.color = `rgba(var(--color-${colorValue}-rgb), 0.7)`;
+                                    }
                                 }
                                 const hasTitleField = !!this.plugin.settings.noteTitleField;
                                 if (hasTitleField) {
@@ -1127,7 +1151,7 @@ export class GridView extends ItemView {
                         } else {
                             // 其他檔案顯示副檔名
                             contentArea.createEl('p', { text: file.extension.toUpperCase() });
-                        }   
+                        }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
                         if (file.extension === 'md' && this.plugin.settings.showNoteTags) {
@@ -1204,39 +1228,41 @@ export class GridView extends ItemView {
                     }
                     
                     // 載入圖片預覽
-                    const imageArea = fileEl.querySelector('.ge-image-area');
-                    if (imageArea && !imageArea.hasAttribute('data-loaded')) {
-                        // 根據檔案類型處理
-                        if (isImageFile(file)) {
-                            // 直接顯示圖片
-                            const img = imageArea.createEl('img');
-                            img.src = this.app.vault.getResourcePath(file);
-                            imageArea.setAttribute('data-loaded', 'true');
-                        } else if (isVideoFile(file)) {
-                            // 根據設定決定是否顯示影片縮圖
-                            if (this.plugin.settings.showVideoThumbnails) {
-                                // 顯示影片縮圖
-                                const video = imageArea.createEl('video');
-                                video.src = this.app.vault.getResourcePath(file);
-                            } else {
-                                // 顯示播放圖示
-                                const videoThumb = imageArea.createDiv('ge-video-thumbnail');
-                                setIcon(videoThumb, 'play-circle');
-                            }
-                            imageArea.setAttribute('data-loaded', 'true');
-                        } else if (file.extension === 'md') {
-                            // Markdown 檔案尋找內部圖片
-                            if (imageUrl) {
+                    if (!this.minMode) {
+                        const imageArea = fileEl.querySelector('.ge-image-area');
+                        if (imageArea && !imageArea.hasAttribute('data-loaded')) {
+                            // 根據檔案類型處理
+                            if (isImageFile(file)) {
+                                // 直接顯示圖片
                                 const img = imageArea.createEl('img');
-                                img.src = imageUrl;
+                                img.src = this.app.vault.getResourcePath(file);
                                 imageArea.setAttribute('data-loaded', 'true');
+                            } else if (isVideoFile(file)) {
+                                // 根據設定決定是否顯示影片縮圖
+                                if (this.plugin.settings.showVideoThumbnails) {
+                                    // 顯示影片縮圖
+                                    const video = imageArea.createEl('video');
+                                    video.src = this.app.vault.getResourcePath(file);
+                                } else {
+                                    // 顯示播放圖示
+                                    const videoThumb = imageArea.createDiv('ge-video-thumbnail');
+                                    setIcon(videoThumb, 'play-circle');
+                                }
+                                imageArea.setAttribute('data-loaded', 'true');
+                            } else if (file.extension === 'md') {
+                                // Markdown 檔案尋找內部圖片
+                                if (imageUrl) {
+                                    const img = imageArea.createEl('img');
+                                    img.src = imageUrl;
+                                    imageArea.setAttribute('data-loaded', 'true');
+                                } else {
+                                    // 如果沒有圖片，移除圖片區域
+                                    imageArea.remove();
+                                }
                             } else {
-                                // 如果沒有圖片，移除圖片區域
+                                // 其他檔案類型，移除圖片區域
                                 imageArea.remove();
                             }
-                        } else {
-                            // 其他檔案類型，移除圖片區域
-                            imageArea.remove();
                         }
                     }
                     
@@ -1373,7 +1399,9 @@ export class GridView extends ItemView {
                 titleEl.setAttribute('title', file.basename);
                 
                 // 創建圖片區域，但先不載入圖片
-                fileEl.createDiv('ge-image-area');
+                if (!this.minMode) {
+                    fileEl.createDiv('ge-image-area');
+                }
                 
                 // 開始觀察這個元素
                 observer.observe(fileEl);
@@ -1682,14 +1710,11 @@ export class GridView extends ItemView {
 
     // 處理鍵盤導航
     handleKeyDown(event: KeyboardEvent) {
-        // 如果鍵盤導航被禁用或沒有項目，直接返回
-        if (!this.keyboardNavigationEnabled || this.gridItems.length === 0) return;
+        // 如果沒有項目，直接返回
+        if (this.gridItems.length === 0) return;
 
-        // 計算每行的項目數量（根據容器寬度和項目寬度計算）
-        const container = this.containerEl.children[1] as HTMLElement;
-        const containerWidth = container.clientWidth;
-        const itemWidth = this.plugin.settings.gridItemWidth + 20; // 項目寬度加上間距
-        const itemsPerRow = Math.max(1, Math.floor(containerWidth / itemWidth));
+        // 如果有Modal視窗，直接返回
+        if (document.querySelector('.modal-container')) return;
         
         let newIndex = this.selectedItemIndex;
 
@@ -1731,13 +1756,56 @@ export class GridView extends ItemView {
                 event.preventDefault();
                 break;
             case 'ArrowDown':
-                newIndex = Math.min(this.gridItems.length - 1, this.selectedItemIndex + itemsPerRow);
+                // 使用基於位置的導航而非固定行數
+                if (this.selectedItemIndex >= 0) {
+                    const currentItem = this.gridItems[this.selectedItemIndex];
+                    const currentRect = currentItem.getBoundingClientRect();
+                    const currentCenterX = currentRect.left + currentRect.width / 2;
+                    const currentBottom = currentRect.bottom;
+                    
+                    // 尋找下方最近的項目
+                    let closestItem = -1;
+                    let minDistance = Number.MAX_VALUE;
+                    let minVerticalDistance = Number.MAX_VALUE;
+                    
+                    for (let i = 0; i < this.gridItems.length; i++) {
+                        if (i === this.selectedItemIndex) continue;
+                        
+                        const itemRect = this.gridItems[i].getBoundingClientRect();
+                        const itemCenterX = itemRect.left + itemRect.width / 2;
+                        const itemTop = itemRect.top;
+                        
+                        // 只考慮下方的項目
+                        if (itemTop <= currentBottom) continue;
+                        
+                        // 計算水平和垂直距離
+                        const horizontalDistance = Math.abs(itemCenterX - currentCenterX);
+                        const verticalDistance = itemTop - currentBottom;
+                        
+                        // 優先考慮垂直距離最小的項目
+                        if (verticalDistance < minVerticalDistance || 
+                            (verticalDistance === minVerticalDistance && horizontalDistance < minDistance)) {
+                            minVerticalDistance = verticalDistance;
+                            minDistance = horizontalDistance;
+                            closestItem = i;
+                        }
+                    }
+                    
+                    if (closestItem !== -1) {
+                        newIndex = closestItem;
+                    } else {
+                        // 如果找不到下方項目，選擇最後一個項目
+                        newIndex = this.gridItems.length - 1;
+                    }
+                } else {
+                    newIndex = 0; // 如果沒有選中項目，選擇第一個
+                }
                 this.hasKeyboardFocus = true;
                 event.preventDefault();
                 break;
             case 'ArrowUp':
                 if (event.altKey) {
-                    // 如果按下 Alt + 左鍵，且是資料夾模式且不是根目錄
+                    // 如果按下 Alt + 上鍵，且是資料夾模式且不是根目錄
                     if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
                         // 獲取上一層資料夾路徑
                         const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
@@ -1747,7 +1815,50 @@ export class GridView extends ItemView {
                     }
                     break;
                 }
-                newIndex = Math.max(0, this.selectedItemIndex - itemsPerRow);
+                // 使用基於位置的導航而非固定行數
+                if (this.selectedItemIndex >= 0) {
+                    const currentItem = this.gridItems[this.selectedItemIndex];
+                    const currentRect = currentItem.getBoundingClientRect();
+                    const currentCenterX = currentRect.left + currentRect.width / 2;
+                    const currentTop = currentRect.top;
+                    
+                    // 尋找上方最近的項目
+                    let closestItem = -1;
+                    let minDistance = Number.MAX_VALUE;
+                    let minVerticalDistance = Number.MAX_VALUE;
+                    
+                    for (let i = 0; i < this.gridItems.length; i++) {
+                        if (i === this.selectedItemIndex) continue;
+                        
+                        const itemRect = this.gridItems[i].getBoundingClientRect();
+                        const itemCenterX = itemRect.left + itemRect.width / 2;
+                        const itemBottom = itemRect.bottom;
+                        
+                        // 只考慮上方的項目
+                        if (itemBottom >= currentTop) continue;
+                        
+                        // 計算水平和垂直距離
+                        const horizontalDistance = Math.abs(itemCenterX - currentCenterX);
+                        const verticalDistance = currentTop - itemBottom;
+                        
+                        // 優先考慮垂直距離最小的項目
+                        if (verticalDistance < minVerticalDistance || 
+                            (verticalDistance === minVerticalDistance && horizontalDistance < minDistance)) {
+                            minVerticalDistance = verticalDistance;
+                            minDistance = horizontalDistance;
+                            closestItem = i;
+                        }
+                    }
+                    
+                    if (closestItem !== -1) {
+                        newIndex = closestItem;
+                    } else {
+                        // 如果找不到上方項目，選擇第一個項目
+                        newIndex = 0;
+                    }
+                } else {
+                    newIndex = 0; // 如果沒有選中項目，選擇第一個
+                }
                 this.hasKeyboardFocus = true;
                 event.preventDefault();
                 break;
@@ -1918,7 +2029,8 @@ export class GridView extends ItemView {
                 searchQuery: this.searchQuery,
                 searchAllFiles: this.searchAllFiles,
                 searchMediaFiles: this.searchMediaFiles,
-                randomNoteIncludeMedia: this.randomNoteIncludeMedia
+                randomNoteIncludeMedia: this.randomNoteIncludeMedia,
+                minMode: this.minMode,
             }
         };
     }
@@ -1934,17 +2046,8 @@ export class GridView extends ItemView {
             this.searchAllFiles = state.state.searchAllFiles ?? true;
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
             this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
+            this.minMode = state.state.minMode ?? false;
             this.render();
         }
-    }
-
-    // 禁用鍵盤導航
-    disableKeyboardNavigation() {
-        this.keyboardNavigationEnabled = false;
-    }
-
-    // 啟用鍵盤導航
-    enableKeyboardNavigation() {
-        this.keyboardNavigationEnabled = true;
     }
 }

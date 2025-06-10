@@ -41,13 +41,7 @@ export class FolderNoteSettingsModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-
-        // 如果有 GridView 實例，禁用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.disableKeyboardNavigation();
-        }
         
-
         // 如果筆記已存在，讀取其設定
         if (this.existingFile) {
             await this.loadExistingSettings();
@@ -199,10 +193,5 @@ export class FolderNoteSettingsModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-
-        // 如果有 GridView 實例，重新啟用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.enableKeyboardNavigation();
-        }
     }
 }

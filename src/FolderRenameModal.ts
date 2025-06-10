@@ -25,11 +25,6 @@ export class FolderRenameModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        // 如果有 GridView 實例，禁用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.disableKeyboardNavigation();
-        }
-
         new Setting(contentEl)
             .setName(t('rename_folder'))
             .setDesc(t('enter_new_folder_name'))
@@ -75,10 +70,5 @@ export class FolderRenameModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-
-        // 如果有 GridView 實例，重新啟用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.enableKeyboardNavigation();
-        }
     }
 }

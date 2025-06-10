@@ -17,11 +17,6 @@ export class SearchModal extends Modal {
         contentEl.empty();
         new Setting(contentEl).setName(t('search')).setHeading();
 
-        // 如果有 GridView 實例，禁用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.disableKeyboardNavigation();
-        }
-
         // 創建搜尋輸入框容器
         const searchContainer = contentEl.createDiv('ge-search-container');
 
@@ -153,11 +148,6 @@ export class SearchModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-
-        // 如果有 GridView 實例，重新啟用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.enableKeyboardNavigation();
-        }
     }
 }
 

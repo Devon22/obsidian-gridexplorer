@@ -34,6 +34,7 @@ export interface GallerySettings {
     randomNoteCount: number; // 隨機筆記模式顯示的筆數
     showNoteTags: boolean; // 是否顯示筆記標籤
     dateDividerMode: string; // 日期分隔器模式：none, year, month, day
+    showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
 }
 
 // 預設設定
@@ -69,6 +70,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     createdDateField: '', // 建立時間的欄位名稱
     showNoteTags: false, // 預設不顯示筆記標籤
     dateDividerMode: 'none', // 預設不使用日期分隔器
+    showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
 };
 
 // 設定頁面類別
@@ -485,6 +487,16 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
+        // 是否在摘要中顯示程式碼區塊
+        new Setting(containerEl)
+        .setName(t('show_code_blocks_in_summary'))
+        .setDesc(t('show_code_blocks_in_summary_desc'))
+        .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.showCodeBlocksInSummary)
+            .onChange(async (value) => {
+                this.plugin.settings.showCodeBlocksInSummary = value;
+                await this.plugin.saveSettings();
+            }));
         
         
         // 忽略資料夾設定區域

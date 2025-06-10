@@ -250,10 +250,6 @@ export class FolderSelectionModal extends Modal {
                 this.updateSelection(index);
             });
         });
-
-        if(this.activeView) {
-            this.activeView.disableKeyboardNavigation();
-        }
     }
 
     // 處理鍵盤事件
@@ -366,9 +362,6 @@ export class FolderSelectionModal extends Modal {
     }
 
     onClose() {
-        if(this.activeView) {
-            this.activeView.enableKeyboardNavigation();
-        }
         const { contentEl } = this;
         contentEl.empty();
     }

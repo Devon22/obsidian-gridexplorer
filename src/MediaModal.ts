@@ -24,11 +24,6 @@ export class MediaModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         
-        // 如果有 GridView 實例，禁用其鍵盤導航
-        if (this.gridView) {
-            this.gridView.disableKeyboardNavigation();
-        }
-        
         // 設置 modal 樣式為全螢幕
         contentEl.empty();
         contentEl.style.width = '100%';
@@ -113,10 +108,8 @@ export class MediaModal extends Modal {
             this.handleWheel = null;
         }
         
-        // 如果有 GridView 實例，重新啟用其鍵盤導航並跳轉到當前選中的項目
+        // 如果有 GridView 實例，跳轉到當前選中的項目
         if (this.gridView) {
-            this.gridView.enableKeyboardNavigation();
-            
             // 找到當前媒體檔案在 GridView 中的索引
             const currentFile = this.mediaFiles[this.currentIndex];
             const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) => 
