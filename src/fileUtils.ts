@@ -2,6 +2,12 @@ import { TFile, TFolder, getFrontMatterInfo } from 'obsidian';
 import { type GallerySettings } from './settings';
 import { GridView } from './GridView';
 
+// 媒體檔案副檔名集合
+export const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg']);
+export const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogv']);
+export const AUDIO_EXTENSIONS = new Set(['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp']);
+export const DOCUMENT_EXTENSIONS = new Set(['md', 'pdf', 'canvas']);
+
 let customDocumentExtensions: string[] = [];
 
 // 更新自訂文件副檔名列表
@@ -18,28 +24,23 @@ export function updateCustomDocumentExtensions(settings: GallerySettings) {
 
 // 檢查檔案是否為文件檔案
 export function isDocumentFile(file: TFile): boolean {
-    const defaultDocumentExtensions = ['md', 'pdf', 'canvas'];
     const extension = file.extension.toLowerCase();
-    return defaultDocumentExtensions.includes(extension) || 
-            customDocumentExtensions.includes(extension);
+    return DOCUMENT_EXTENSIONS.has(extension) || customDocumentExtensions.includes(extension);
 }
 
 // 檢查檔案是否為圖片檔案
 export function isImageFile(file: TFile): boolean {
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
-    return imageExtensions.includes(file.extension.toLowerCase());
+    return IMAGE_EXTENSIONS.has(file.extension.toLowerCase());
 }
 
 // 檢查檔案是否為影片檔案
 export function isVideoFile(file: TFile): boolean {
-    const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogv'];
-    return videoExtensions.includes(file.extension.toLowerCase());
+    return VIDEO_EXTENSIONS.has(file.extension.toLowerCase());
 }
 
 // 檢查檔案是否為音樂檔案
 export function isAudioFile(file: TFile): boolean {
-    const audioExtensions = ['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp'];
-    return audioExtensions.includes(file.extension.toLowerCase());
+    return AUDIO_EXTENSIONS.has(file.extension.toLowerCase());
 }
 
 // 檢查檔案是否為媒體檔案

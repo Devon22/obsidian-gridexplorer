@@ -51,5 +51,3 @@ function processMediaLink(app: App, linkText: RegExpMatchArray) {
     }
     return null;
 }
-
-

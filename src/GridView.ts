@@ -7,10 +7,11 @@ import { showNoteColorSettingsModal } from './NoteColorSettingsModal';
 import { showFolderRenameModal } from './FolderRenameModal';
 import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
-import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles } from './fileUtils';
+import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
+
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -663,6 +664,8 @@ export class GridView extends ItemView {
         const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
         container.addClass('ge-grid-container');
+
+        // 設定網格項目寬度和高度等設定
         container.style.setProperty('--grid-item-width', this.plugin.settings.gridItemWidth + 'px');
         if (this.plugin.settings.gridItemHeight === 0 || this.minMode) {
             container.style.setProperty('--grid-item-height', '100%');
@@ -672,7 +675,7 @@ export class GridView extends ItemView {
         container.style.setProperty('--image-area-width', this.plugin.settings.imageAreaWidth + 'px');
         container.style.setProperty('--image-area-height', this.plugin.settings.imageAreaHeight + 'px');
         container.style.setProperty('--title-font-size', this.plugin.settings.titleFontSize + 'em');
-        
+
         // 添加點擊空白處取消選中的事件處理器
         container.addEventListener('click', (event) => {
             // 只有當點擊的是容器本身，而不是其子元素時才清除選中
@@ -1094,13 +1097,27 @@ export class GridView extends ItemView {
                                 }
 
                                 let contentWithoutMediaLinks = '';
+
                                 if (this.plugin.settings.showCodeBlocksInSummary) {
-                                    // 不過濾code block
-                                    contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '');
+                                    contentWithoutMediaLinks = contentWithoutFrontmatter;
                                 } else {
-                                    contentWithoutMediaLinks = contentWithoutFrontmatter.replace(/```[\s\S]*?```\n|<!--[\s\S]*?-->|!?(?:\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\])/g, '')
-                                                                                        .replace(/```[\s\S]*$/,'');                                                 
+                                    // 刪除 code block
+                                    contentWithoutMediaLinks = contentWithoutFrontmatter
+                                        .replace(/```[\s\S]*?```\n/g, '')
+                                        .replace(/```[\s\S]*$/,'');                  
                                 }
+
+                                // 刪除註解及連結
+                                contentWithoutMediaLinks = contentWithoutMediaLinks
+                                    .replace(/<!--[\s\S]*?-->/g, '')
+                                    .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (match, p1, p2) => {
+                                        const linkText = p1 || p2 || '';
+                                        if (!linkText) return '';
+                                        
+                                        // 獲取副檔名並檢查是否為圖片或影片
+                                        const extension = linkText.split('.').pop()?.toLowerCase() || '';
+                                        return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
+                                    });  
 
                                 //把開頭的標題整行刪除
                                 if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
@@ -1108,7 +1125,7 @@ export class GridView extends ItemView {
                                 }
                                 
                                 if (!this.plugin.settings.showCodeBlocksInSummary) {
-                                    // 不過濾code block的情況下，包含這些特殊符號
+                                    // 不刪除code block的情況下，包含這些特殊符號
                                     contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
                                 }
 
@@ -1150,7 +1167,9 @@ export class GridView extends ItemView {
                             imageUrl = await findFirstImageInNote(this.app, content);
                         } else {
                             // 其他檔案顯示副檔名
-                            contentArea.createEl('p', { text: file.extension.toUpperCase() });
+                            if (!this.minMode) {
+                                contentArea.createEl('p', { text: file.extension.toUpperCase() });
+                            }
                         }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
@@ -1395,8 +1414,10 @@ export class GridView extends ItemView {
                 }
                 
                 // 創建標題（立即載入）
-                const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: file.basename });
-                titleEl.setAttribute('title', file.basename);
+                const shouldShowExtension = this.minMode && file.extension.toLowerCase() !== 'md';
+                const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
+                const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
+                titleEl.setAttribute('title', displayText);
                 
                 // 創建圖片區域，但先不載入圖片
                 if (!this.minMode) {
