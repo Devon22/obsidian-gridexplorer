@@ -6,7 +6,7 @@ import { GridView } from './GridView';
 export const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg']);
 export const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogv']);
 export const AUDIO_EXTENSIONS = new Set(['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp']);
-export const DOCUMENT_EXTENSIONS = new Set(['md', 'pdf', 'canvas']);
+export const DOCUMENT_EXTENSIONS = new Set(['md', 'pdf', 'canvas', 'base']);
 
 let customDocumentExtensions: string[] = [];
 
@@ -180,12 +180,11 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
 }
 
 // 獲取檔案
-export async function getFiles(gridView: GridView): Promise<TFile[]> {
+export async function getFiles(gridView: GridView, includeMediaFiles: boolean): Promise<TFile[]> {
     const app = gridView.app;
     const settings = gridView.plugin.settings;
     const sourceMode = gridView.sourceMode;
     const sourcePath = gridView.sourcePath;
-    const randomNoteIncludeMedia = gridView.randomNoteIncludeMedia;
 
     if (sourceMode === 'folder' && sourcePath) {
         // 獲取指定資料夾內的所有 Markdown、圖片和影片檔案
@@ -195,9 +194,12 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
             const files = folder.children.filter((file): file is TFile => {
                 if (!(file instanceof TFile)) return false;
                 
-                // 如果是 Markdown 檔案，直接包含
-                if (isDocumentFile(file) ||
-                    (settings.showMediaFiles && isMediaFile(file))) {
+                // 當存在搜尋關鍵字時，是否包含媒體檔案取決於 includeMediaFiles
+                // 不存在搜尋關鍵字時，是否包含媒體檔案取決於 settings.showMediaFiles
+                const allowMedia = settings.showMediaFiles && (!gridView.searchQuery || includeMediaFiles);
+                    
+                // 如果是文件檔案，直接包含；若為媒體檔案則依 allowMedia 判斷
+                if (isDocumentFile(file) || (allowMedia && isMediaFile(file))) {
                     return true;
                 }
                 return false;
@@ -323,7 +325,7 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
         const allVaultFiles = app.vault.getFiles().filter(file => {
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
-                (settings.showMediaFiles && randomNoteIncludeMedia && isMediaFile(file))) {
+                (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {
                 return true;
             }
             return false;
@@ -334,7 +336,7 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
         const recentFiles = app.vault.getFiles().filter(file => {
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
-                (settings.showMediaFiles && randomNoteIncludeMedia && isMediaFile(file))) {
+                (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {
                 return true;
             }
             return false;
@@ -350,7 +352,7 @@ export async function getFiles(gridView: GridView): Promise<TFile[]> {
         const randomFiles = app.vault.getFiles().filter(file => {
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
-                (settings.showMediaFiles && randomNoteIncludeMedia && isMediaFile(file))) {
+                (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {
                 return true;
             }
             return false;

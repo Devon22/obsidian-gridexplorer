@@ -1,6 +1,6 @@
 {
 	"name": "gridexplorer",
-	"version": "2.0.1",
+	"version": "2.1.0",
 	"description": "Browse note files in a grid view.",
 	"main": "main.js",
 	"scripts": {

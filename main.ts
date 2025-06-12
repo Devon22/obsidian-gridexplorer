@@ -1,7 +1,7 @@
 import { Plugin, TFolder, TFile, App, Menu } from 'obsidian';
 import { GridView } from './src/GridView';
 import { showFolderSelectionModal } from './src/FolderSelectionModal';
-import { showNoteColorSettingsModal } from './src/NoteColorSettingsModal';
+import { showNoteSettingsModal } from './src/NoteSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
 import { t } from './src/translations';
 import { updateCustomDocumentExtensions } from './src/fileUtils';
@@ -170,10 +170,10 @@ export default class GridExplorerPlugin extends Plugin {
                     });
                     menu.addItem((item) => {
                         item
-                            .setTitle(t('set_note_color'))
+                            .setTitle(t('set_note_attribute'))
                             .setIcon('palette')
                             .onClick(() => {
-                                showNoteColorSettingsModal(this.app, this, file);
+                                showNoteSettingsModal(this.app, this, file);
                             });
                     });
                 }

@@ -34,6 +34,7 @@
     width: 0 !important;
 }
 
+/* Grid 項目樣式 */
 .ge-grid-item {
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -104,6 +105,10 @@
 
 .ge-icon-container.ge-canvas {
     color: var(--color-green);
+}
+
+.ge-icon-container.ge-base {
+    color: var(--color-cyan);
 }
 
 .ge-title {
@@ -257,7 +262,21 @@
     grid-column: 1 / -1;
     pointer-events: none;
     user-select: none;
-    background-color: var(--background-secondary);
+    margin-top: -2px;
+    margin-bottom: -3px;
+}
+
+/* Pin分隔器樣式 */
+.ge-pin-divider {
+    width: 100%;
+    text-align: left;
+    color: var(--text-normal);
+    margin-left: 8px;
+    grid-column: 1 / -1;
+    pointer-events: none;
+    user-select: none;
+    margin-top: -2px;
+    margin-bottom: -3px;
 }
 
 /* 頂部按鈕區域樣式 */

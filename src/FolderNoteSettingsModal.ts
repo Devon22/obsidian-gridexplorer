@@ -168,9 +168,21 @@ export class FolderNoteSettingsModal extends Modal {
             
             // 使用 fileManager.processFrontMatter 更新 frontmatter
             await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-                frontmatter['sort'] = this.settings.sort;
-                frontmatter['color'] = this.settings.color;
-                frontmatter['icon'] = this.settings.icon;
+                if (this.settings.sort) {
+                    frontmatter['sort'] = this.settings.sort;
+                } else {
+                    delete frontmatter['sort'];
+                }
+                if (this.settings.color) {
+                    frontmatter['color'] = this.settings.color;
+                } else {
+                    delete frontmatter['color'];
+                }
+                if (this.settings.icon && this.settings.icon !== '📁') {
+                    frontmatter['icon'] = this.settings.icon;
+                } else {
+                    delete frontmatter['icon'];
+                }
             });
 
             // 強制更新 metadata cache

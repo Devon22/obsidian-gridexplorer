@@ -3,7 +3,7 @@ import { showFolderSelectionModal } from './FolderSelectionModal';
 import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';
 import { showFolderNoteSettingsModal } from './FolderNoteSettingsModal';
-import { showNoteColorSettingsModal } from './NoteColorSettingsModal';
+import { showNoteSettingsModal } from './NoteSettingsModal';
 import { showFolderRenameModal } from './FolderRenameModal';
 import { showSearchModal } from './SearchModal';
 import { FileWatcher } from './FileWatcher';
@@ -11,7 +11,6 @@ import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sor
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
-
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -31,7 +30,8 @@ export class GridView extends ItemView {
     fileWatcher: FileWatcher;
     recentSources: string[] = []; // 歷史記錄
     minMode: boolean = false; // 最小模式
-    
+    pinnedList: string[] = []; // 置頂清單
+
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
         this.plugin = plugin;
@@ -103,19 +103,32 @@ export class GridView extends ItemView {
         }
     }
 
+    // 將來源加入歷史記錄（LRU 去重）
+    // 1. 若已有相同紀錄先移除，確保唯一
+    // 2. 插入到陣列開頭，代表最新使用
+    // 3. 超過上限時裁切
+    private pushHistory(mode: string, path: string) {
+        const key = JSON.stringify({ mode, path });
+        const existingIndex = this.recentSources.indexOf(key);
+        if (existingIndex !== -1) {
+            this.recentSources.splice(existingIndex, 1);
+        }
+        this.recentSources.unshift(key);
+        const limit = 10;
+        if (this.recentSources.length > limit) {
+            this.recentSources.length = limit;
+        }
+    }
+
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
 
         // 記錄之前的狀態到歷史記錄中（如果有）
         if (this.sourceMode && recordHistory) {
-            const previousState = JSON.stringify({ mode: this.sourceMode, path: this.sourcePath });
-            this.recentSources.unshift(previousState);
-            // 限制歷史記錄數量為10個
-            if (this.recentSources.length > 10) {
-                this.recentSources = this.recentSources.slice(0, 10);
-            }
+            this.pushHistory(this.sourceMode, this.sourcePath);
         }
 
         this.folderSortType = '';
+        this.pinnedList = [];
         if(mode === 'folder') {
             // 檢查是否有與資料夾同名的 md 檔案
             const folderName = path.split('/').pop() || '';
@@ -602,7 +615,7 @@ export class GridView extends ItemView {
 
         if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
             this.plugin.settings.showMediaFiles && this.searchQuery === '') {
-            // 建立隨機筆記是否包含圖片和影片的設定按鈕
+            // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
             const randomNoteSettingsButton = headerButtonsDiv.createEl('button', {
                 attr: { 'aria-label': this.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only') } 
             });
@@ -641,6 +654,24 @@ export class GridView extends ItemView {
 
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
+
+        // 取得置頂清單
+        if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
+            this.pinnedList = [];
+            const folderPath = this.sourcePath;
+            if (!folderPath || folderPath === '/') return;
+            const folderName = folderPath.split('/').pop() || '';
+            const notePath = `${folderPath}/${folderName}.md`;
+            const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+            if (noteFile instanceof TFile) {
+                const metadata = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
+                if (metadata && Array.isArray(metadata['pinned'])) {
+                    this.pinnedList = metadata['pinned'] as string[];
+                } else {
+                    this.pinnedList = [];
+                }
+            }
+        };
 
         // 重新渲染內容
         await this.grid_render();
@@ -953,10 +984,7 @@ export class GridView extends ItemView {
                 );
             } else {
                 // 當前位置檔案
-                const randomNoteIncludeMedia = this.randomNoteIncludeMedia;
-                this.randomNoteIncludeMedia = this.searchMediaFiles;
-                allFiles = await getFiles(this);
-                this.randomNoteIncludeMedia = randomNoteIncludeMedia;
+                allFiles = await getFiles(this, this.searchMediaFiles);
 
                 if (this.sourceMode === 'recent-files') {
                     // 搜尋"最近檔案"的當前位置時，先作忽略檔案和只取前n筆
@@ -1028,7 +1056,7 @@ export class GridView extends ItemView {
             loadingDiv.remove();
         } else {
             // 無搜尋關鍵字的情況
-            files = await getFiles(this);
+            files = await getFiles(this, this.randomNoteIncludeMedia);
 
             // 忽略檔案
             files = ignoredFiles(files, this)
@@ -1056,6 +1084,15 @@ export class GridView extends ItemView {
                 this.plugin.statusBarItem.setText('');
             }
             return;
+        }
+
+        // 若有置頂清單且目前為資料夾模式，將置頂檔案移到最前面並維持其在清單中的順序
+        if (this.pinnedList.length > 0 && this.sourceMode === 'folder') {
+            const pinnedFiles = files.filter(f => this.pinnedList.includes(f.name));
+            // 依照 pinnedList 順序排序
+            pinnedFiles.sort((a, b) => this.pinnedList.indexOf(a.name) - this.pinnedList.indexOf(b.name));
+            const otherFiles = files.filter(f => !this.pinnedList.includes(f.name));
+            files = [...pinnedFiles, ...otherFiles];
         }
 
         // 創建 Intersection Observer
@@ -1162,6 +1199,18 @@ export class GridView extends ItemView {
                                         }
                                     }
                                 }
+                                const displayValue = metadata?.display;
+                                if (displayValue === 'minimized') {
+                                    // 移除已建立的預覽段落
+                                    if (pEl) {
+                                        pEl.remove();
+                                    }
+                                    // 移除圖片區域（若已存在）
+                                    const imageAreaEl = fileEl.querySelector('.ge-image-area');
+                                    if (imageAreaEl) {
+                                        imageAreaEl.remove();
+                                    }
+                                }
                             }
 
                             imageUrl = await findFirstImageInNote(this.app, content);
@@ -1173,73 +1222,79 @@ export class GridView extends ItemView {
                         }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
-                        if (file.extension === 'md' && this.plugin.settings.showNoteTags) {
+                        if (file.extension === 'md' && this.plugin.settings.showNoteTags && !this.minMode) {
                             const fileCache = this.app.metadataCache.getFileCache(file);
-                            const allTags = new Set<string>();
-                            
-                            // 從 frontmatter 獲取標籤
-                            let frontmatterTags = fileCache?.frontmatter?.tags || [];
-                            
-                            // 處理不同的標籤格式
-                            if (typeof frontmatterTags === 'string') {
-                                // 如果是字符串，按逗號或空格分割
-                                frontmatterTags.split(/[,\s]+/).filter(tag => tag.trim() !== '')
-                                    .forEach(tag => allTags.add(tag));
-                            } else if (Array.isArray(frontmatterTags)) {
-                                frontmatterTags.forEach(tag => {
-                                    // 處理陣列中的每個標籤，可能是字符串或包含空格的字符串
-                                    if (typeof tag === 'string') {
-                                        // 檢查標籤是否包含空格（可能是未被正確分割的多個標籤）
-                                        if (tag.includes(' ')) {
-                                            // 按空格分割並添加每個子標籤
-                                            tag.split(/\s+/).filter(subTag => subTag.trim() !== '')
-                                                .forEach(subTag => allTags.add(subTag));
-                                        } else {
-                                            allTags.add(tag);
-                                        }
-                                    }
-                                });
-                            }
-                            
-                            // 從檔案 cache 中獲取內文標籤
-                            const cacheTags = fileCache?.tags || [];
-                            cacheTags.forEach(tagObj => {
-                                const tag = tagObj.tag.startsWith('#') ? tagObj.tag.substring(1) : tagObj.tag;
-                                allTags.add(tag);
-                            });
-                            
-                            if (allTags.size > 0) {
-                                // 創建標籤容器
-                                const tagsContainer = contentArea.createDiv('ge-tags-container');
-                                
-                                // 根據區塊寬度動態計算可顯示的標籤數量
-                                const containerWidth = tagsContainer.getBoundingClientRect().width;
-                                const tagWidth = 70;
-                                const maxTags = Math.floor(containerWidth / tagWidth);
+                            const displaySetting = fileCache?.frontmatter?.display;
 
-                                // 取得要顯示的標籤
-                                const displayTags = Array.from(allTags).slice(0, maxTags);
-                            
-                                displayTags.forEach(tag => {
-                                    const tagEl = tagsContainer.createEl('span', { 
-                                        cls: 'ge-tag',
-                                        text: tag.startsWith('#') ? tag : `#${tag}`
-                                    });
-                                    
-                                    // 添加點擊事件，點擊後設置搜尋關鍵字並重新渲染
-                                    tagEl.addEventListener('click', (e) => {
-                                        e.stopPropagation(); // 防止事件冒泡到卡片
-                                        const tagText = tag.startsWith('#') ? tag.substring(1) : tag;
-                                        if (this.searchQuery === tagText) {
-                                            return;
+                            // 如果筆記是最小化就直接跳過標籤邏輯
+                            if (displaySetting !== 'minimized') {
+
+                                const allTags = new Set<string>();
+                                
+                                // 從 frontmatter 獲取標籤
+                                let frontmatterTags = fileCache?.frontmatter?.tags || [];
+                                
+                                // 處理不同的標籤格式
+                                if (typeof frontmatterTags === 'string') {
+                                    // 如果是字符串，按逗號或空格分割
+                                    frontmatterTags.split(/[,\s]+/).filter(tag => tag.trim() !== '')
+                                        .forEach(tag => allTags.add(tag));
+                                } else if (Array.isArray(frontmatterTags)) {
+                                    frontmatterTags.forEach(tag => {
+                                        // 處理陣列中的每個標籤，可能是字符串或包含空格的字符串
+                                        if (typeof tag === 'string') {
+                                            // 檢查標籤是否包含空格（可能是未被正確分割的多個標籤）
+                                            if (tag.includes(' ')) {
+                                                // 按空格分割並添加每個子標籤
+                                                tag.split(/\s+/).filter(subTag => subTag.trim() !== '')
+                                                    .forEach(subTag => allTags.add(subTag));
+                                            } else {
+                                                allTags.add(tag);
+                                            }
                                         }
-                                        this.searchQuery = tagText;
-                                        this.searchAllFiles = true; 
-                                        this.searchMediaFiles = false;
-                                        this.render(true);
-                                        return false;
                                     });
+                                }
+                                
+                                // 從檔案 cache 中獲取內文標籤
+                                const cacheTags = fileCache?.tags || [];
+                                cacheTags.forEach(tagObj => {
+                                    const tag = tagObj.tag.startsWith('#') ? tagObj.tag.substring(1) : tagObj.tag;
+                                    allTags.add(tag);
                                 });
+                                
+                                if (allTags.size > 0) {
+                                    // 創建標籤容器
+                                    const tagsContainer = contentArea.createDiv('ge-tags-container');
+                                    
+                                    // 根據區塊寬度動態計算可顯示的標籤數量
+                                    const containerWidth = tagsContainer.getBoundingClientRect().width;
+                                    const tagWidth = 70;
+                                    const maxTags = Math.floor(containerWidth / tagWidth);
+
+                                    // 取得要顯示的標籤
+                                    const displayTags = Array.from(allTags).slice(0, maxTags);
+                                
+                                    displayTags.forEach(tag => {
+                                        const tagEl = tagsContainer.createEl('span', { 
+                                            cls: 'ge-tag',
+                                            text: tag.startsWith('#') ? tag : `#${tag}`
+                                        });
+                                        
+                                        // 添加點擊事件，點擊後設置搜尋關鍵字並重新渲染
+                                        tagEl.addEventListener('click', (e) => {
+                                            e.stopPropagation(); // 防止事件冒泡到卡片
+                                            const tagText = tag.startsWith('#') ? tag.substring(1) : tag;
+                                            if (this.searchQuery === tagText) {
+                                                return;
+                                            }
+                                            this.searchQuery = tagText;
+                                            this.searchAllFiles = true; 
+                                            this.searchMediaFiles = false;
+                                            this.render(true);
+                                            return false;
+                                        });
+                                    });
+                                }
                             }
                         }
                         
@@ -1306,10 +1361,25 @@ export class GridView extends ItemView {
                 this.sourceMode !== 'bookmarks';
 
             let lastDateString = '';
+            let pinDividerAdded = false;
+            let blankDividerAdded = false;
             
             for (const file of files) {
+                // 如果需要顯示置頂分隔器，且尚未加入，當前檔案為置頂清單之一時插入
+                if (!pinDividerAdded && this.pinnedList.includes(file.name)) {
+                    const pinDivider = container.createDiv('ge-pin-divider');
+                    pinDivider.textContent = `📌 ${t('pinned')}`;
+                    pinDividerAdded = true;
+                }
+
+                // 插入空白分隔器：當已加入置頂分隔器且尚未加入空白分隔器，且當前檔案不是置頂檔案
+                if (pinDividerAdded && !blankDividerAdded && !this.pinnedList.includes(file.name)) {
+                    container.createDiv('ge-break');
+                    blankDividerAdded = true;
+                }
+
                 // 如果啟用日期分隔器，檢查是否需要添加新的日期分隔器
-                if (shouldShowDateDividers) {
+                if (shouldShowDateDividers && !this.pinnedList.includes(file.name)) {
                     let timestamp = 0;
                     
                     // 根據排序類型獲取日期時間戳
@@ -1405,6 +1475,9 @@ export class GridView extends ItemView {
                 } else if (extension === 'canvas') {
                     const iconContainer = titleContainer.createDiv('ge-icon-container ge-canvas');
                     setIcon(iconContainer, 'layout-dashboard');
+                } else if (extension === 'base') {
+                    const iconContainer = titleContainer.createDiv('ge-icon-container ge-base');
+                    setIcon(iconContainer, 'layout-list');
                 } else if (extension === 'md' || extension === 'txt') {
                     const iconContainer = titleContainer.createDiv('ge-icon-container');
                     setIcon(iconContainer, 'file-text');
@@ -1449,7 +1522,7 @@ export class GridView extends ItemView {
                                     this.openMediaFile(file, files);
                                 }
                             } else {
-                                // 開啟文件檔案
+                                // 開啟文件檔案到新分頁
                                 this.app.workspace.getLeaf(true).openFile(file);
                             }
                         }
@@ -1578,10 +1651,10 @@ export class GridView extends ItemView {
                         if (allMdFiles) {
                             menu.addItem((item) => {
                                 item
-                                    .setTitle(t('set_note_color'))
+                                    .setTitle(t('set_note_attribute'))
                                     .setIcon('palette')
                                     .onClick(() => {
-                                        showNoteColorSettingsModal(this.app, this.plugin, selectedFiles);
+                                        showNoteSettingsModal(this.app, this.plugin, selectedFiles);
                                     });
                             });
                         }
@@ -2025,7 +2098,7 @@ export class GridView extends ItemView {
         // 如果沒有傳入媒體檔案列表，則獲取
         const getMediaFilesPromise = mediaFiles 
             ? Promise.resolve(mediaFiles.filter(f => isMediaFile(f)))
-            : getFiles(this).then(allFiles => allFiles.filter(f => isMediaFile(f)));
+            : getFiles(this, this.randomNoteIncludeMedia).then(allFiles => allFiles.filter(f => isMediaFile(f)));
         
         getMediaFilesPromise.then(filteredMediaFiles => {
             // 找到當前檔案在媒體檔案列表中的索引

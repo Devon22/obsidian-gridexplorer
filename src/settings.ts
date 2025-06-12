@@ -489,8 +489,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 是否在摘要中顯示程式碼區塊
         new Setting(containerEl)
-        .setName(t('show_code_blocks_in_summary'))
-        .setDesc(t('show_code_blocks_in_summary_desc'))
+        .setName(t('show_code_block_in_summary'))
+        .setDesc(t('show_code_block_in_summary_desc'))
         .addToggle(toggle => toggle
             .setValue(this.plugin.settings.showCodeBlocksInSummary)
             .onChange(async (value) => {
