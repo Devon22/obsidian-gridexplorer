@@ -1370,6 +1370,11 @@ export class GridView extends ItemView {
                     const pinDivider = container.createDiv('ge-pin-divider');
                     pinDivider.textContent = `📌 ${t('pinned')}`;
                     pinDividerAdded = true;
+
+                    // 針對 iOS 設備進行特殊處理
+                    if (Platform.isIosApp) {
+                        pinDivider.style.width = 'calc(100% - 16px)';
+                    }
                 }
 
                 // 插入空白分隔器：當已加入置頂分隔器且尚未加入空白分隔器，且當前檔案不是置頂檔案
