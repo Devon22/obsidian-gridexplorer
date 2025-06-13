@@ -92,15 +92,16 @@ export class FolderNoteSettingsModal extends Modal {
             });
 
         // 圖示選項
+        const customFolderIcon = this.plugin.settings.customFolderIcon;
         new Setting(contentEl)
             .setName(t('folder_icon'))
             .setDesc(t('folder_icon_desc'))
             .addText(text => {
                 text
-                    .setPlaceholder('📁')
-                    .setValue(this.settings.icon || '📁')
+                    .setPlaceholder(customFolderIcon)
+                    .setValue(this.settings.icon || customFolderIcon)
                     .onChange(value => {
-                        this.settings.icon = value || '📁';
+                        this.settings.icon = value || customFolderIcon;
                     });
             });
 

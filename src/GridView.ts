@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache } from 'obsidian';
 import { showFolderSelectionModal } from './FolderSelectionModal';
 import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';
@@ -30,6 +30,7 @@ export class GridView extends ItemView {
     fileWatcher: FileWatcher;
     recentSources: string[] = []; // 歷史記錄
     minMode: boolean = false; // 最小模式
+    showIgnoredFolders: boolean = false; // 顯示忽略資料夾
     pinnedList: string[] = []; // 置頂清單
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
@@ -236,6 +237,7 @@ export class GridView extends ItemView {
                         });
                     }
                 }
+                // 最小化模式選項
                 menu.addItem((item) => {
                     item
                         .setTitle(t(this.minMode ? 'close_min_mode' : 'min_mode'))
@@ -245,6 +247,21 @@ export class GridView extends ItemView {
                             const titleElement = this.containerEl.querySelector('.ge-header-buttons')?.querySelector('.ge-title');
                             if (titleElement) {
                                 titleElement.textContent = this.minMode ? t('min_mode') : t('close_min_mode');
+                            }
+                            this.app.workspace.requestSaveLayout();
+                            this.render();
+                        });
+                });
+                // 顯示忽略資料夾選項
+                menu.addItem((item) => {
+                    item
+                        .setTitle(this.showIgnoredFolders ? t('hide_ignored_folders') : t('show_ignored_folders'))
+                        .setIcon('folder')
+                        .onClick(() => {
+                            this.showIgnoredFolders = !this.showIgnoredFolders;
+                            const titleElement = this.containerEl.querySelector('.ge-header-buttons')?.querySelector('.ge-title');
+                            if (titleElement) {
+                                titleElement.textContent = this.showIgnoredFolders ? t('hide_ignored_folders') : t('show_ignored_folders');
                             }
                             this.app.workspace.requestSaveLayout();
                             this.render();
@@ -757,7 +774,8 @@ export class GridView extends ItemView {
             
             const contentArea = parentFolderEl.createDiv('ge-content-area');
             const titleContainer = contentArea.createDiv('ge-title-container');
-            titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ..` });
+            const customFolderIcon = this.plugin.settings.customFolderIcon;
+            titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ..`.trim() });
             
             // 回上層資料夾事件
             parentFolderEl.addEventListener('click', () => {
@@ -772,16 +790,18 @@ export class GridView extends ItemView {
             if (currentFolder instanceof TFolder) {
                 const subfolders = currentFolder.children
                     .filter(child => {
+                        // 如果不是資料夾，則不顯示
                         if (!(child instanceof TFolder)) return false;
                         
+                        // 如果開啟顯示忽略資料夾模式，則顯示所有資料夾
+                        if (this.showIgnoredFolders) return true;
+
                         // 檢查資料夾是否在忽略清單中
                         const isInIgnoredFolders = this.plugin.settings.ignoredFolders.some(folder => 
                             child.path === folder || child.path.startsWith(folder + '/')
                         );
                         
-                        if (isInIgnoredFolders) {
-                            return false;
-                        }
+                        if (isInIgnoredFolders) return false;
                         
                         // 檢查資料夾是否符合忽略的模式
                         if (this.plugin.settings.ignoredFolderPatterns && this.plugin.settings.ignoredFolderPatterns.length > 0) {
@@ -802,9 +822,7 @@ export class GridView extends ItemView {
                                 }
                             });
                             
-                            if (matchesIgnoredPattern) {
-                                return false;
-                            }
+                            if (matchesIgnoredPattern) return false;
                         }
 
                         return true;
@@ -819,7 +837,8 @@ export class GridView extends ItemView {
                     
                     const contentArea = folderEl.createDiv('ge-content-area');
                     const titleContainer = contentArea.createDiv('ge-title-container');
-                    titleContainer.createEl('span', { cls: 'ge-title', text: `📁 ${folder.name}` });
+                    const customFolderIcon = this.plugin.settings.customFolderIcon;
+                    titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
                     titleContainer.setAttribute('title', folder.name);
                     
                     // 檢查同名筆記是否存在
@@ -919,16 +938,29 @@ export class GridView extends ItemView {
                                     });
                             });
                         }
-                        //加入"忽略此資料夾"選項
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('ignore_folder'))
-                                .setIcon('x')
-                                .onClick(() => {
-                                    this.plugin.settings.ignoredFolders.push(folder.path);
-                                    this.plugin.saveSettings();
-                                });
-                        });
+                        if (!this.plugin.settings.ignoredFolders.includes(folder.path)) {
+                            //加入"忽略此資料夾"選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('ignore_folder'))
+                                    .setIcon('folder-x')
+                                    .onClick(() => {
+                                        this.plugin.settings.ignoredFolders.push(folder.path);
+                                        this.plugin.saveSettings();
+                                    });
+                            });
+                        } else {
+                            //加入"取消忽略此資料夾"選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('unignore_folder'))
+                                    .setIcon('folder-up')
+                                    .onClick(() => {
+                                        this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
+                                        this.plugin.saveSettings();
+                                    });
+                            });
+                        }
                         // 重新命名資料夾
                         menu.addItem((item) => {
                             item
@@ -1122,59 +1154,67 @@ export class GridView extends ItemView {
                             // Markdown 檔案顯示內容預覽
                             const content = await this.app.vault.cachedRead(file);
                             const frontMatterInfo = getFrontMatterInfo(content);
-                            
+                            let metadata: FrontMatterCache | undefined = undefined;
+                            if (frontMatterInfo.exists) {
+                                metadata = this.app.metadataCache.getFileCache(file)?.frontmatter;
+                            }
+
                             let pEl: HTMLElement | null = null;
                             if (!this.minMode) {
-
-                                let contentWithoutFrontmatter = '';
-                                if (summaryLength < 500) {
-                                    contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, 500);
+                                const summaryField = this.plugin.settings.noteSummaryField || 'summary';
+                                const summaryValue = metadata?.[summaryField];
+                                if (summaryValue) {
+                                    pEl = contentArea.createEl('p', { text: summaryValue.trim() });
                                 } else {
-                                    contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
+                                    let contentWithoutFrontmatter = '';
+                                    if (summaryLength < 500) {
+                                        contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, 500);
+                                    } else {
+                                        contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, summaryLength + summaryLength);
+                                    }
+
+                                    let contentWithoutMediaLinks = '';
+
+                                    if (this.plugin.settings.showCodeBlocksInSummary) {
+                                        contentWithoutMediaLinks = contentWithoutFrontmatter;
+                                    } else {
+                                        // 刪除 code block
+                                        contentWithoutMediaLinks = contentWithoutFrontmatter
+                                            .replace(/```[\s\S]*?```\n/g, '')
+                                            .replace(/```[\s\S]*$/,'');                  
+                                    }
+
+                                    // 刪除註解及連結
+                                    contentWithoutMediaLinks = contentWithoutMediaLinks
+                                        .replace(/<!--[\s\S]*?-->/g, '')
+                                        .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (match, p1, p2) => {
+                                            const linkText = p1 || p2 || '';
+                                            if (!linkText) return '';
+                                            
+                                            // 獲取副檔名並檢查是否為圖片或影片
+                                            const extension = linkText.split('.').pop()?.toLowerCase() || '';
+                                            return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
+                                        });  
+
+                                    //把開頭的標題整行刪除
+                                    if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
+                                        contentWithoutMediaLinks = contentWithoutMediaLinks.split('\n').slice(1).join('\n');
+                                    }
+                                    
+                                    if (!this.plugin.settings.showCodeBlocksInSummary) {
+                                        // 不刪除code block的情況下，包含這些特殊符號
+                                        contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
+                                    }
+
+                                    // 只取前 summaryLength 個字符作為預覽
+                                    const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
+                                    
+                                    // 創建預覽內容
+                                    pEl = contentArea.createEl('p', { text: preview.trim() });
                                 }
-
-                                let contentWithoutMediaLinks = '';
-
-                                if (this.plugin.settings.showCodeBlocksInSummary) {
-                                    contentWithoutMediaLinks = contentWithoutFrontmatter;
-                                } else {
-                                    // 刪除 code block
-                                    contentWithoutMediaLinks = contentWithoutFrontmatter
-                                        .replace(/```[\s\S]*?```\n/g, '')
-                                        .replace(/```[\s\S]*$/,'');                  
-                                }
-
-                                // 刪除註解及連結
-                                contentWithoutMediaLinks = contentWithoutMediaLinks
-                                    .replace(/<!--[\s\S]*?-->/g, '')
-                                    .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (match, p1, p2) => {
-                                        const linkText = p1 || p2 || '';
-                                        if (!linkText) return '';
-                                        
-                                        // 獲取副檔名並檢查是否為圖片或影片
-                                        const extension = linkText.split('.').pop()?.toLowerCase() || '';
-                                        return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
-                                    });  
-
-                                //把開頭的標題整行刪除
-                                if (contentWithoutMediaLinks.startsWith('# ') || contentWithoutMediaLinks.startsWith('## ') || contentWithoutMediaLinks.startsWith('### ')) {
-                                    contentWithoutMediaLinks = contentWithoutMediaLinks.split('\n').slice(1).join('\n');
-                                }
-                                
-                                if (!this.plugin.settings.showCodeBlocksInSummary) {
-                                    // 不刪除code block的情況下，包含這些特殊符號
-                                    contentWithoutMediaLinks = contentWithoutMediaLinks.replace(/[>|\-#*]/g,'').trim();
-                                }
-
-                                // 只取前 summaryLength 個字符作為預覽
-                                const preview = contentWithoutMediaLinks.slice(0, summaryLength) + (contentWithoutMediaLinks.length > summaryLength ? '...' : '');
-                                
-                                // 創建預覽內容
-                                pEl = contentArea.createEl('p', { text: preview.trim() });
                             } 
 
                             if (frontMatterInfo.exists) {
-                                const metadata = this.app.metadataCache.getFileCache(file)?.frontmatter;
                                 const colorValue = metadata?.color;
                                 if (colorValue) {
                                     // 設置背景色、框線色和文字顏色
@@ -1187,18 +1227,15 @@ export class GridView extends ItemView {
                                         pEl.style.color = `rgba(var(--color-${colorValue}-rgb), 0.7)`;
                                     }
                                 }
-                                const hasTitleField = !!this.plugin.settings.noteTitleField;
-                                if (hasTitleField) {
-                                    const titleField = this.plugin.settings.noteTitleField;
-                                    const titleValue = metadata?.[titleField];
-                                    if (titleValue) {
-                                        // 將標題文字設為 frontmatter 的 title
-                                        const titleEl = fileEl.querySelector('.ge-title');
-                                        if (titleEl) {
-                                            titleEl.textContent = titleValue;
-                                        }
+                                const titleField = this.plugin.settings.noteTitleField || 'title';
+                                const titleValue = metadata?.[titleField];
+                                if (titleValue) {
+                                    // 將標題文字設為 frontmatter 的 title
+                                    const titleEl = fileEl.querySelector('.ge-title');
+                                    if (titleEl) {
+                                        titleEl.textContent = titleValue;
                                     }
-                                }
+                                } 
                                 const displayValue = metadata?.display;
                                 if (displayValue === 'minimized') {
                                     // 移除已建立的預覽段落
@@ -2130,6 +2167,7 @@ export class GridView extends ItemView {
                 searchMediaFiles: this.searchMediaFiles,
                 randomNoteIncludeMedia: this.randomNoteIncludeMedia,
                 minMode: this.minMode,
+                showIgnoredFolders: this.showIgnoredFolders,
             }
         };
     }
@@ -2146,6 +2184,7 @@ export class GridView extends ItemView {
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
             this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
             this.minMode = state.state.minMode ?? false;
+            this.showIgnoredFolders = state.state.showIgnoredFolders ?? false;
             this.render();
         }
     }

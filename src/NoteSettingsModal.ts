@@ -5,6 +5,7 @@ import { GridView } from './GridView';
 
 export interface NoteSettings {
     title: string;
+    summary: string;
     color: string;
     isPinned: boolean;
     isMinimized: boolean;
@@ -19,6 +20,7 @@ export class NoteSettingsModal extends Modal {
     files: TFile[];
     settings: NoteSettings = {
         title: '',
+        summary: '',
         color: '',
         isPinned: false,
         isMinimized: false,
@@ -35,7 +37,7 @@ export class NoteSettingsModal extends Modal {
         contentEl.empty();
 
         // 讀取現有設定
-        await this.loadExistingSettings();
+        await this.loadAttributes();
 
         // 標題
         if (this.files.length > 1) {
@@ -53,6 +55,16 @@ export class NoteSettingsModal extends Modal {
                     text.setValue(this.settings.title);
                     text.onChange(value => {
                         this.settings.title = value;
+                    });
+                });
+            // 自訂筆記摘要
+            new Setting(contentEl)
+                .setName(t('note_summary'))
+                .setDesc(t('note_summary_desc'))
+                .addText(text => {
+                    text.setValue(this.settings.summary);
+                    text.onChange(value => {
+                        this.settings.summary = value;
                     });
                 });
         }
@@ -115,24 +127,28 @@ export class NoteSettingsModal extends Modal {
                 .setButtonText(t('confirm'))
                 .setCta() // 設置為主要按鈕樣式
                 .onClick(() => {
-                    this.saveNoteColor();
+                    this.saveAttributes();
                     this.close();
                 });
         });
     }
 
     // 讀取現有筆記的設定
-    async loadExistingSettings() {
+    async loadAttributes() {
         try {
-
             // 讀取自訂標題設定
             if (this.files.length === 1) {
                 const fileCache = this.app.metadataCache.getFileCache(this.files[0]);
                 if (fileCache && fileCache.frontmatter) {
+                    const titleField = this.plugin.settings.noteTitleField || 'title';
                     if ('title' in fileCache.frontmatter) {
-                        this.settings.title = fileCache.frontmatter.title || '';
+                        this.settings.title = fileCache.frontmatter[titleField] || '';
                     }
-                }    
+                    const summaryField = this.plugin.settings.noteSummaryField || 'summary';
+                    if ('summary' in fileCache.frontmatter) {
+                        this.settings.summary = fileCache.frontmatter[summaryField] || '';
+                    }
+                }
             }
 
             // 如果有多個檔案，只讀取第一個檔案的設定作為預設值
@@ -167,16 +183,23 @@ export class NoteSettingsModal extends Modal {
         }
     }
 
-    // 儲存筆記顏色設定
-    async saveNoteColor() {
+    // 儲存筆記屬性設定
+    async saveAttributes() {
         try {
             if (this.files.length === 1 && this.files[0].extension === "md") {
                 // 使用 fileManager.processFrontMatter 更新 frontmatter
                 await this.app.fileManager.processFrontMatter(this.files[0], (frontmatter) => {
+                    const titleField = this.plugin.settings.noteTitleField || 'title';
                     if (this.settings.title) {
-                        frontmatter['title'] = this.settings.title;
+                        frontmatter[titleField] = this.settings.title;
                     } else {
-                        delete frontmatter['title'];
+                        delete frontmatter[titleField];
+                    }
+                    const summaryField = this.plugin.settings.noteSummaryField || 'summary';
+                    if (this.settings.summary) {
+                        frontmatter[summaryField] = this.settings.summary;
+                    } else {
+                        delete frontmatter[summaryField];
                     }
                     if (this.settings.color) {
                         frontmatter['color'] = this.settings.color;

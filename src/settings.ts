@@ -25,9 +25,11 @@ export interface GallerySettings {
     showAllFilesMode: boolean; // 是否顯示所有檔案模式
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
     showRecentFilesMode: boolean; // 是否顯示最近筆記模式
+    customFolderIcon: string; // 自訂資料夾圖示
     customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
     recentSources: string[]; // 最近的瀏覽記錄
     noteTitleField: string; // 筆記標題的欄位名稱
+    noteSummaryField: string; // 筆記摘要的欄位名稱
     modifiedDateField: string;  // 修改時間的欄位名稱
     createdDateField: string;   // 建立時間的欄位名稱
     recentFilesCount: number; // 最近筆記模式顯示的筆數
@@ -63,9 +65,11 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showRecentFilesMode: true, // 預設顯示最近筆記模式
     recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
     randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
+    customFolderIcon: '📁', // 自訂資料夾圖示
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
     noteTitleField: 'title', // 筆記標題的欄位名稱
+    noteSummaryField: 'summary', // 筆記摘要的欄位名稱
     modifiedDateField: '', // 修改時間的欄位名稱
     createdDateField: '', // 建立時間的欄位名稱
     showNoteTags: false, // 預設不顯示筆記標籤
@@ -302,6 +306,18 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 await this.plugin.saveSettings(false);
             }));
 
+        // 筆記摘要欄位名稱設定
+        new Setting(containerEl)
+        .setName(t('note_summary_field'))
+        .setDesc(t('note_summary_field_desc'))
+        .addText(text => text
+            .setPlaceholder('summary')
+            .setValue(this.plugin.settings.noteSummaryField)
+            .onChange(async (value) => {
+                this.plugin.settings.noteSummaryField = value;
+                await this.plugin.saveSettings(false);
+            }));
+
         // 修改時間欄位名稱設定
         new Setting(containerEl)
         .setName(t('modified_date_field'))
@@ -366,6 +382,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.customDocumentExtensions)
                 .onChange(async (value) => {
                     this.plugin.settings.customDocumentExtensions = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
+        // 自訂資料夾圖示
+        new Setting(containerEl)
+        .setName(t('custom_folder_icon'))
+        .setDesc(t('custom_folder_icon_desc'))
+        .addText(text => {
+            text
+                .setValue(this.plugin.settings.customFolderIcon)
+                .onChange(async (value) => {
+                    this.plugin.settings.customFolderIcon = value;
                     await this.plugin.saveSettings();
                 });
         });

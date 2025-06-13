@@ -143,6 +143,10 @@ export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
 export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
     const settings = gridView.plugin.settings;
     return files.filter(file => {
+
+        // 如果開啟顯示忽略資料夾模式，則顯示所有檔案
+        if (gridView.showIgnoredFolders) return true;
+        
         // 檢查是否在忽略的資料夾中
         const isInIgnoredFolder = settings.ignoredFolders.some(folder => 
             file.path.startsWith(`${folder}/`)
