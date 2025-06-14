@@ -890,6 +890,41 @@ export class GridView extends ItemView {
                         event.preventDefault();
                         const menu = new Menu();
                         
+                        //在新網格視圖開啟
+                        menu.addItem((item) => {
+                            item
+                                .setTitle( t('open_in_new_grid_view'))
+                                .setIcon('grid')
+                                .onClick(() => {
+                                    const { workspace } = this.app;
+                                    let leaf = null;
+                                    workspace.getLeavesOfType('grid-view');
+                                    switch (this.plugin.settings.defaultOpenLocation) {
+                                        case 'left':
+                                            leaf = workspace.getLeftLeaf(false);
+                                            break;
+                                        case 'right':
+                                            leaf = workspace.getRightLeaf(false);
+                                            break;
+                                        case 'tab':
+                                        default:
+                                            leaf = workspace.getLeaf('tab');
+                                            break;
+                                    }
+                                    if (!leaf) {
+                                        // 如果無法獲取指定位置的 leaf，則回退到新分頁
+                                        leaf = workspace.getLeaf('tab');
+                                    }
+                                    leaf.setViewState({ type: 'grid-view', active: true });
+                                    // 設定資料來源
+                                    if (leaf.view instanceof GridView) {
+                                        leaf.view.setSource('folder', folder.path);
+                                    }
+                                    // 確保視圖是活躍的
+                                    workspace.revealLeaf(leaf);
+                                });
+                        });
+
                         // 檢查同名筆記是否存在
                         const notePath = `${folder.path}/${folder.name}.md`;
                         let noteFile = this.app.vault.getAbstractFileByPath(notePath);
@@ -992,8 +1027,8 @@ export class GridView extends ItemView {
                     });
                 }
                 
-                // 資料夾渲染完插入 break（僅當有資料夾時）
-                if (subfolders.length > 0) {
+                // 資料夾渲染完插入 break（僅當有資料夾時或有顯示回上一層資料夾項目時）
+                if (subfolders.length > 0 || (subfolders.length === 0 && this.plugin.settings.showParentFolderItem)) {
                     container.createDiv('ge-break');
                 }
             }
