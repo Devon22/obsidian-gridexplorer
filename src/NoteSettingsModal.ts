@@ -25,6 +25,7 @@ export class NoteSettingsModal extends Modal {
         isPinned: false,
         isMinimized: false,
     };
+    private initialIsPinned: boolean = false; // 記錄初始的 isPinned 狀態
     
     constructor(app: App, plugin: GridExplorerPlugin, file: TFile | TFile[]) {
         super(app);
@@ -177,6 +178,8 @@ export class NoteSettingsModal extends Modal {
                         this.settings.isPinned = fm['pinned'].includes(this.files[0].name);
                     }
                 }
+                // 保存初始的 isPinned 狀態
+                this.initialIsPinned = this.settings.isPinned;
             }
         } catch (error) {
             console.error('無法讀取筆記屬性設定', error);
@@ -238,34 +241,36 @@ export class NoteSettingsModal extends Modal {
             // 等待一小段時間以確保 metadata cache 已更新
             setTimeout(() => {}, 200);
             
-            // 更新資料夾筆記的 pinned 欄位
-            for (const file of this.files) {
-                const folder = file.parent;
-                if (!folder || folder === this.app.vault.getRoot()) continue;
-                const notePath = `${folder.path}/${folder.name}.md`;
-                let noteFile = this.app.vault.getAbstractFileByPath(notePath);
+            // 只有在 isPinned 有變更時才更新資料夾筆記的 pinned 欄位
+            if (this.initialIsPinned !== this.settings.isPinned) {
+                for (const file of this.files) {
+                    const folder = file.parent;
+                    if (!folder || folder === this.app.vault.getRoot()) continue;
+                    const notePath = `${folder.path}/${folder.name}.md`;
+                    let noteFile = this.app.vault.getAbstractFileByPath(notePath);
 
-                // 如果資料夾筆記不存在，先建立一個空白檔案並加上 frontmatter
-                if (!(noteFile instanceof TFile)) {
-                    const initialFrontmatter = this.settings.isPinned ? `pinned:\n  - ${file.name}\n` : '';
-                    const initialContent = `---\n${initialFrontmatter}---\n`;
-                    noteFile = await this.app.vault.create(notePath, initialContent);
+                    // 如果資料夾筆記不存在，先建立一個空白檔案並加上 frontmatter
+                    if (!(noteFile instanceof TFile)) {
+                        const initialFrontmatter = this.settings.isPinned ? `pinned:\n  - ${file.name}\n` : '';
+                        const initialContent = `---\n${initialFrontmatter}---\n`;
+                        noteFile = await this.app.vault.create(notePath, initialContent);
+                    }
+
+                    // 此時 noteFile 一定是 TFile
+                    await this.app.fileManager.processFrontMatter(noteFile as TFile, (frontmatter) => {
+                        let list: string[] = Array.isArray(frontmatter['pinned']) ? frontmatter['pinned'] : [];
+                        if (this.settings.isPinned) {
+                            if (!list.includes(file.name)) list.push(file.name);
+                        } else {
+                            list = list.filter(n => n !== file.name);
+                        }
+                        if (list.length > 0) {
+                            frontmatter['pinned'] = list;
+                        } else {
+                            delete frontmatter['pinned'];
+                        }
+                    });
                 }
-
-                // 此時 noteFile 一定是 TFile
-                await this.app.fileManager.processFrontMatter(noteFile as TFile, (frontmatter) => {
-                    let list: string[] = Array.isArray(frontmatter['pinned']) ? frontmatter['pinned'] : [];
-                    if (this.settings.isPinned) {
-                        if (!list.includes(file.name)) list.push(file.name);
-                    } else {
-                        list = list.filter(n => n !== file.name);
-                    }
-                    if (list.length > 0) {
-                        frontmatter['pinned'] = list;
-                    } else {
-                        delete frontmatter['pinned'];
-                    }
-                });
             }
 
             // 等待一小段時間以確保 metadata cache 已更新
