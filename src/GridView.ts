@@ -240,14 +240,11 @@ export class GridView extends ItemView {
                 // 最小化模式選項
                 menu.addItem((item) => {
                     item
-                        .setTitle(t(this.minMode ? 'close_min_mode' : 'min_mode'))
-                        .setIcon(this.minMode ? 'maximize-2' : 'minimize-2')
+                        .setTitle(t('min_mode'))
+                        .setIcon('minimize-2')
+                        .setChecked(this.minMode)
                         .onClick(() => {
                             this.minMode = !this.minMode;
-                            const titleElement = this.containerEl.querySelector('.ge-header-buttons')?.querySelector('.ge-title');
-                            if (titleElement) {
-                                titleElement.textContent = this.minMode ? t('min_mode') : t('close_min_mode');
-                            }
                             this.app.workspace.requestSaveLayout();
                             this.render();
                         });
@@ -255,14 +252,11 @@ export class GridView extends ItemView {
                 // 顯示忽略資料夾選項
                 menu.addItem((item) => {
                     item
-                        .setTitle(this.showIgnoredFolders ? t('hide_ignored_folders') : t('show_ignored_folders'))
-                        .setIcon('folder')
+                        .setTitle(t('show_ignored_folders'))
+                        .setIcon('folder-open-dot')
+                        .setChecked(this.showIgnoredFolders)
                         .onClick(() => {
                             this.showIgnoredFolders = !this.showIgnoredFolders;
-                            const titleElement = this.containerEl.querySelector('.ge-header-buttons')?.querySelector('.ge-title');
-                            if (titleElement) {
-                                titleElement.textContent = this.showIgnoredFolders ? t('hide_ignored_folders') : t('show_ignored_folders');
-                            }
                             this.app.workspace.requestSaveLayout();
                             this.render();
                         });
@@ -1249,6 +1243,12 @@ export class GridView extends ItemView {
                                 }
                             } 
 
+                            //將預覽文字設定到標題的 title 屬性中
+                            const titleEl = fileEl.querySelector('.ge-title');
+                            if (titleEl && pEl) {
+                                titleEl.setAttribute('title', `<${titleEl.textContent}>\n${pEl.textContent}` || '');
+                            }
+
                             if (frontMatterInfo.exists) {
                                 const colorValue = metadata?.color;
                                 if (colorValue) {
@@ -1266,11 +1266,11 @@ export class GridView extends ItemView {
                                 const titleValue = metadata?.[titleField];
                                 if (titleValue) {
                                     // 將標題文字設為 frontmatter 的 title
-                                    const titleEl = fileEl.querySelector('.ge-title');
                                     if (titleEl) {
                                         titleEl.textContent = titleValue;
                                     }
                                 } 
+
                                 const displayValue = metadata?.display;
                                 if (displayValue === 'minimized') {
                                     // 移除已建立的預覽段落
