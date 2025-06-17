@@ -200,6 +200,24 @@ export class FolderSelectionModal extends Modal {
             this.folderOptions.push(randomNoteOption);
         }
 
+        // 建立任務選項
+        if (this.plugin.settings.showTasksMode) {
+            const tasksOption = this.folderOptionsContainer.createEl('div', {
+                cls: 'ge-grid-view-folder-option ge-special-option',
+                text: `☑️ ${t('tasks_mode')}`
+            });
+
+            tasksOption.addEventListener('click', () => {
+                if (this.activeView) {
+                    this.activeView.setSource('tasks', '', true);
+                } else {
+                    this.plugin.activateView('tasks');
+                }
+                this.close();
+            });
+            this.folderOptions.push(tasksOption);
+        }
+
         // 建立根目錄選項
         const rootFolderOption = this.folderOptionsContainer.createEl('div', {
             cls: 'ge-grid-view-folder-option',

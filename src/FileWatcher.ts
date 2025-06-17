@@ -7,6 +7,7 @@ export class FileWatcher {
     private plugin: GridExplorerPlugin;
     private gridView: GridView;
     private app: App;
+    private renderTimer: number | null = null; // 用於去抖動 render()
 
     constructor(plugin: GridExplorerPlugin, gridView: GridView) {
         this.plugin = plugin;
@@ -24,27 +25,25 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note' || 
-                        this.gridView.sourceMode === 'bookmarks' ||
-                        this.gridView.sourceMode === 'outgoinglinks') {
+                    if(this.gridView.sourceMode === 'random-note') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
                         if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
-                            this.gridView.render();
+                            this.scheduleRender();
                         }
                     } else if (this.gridView.sourceMode === 'folder') {
                         if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
                             const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                             if (fileDirPath === this.gridView.sourcePath) {
-                                this.gridView.render();
+                                this.scheduleRender();
                             } 
                         }
                     } else if (this.gridView.sourceMode === 'backlinks') {
                         if(isDocumentFile(file)) {
-                            this.gridView.render();
+                            this.scheduleRender();
                         }
                     } else {
-                        this.gridView.render();
+                        this.scheduleRender();
                     }
                 }
             })
@@ -54,21 +53,21 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('delete', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note' || this.gridView.sourceMode === 'bookmarks') {
+                    if(this.gridView.sourceMode === 'random-note') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
                         if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
-                            this.gridView.render();
+                            this.scheduleRender();
                         }
                     } else if (this.gridView.sourceMode === 'folder') {
                         if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
                             const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                             if (fileDirPath === this.gridView.sourcePath) {
-                                this.gridView.render();
+                                this.scheduleRender();
                             } 
                         }
                     } else {
-                        this.gridView.render();
+                        this.scheduleRender();
                     }
                 }
             })
@@ -85,11 +84,11 @@ export class FileWatcher {
                             const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                             const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
                             if (fileDirPath === this.gridView.sourcePath || oldDirPath === this.gridView.sourcePath) {
-                                this.gridView.render();
+                                this.scheduleRender();
                             } 
                         }
                     } else {
-                        this.gridView.render();
+                        this.scheduleRender();
                     }
                 }
             })
@@ -99,7 +98,7 @@ export class FileWatcher {
         this.plugin.registerEvent(
             (this.app as any).internalPlugins.plugins.bookmarks.instance.on('changed', () => {
                 if (this.gridView.sourceMode === 'bookmarks') {
-                    this.gridView.render();
+                    this.scheduleRender();
                 }
             })
         );
@@ -110,11 +109,24 @@ export class FileWatcher {
                 if (file instanceof TFile) {
                     if ((this.gridView.sourceMode === 'backlinks' || this.gridView.sourceMode === 'outgoinglinks') 
                         && this.gridView.searchQuery === '') {
-                        this.gridView.render();
+                        this.scheduleRender();
                     }
                 }
             })
         );
     }
-    
+
+    // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪
+    private scheduleRender = (): void => {
+        if (this.renderTimer !== null) {
+            clearTimeout(this.renderTimer);
+        }
+        // 200ms 延遲，可視需求調整
+        this.renderTimer = window.setTimeout((): void => {
+            console.log('123');
+            this.gridView.render();
+            this.renderTimer = null;
+        }, 200);
+    }
+
 }

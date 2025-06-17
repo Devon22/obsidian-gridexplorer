@@ -32,6 +32,7 @@ export class GridView extends ItemView {
     minMode: boolean = false; // 最小模式
     showIgnoredFolders: boolean = false; // 顯示忽略資料夾
     pinnedList: string[] = []; // 置頂清單
+    taskFilter: string = 'uncompleted'; // 任務分類
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -69,6 +70,8 @@ export class GridView extends ItemView {
             return 'links-going-out';
         } else if (this.sourceMode === 'random-note') {
             return 'dice';
+        } else if (this.sourceMode === 'tasks') {
+            return 'square-check-big';
         } else if (this.sourceMode === 'recent-files') {
             return 'calendar-days';
         } else if (this.sourceMode === 'all-files') {
@@ -93,6 +96,8 @@ export class GridView extends ItemView {
             return t('outgoinglinks_mode');
         } else if (this.sourceMode === 'random-note') {
             return t('random_note_mode');
+        } else if (this.sourceMode === 'tasks') {
+            return t('tasks_mode');
         } else if (this.sourceMode === 'recent-files') {
             return t('recent_files_mode');
         } else if (this.sourceMode === 'all-files') {
@@ -171,7 +176,7 @@ export class GridView extends ItemView {
             // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
             if (event.target === headerButtonsDiv) {
                 event.preventDefault();
-                // 取得網格容器（應該是在 grid_render 後建立的第二個子元素）
+                // 取得網格容器
                 const gridContainer = this.containerEl.querySelector('.ge-grid-container');
                 if (gridContainer) {
                     gridContainer.scrollTo({
@@ -663,6 +668,60 @@ export class GridView extends ItemView {
             });
         }
 
+        if (this.sourceMode === 'tasks' && this.searchQuery === '') {
+            // 建立任務分類按鈕，區分未完成、已完成、全部
+            const taskFilterButton = headerButtonsDiv.createEl('button', {
+                attr: { 'aria-label': t('task_filter') }
+            });
+            if (this.taskFilter === 'uncompleted') {
+                setIcon(taskFilterButton, 'square');
+            } else if (this.taskFilter === 'completed') {
+                setIcon(taskFilterButton, 'square-check-big');
+            } else {
+                setIcon(taskFilterButton, 'square-asterisk');
+            }
+            // 建立下拉選單，uncompleted、completed、all
+            const menu = new Menu();
+            menu.addItem((item) => {
+                item.setTitle(t('uncompleted'))
+                    .setChecked(this.taskFilter === 'uncompleted')
+                    .setIcon('square')
+                    .onClick(() => {
+                        this.taskFilter = 'uncompleted';
+                        taskFilterButton.textContent = t('uncompleted');
+                        setIcon(taskFilterButton, 'square');
+                        this.render();
+                    });
+            });
+            menu.addItem((item) => {
+                item.setTitle(t('completed'))
+                    .setChecked(this.taskFilter === 'completed')
+                    .setIcon('square-check-big')
+                    .onClick(() => {
+                        this.taskFilter = 'completed';
+                        taskFilterButton.textContent = t('completed');
+                        setIcon(taskFilterButton, 'square-check-big');
+                        this.render();
+                    });
+            });
+            menu.addItem((item) => {
+                item.setTitle(t('all'))
+                    .setChecked(this.taskFilter === 'all')
+                    .setIcon('square-asterisk')
+                    .onClick(() => {
+                        this.taskFilter = 'all';
+                        taskFilterButton.textContent = t('all');
+                        setIcon(taskFilterButton, 'square-asterisk');
+                        this.render();
+                    });
+            });
+            
+            // 點擊按鈕時顯示下拉選單
+            taskFilterButton.addEventListener('click', (event) => {
+                menu.showAtMouseEvent(event);
+            });
+        }
+
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -747,35 +806,42 @@ export class GridView extends ItemView {
         }
 
         // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
-        // if (this.sourceMode === 'folder' && this.searchQuery === '' && this.sourcePath !== '/') {
-        //     const folderName = this.sourcePath.split('/').pop();
-        //     const folderNameContainer = container.createDiv('ge-foldername-content');
-        //     if (folderNameContainer) {
-        //         folderNameContainer.createEl('span', { text: `/ ${folderName}` });
-        //     }
-        // }
-
-        // 如果啟用了顯示"回上層資料夾"選項
         if (this.sourceMode === 'folder' && this.searchQuery === '' && 
             this.plugin.settings.showParentFolderItem && this.sourcePath !== '/') {
-            // 創建"回上層資料夾"
-            const parentFolderEl = container.createDiv('ge-grid-item ge-folder-item');
-            this.gridItems.push(parentFolderEl); // 添加到網格項目數組
-            // 獲取父資料夾路徑
-            const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-            // 設置資料夾路徑屬性
-            parentFolderEl.dataset.folderPath = parentPath;
-            
-            const contentArea = parentFolderEl.createDiv('ge-content-area');
-            const titleContainer = contentArea.createDiv('ge-title-container');
-            const customFolderIcon = this.plugin.settings.customFolderIcon;
-            titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ..`.trim() });
-            
-            // 回上層資料夾事件
-            parentFolderEl.addEventListener('click', () => {
-                this.setSource('folder', parentPath, true);
-                this.clearSelection();
-            });
+            const pathParts = this.sourcePath.split('/');
+            const parentPath = pathParts.slice(0, -1).join('/') || '/';
+            let parentFolderName = pathParts.slice(-2, -1)[0] || '/';
+            const currentFolderName = pathParts.pop() || t('root');
+
+            // 若為根目錄，以 'root' 顯示
+            if (parentPath === '/' || parentFolderName === '/' || parentFolderName === '') {
+                parentFolderName = t('root');
+            }
+
+            const folderNameContainer = container.createDiv('ge-foldername-content');
+
+            if (folderNameContainer) {
+                // 建立可點擊的上層資料夾名稱
+                const customFolderIcon = this.plugin.settings.customFolderIcon;
+                const parentFolderLink = folderNameContainer.createEl('a', {
+                    text: `${customFolderIcon} ${parentFolderName}`.trim(),
+                    cls: 'ge-parent-folder-link'
+                });
+
+                // 點擊後跳轉到上層資料夾
+                parentFolderLink.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.setSource('folder', parentPath, true);
+                    this.clearSelection();
+                });
+
+                // 分隔符號
+                folderNameContainer.createEl('span', { text: ' > ' });
+
+                // 目前資料夾名稱
+                folderNameContainer.createEl('span', { text: currentFolderName });
+            }
         }
 
         // 如果是資料夾模式，先顯示所有子資料夾
@@ -1022,20 +1088,22 @@ export class GridView extends ItemView {
                 }
                 
                 // 資料夾渲染完插入 break（僅當有資料夾時或有顯示回上一層資料夾項目時）
-                if (subfolders.length > 0 || (subfolders.length === 0 && this.plugin.settings.showParentFolderItem)) {
+                if (subfolders.length > 0 || (subfolders.length === 0 && this.plugin.settings.dateDividerMode !== 'none' && this.plugin.settings.showParentFolderItem)) {
                     container.createDiv('ge-break');
                 }
             }
+        }
+
+        let loadingDiv: HTMLElement | null = null;
+        if (this.searchQuery || this.sourceMode === 'tasks') {
+            // 顯示搜尋中的提示
+            loadingDiv = container.createDiv({ text: t('searching'), cls: 'ge-loading-indicator' });
         }
 
         let files: TFile[] = [];
         // 使用 Map 來記錄原始順序
         let fileIndexMap = new Map<TFile, number>();
         if (this.searchQuery) {
-            // 顯示搜尋中的提示
-            const loadingDiv = container.createDiv('ge-loading-indicator');
-            loadingDiv.setText(t('searching'));
-            
             // 取得 vault 中所有支援的檔案
             let allFiles: TFile[] = [];
             if (this.searchAllFiles) {
@@ -1112,9 +1180,6 @@ export class GridView extends ItemView {
 
             // 忽略檔案
             files = ignoredFiles(files, this);
-
-            // 移除搜尋中的提示
-            loadingDiv.remove();
         } else {
             // 無搜尋關鍵字的情況
             files = await getFiles(this, this.randomNoteIncludeMedia);
@@ -1131,6 +1196,10 @@ export class GridView extends ItemView {
             if (this.sourceMode === 'random-note') {
                 files = files.slice(0, this.plugin.settings.randomNoteCount);
             }
+        }
+
+        if (loadingDiv) {
+            loadingDiv.remove();
         }
 
         // 如果沒有檔案，顯示提示訊息
@@ -1246,7 +1315,7 @@ export class GridView extends ItemView {
                             //將預覽文字設定到標題的 title 屬性中
                             const titleEl = fileEl.querySelector('.ge-title');
                             if (titleEl && pEl) {
-                                titleEl.setAttribute('title', `<${titleEl.textContent}>\n${pEl.textContent}` || '');
+                                titleEl.setAttribute('title', `${titleEl.textContent}\n${pEl.textContent}` || '');
                             }
 
                             if (frontMatterInfo.exists) {
@@ -1282,6 +1351,7 @@ export class GridView extends ItemView {
                                     if (imageAreaEl) {
                                         imageAreaEl.remove();
                                     }
+                                    fileEl.style.height = '100%';
                                 }
                             }
 
@@ -1826,10 +1896,10 @@ export class GridView extends ItemView {
                                 const file = this.app.vault.getAbstractFileByPath(path);
                                 if (file instanceof TFile) {
                                     try {
-                                    // 計算新的檔案路徑
+                                        // 計算新的檔案路徑
                                         const newPath = `${folderPath}/${file.name}`;
-                                    // 移動檔案
-                                    await this.app.fileManager.renameFile(file, newPath);
+                                        // 移動檔案
+                                        await this.app.fileManager.renameFile(file, newPath);
                                     } catch (error) {
                                         console.error(`An error occurred while moving the file ${file.path}:`, error);
                                     }
@@ -1837,7 +1907,7 @@ export class GridView extends ItemView {
                             }
                             
                             // 重新渲染視圖
-                            this.render();
+                            // this.render();
                             return;
                         } catch (error) {
                             console.error('Error parsing dragged files data:', error);
@@ -1865,7 +1935,7 @@ export class GridView extends ItemView {
                             // 移動檔案
                             await this.app.fileManager.renameFile(file, newPath);
                             // 重新渲染視圖
-                            this.render();
+                            // this.render();
                         } catch (error) {
                             console.error('An error occurred while moving the file:', error);
                         }

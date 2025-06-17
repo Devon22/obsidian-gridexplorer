@@ -326,17 +326,38 @@
     align-items: center;
 }
 
-/* .ge-foldername-content {
+.ge-foldername-content {
     grid-column: 1 / -1;
-    margin-top: 5px;
+    margin-top: -2px;
+    margin-bottom: -3px;
+    margin-left: 7px;
     justify-content: center;
 }
 
 .ge-foldername-content span {
     display: inline-flex;
     align-items: center;
-    font-size: 14px;
-}  */
+}
+
+/* 為資料夾名稱、分隔符等元素添加間距 */
+.ge-foldername-content > *:nth-child(1) {
+    margin-right: 3px;
+}
+
+.ge-foldername-content > *:nth-child(2) {
+    margin-right: 6px;
+}
+
+.ge-parent-folder-link {
+    text-decoration: none;
+    padding: 5px;
+}
+
+.ge-parent-folder-link:hover {
+    border-radius: 4px;
+    background-color: var(--background-modifier-hover);
+    text-decoration: none;
+}
 
 /* 搜尋對話框樣式 */
 .ge-search-container {
@@ -542,6 +563,7 @@
 }
 
 .ge-loading-indicator {
+    grid-column: 1 / -1;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -551,6 +573,7 @@
 }
 
 .ge-no-files {
+    grid-column: 1 / -1;
     text-align: center;
     padding: 2em;
     color: var(--text-muted);
@@ -901,4 +924,15 @@
 .ge-audio-dragging {
     opacity: 0.9;
     user-select: none;
+}
+
+/* 設定描述區域樣式 */
+.ge-setting-desc {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ge-setting-number-input {
+    width: 60px;
 }

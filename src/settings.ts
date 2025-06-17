@@ -25,6 +25,7 @@ export interface GallerySettings {
     showAllFilesMode: boolean; // 是否顯示所有檔案模式
     showRandomNoteMode: boolean; // 是否顯示隨機筆記模式
     showRecentFilesMode: boolean; // 是否顯示最近筆記模式
+    showTasksMode: boolean; // 是否顯示任務模式
     customFolderIcon: string; // 自訂資料夾圖示
     customDocumentExtensions: string; // 自訂文件副檔名（用逗號分隔）
     recentSources: string[]; // 最近的瀏覽記錄
@@ -52,9 +53,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     summaryLength: 100, // 筆記摘要的字數，預設 100
     enableFileWatcher: true, // 預設啟用檔案監控
     showMediaFiles: true, // 預設顯示圖片和影片
-    showVideoThumbnails: false, // 預設不顯示影片縮圖
+    showVideoThumbnails: true, // 預設顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
-    showParentFolderItem: false, // 預設不顯示"返回上级文件夹"選項
+    showParentFolderItem: false, // 預設不顯示"返回上層資料夾"選項
     reuseExistingLeaf: false, // 預設不重用現有的網格視圖
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showAllFilesMode: false, // 預設不顯示所有檔案模式
     showRandomNoteMode: false, // 預設不顯示隨機筆記模式
     showRecentFilesMode: true, // 預設顯示最近筆記模式
+    showTasksMode: false, // 預設不顯示任務模式
     recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
     randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
     customFolderIcon: '📁', // 自訂資料夾圖示
@@ -108,7 +110,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 設定是否顯示書籤模式
         new Setting(containerEl)
-            .setName(t('show_bookmarks_mode'))
+            .setName(`📑 ${t('show_bookmarks_mode')}`)
             .addToggle(toggle => {
                 toggle
                     .setValue(this.plugin.settings.showBookmarksMode)
@@ -120,7 +122,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         
         // 設定是否顯示搜尋結果模式
         new Setting(containerEl)
-            .setName(t('show_search_mode'))
+            .setName(`🔍 ${t('show_search_mode')}`)
             .addToggle(toggle => {
                 toggle
                     .setValue(this.plugin.settings.showSearchMode)
@@ -132,7 +134,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         
         // 設定是否顯示反向連結模式
         new Setting(containerEl)
-            .setName(t('show_backlinks_mode'))
+            .setName(`🔗 ${t('show_backlinks_mode')}`)
             .addToggle(toggle => {
                 toggle
                     .setValue(this.plugin.settings.showBacklinksMode)
@@ -144,7 +146,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 設定是否顯示外部連結模式
         new Setting(containerEl)
-            .setName(t('show_outgoinglinks_mode'))
+            .setName(`🔗 ${t('show_outgoinglinks_mode')}`)
             .addToggle(toggle => {
                 toggle
                     .setValue(this.plugin.settings.showOutgoinglinksMode)
@@ -156,7 +158,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 設定是否顯示所有檔案模式
         new Setting(containerEl)
-        .setName(t('show_all_files_mode'))
+        .setName(`📔 ${t('show_all_files_mode')}`)
         .addToggle(toggle => {
             toggle
                 .setValue(this.plugin.settings.showAllFilesMode)
@@ -166,51 +168,87 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 });
         });
 
-        // 設定是否顯示最近檔案模式
+        // 最近檔案模式設定
+        const recentFilesSetting = new Setting(containerEl)
+            .setName(`📅 ${t('show_recent_files_mode')}`);
+
+        // 添加切換按鈕
+        recentFilesSetting.addToggle(toggle => {
+            toggle
+                .setValue(this.plugin.settings.showRecentFilesMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.showRecentFilesMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
+        // 在設定描述區域添加數字輸入框
+        const recentDescEl = recentFilesSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
+        
+        recentDescEl.createEl('span', { text: t('recent_files_count') });
+        
+        const recentInput = recentDescEl.createEl('input', {
+            type: 'number',
+            value: this.plugin.settings.recentFilesCount.toString(),
+            cls: 'ge-setting-number-input'
+        });
+        
+        recentInput.addEventListener('change', async (e) => {
+            const target = e.target as HTMLInputElement;
+            const value = parseInt(target.value);
+            if (!isNaN(value) && value > 0) {
+                this.plugin.settings.recentFilesCount = value;
+                await this.plugin.saveSettings(false);
+            } else {
+                target.value = this.plugin.settings.recentFilesCount.toString();
+            }
+        });
+
+        // 隨機筆記模式設定
+        const randomNoteSetting = new Setting(containerEl)
+            .setName(`🎲 ${t('show_random_note_mode')}`);
+
+        // 添加切換按鈕
+        randomNoteSetting.addToggle(toggle => {
+            toggle
+                .setValue(this.plugin.settings.showRandomNoteMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.showRandomNoteMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
+        // 在設定描述區域添加數字輸入框
+        const descEl = randomNoteSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
+        
+        descEl.createEl('span', { text: t('random_note_count') });
+        
+        const input = descEl.createEl('input', {
+            type: 'number',
+            value: this.plugin.settings.randomNoteCount.toString(),
+            cls: 'ge-setting-number-input'
+        });
+        
+        input.addEventListener('change', async (e) => {
+            const target = e.target as HTMLInputElement;
+            const value = parseInt(target.value);
+            if (!isNaN(value) && value > 0) {
+                this.plugin.settings.randomNoteCount = value;
+                await this.plugin.saveSettings(false);
+            } else {
+                target.value = this.plugin.settings.randomNoteCount.toString();
+            }
+        });
+
+        // 顯示任務模式
         new Setting(containerEl)
-            .setName(t('show_recent_files_mode'))
+            .setName(`☑️ ${t('show_tasks_mode')}`)
             .addToggle(toggle => {
                 toggle
-                    .setValue(this.plugin.settings.showRecentFilesMode)
+                    .setValue(this.plugin.settings.showTasksMode)
                     .onChange(async (value) => {
-                        this.plugin.settings.showRecentFilesMode = value;
+                        this.plugin.settings.showTasksMode = value;
                         await this.plugin.saveSettings();
-                    });
-            });
-
-        // 最近檔案模式的顯示資料筆數
-        new Setting(containerEl)
-            .setName(t('recent_files_count'))
-            .addText(text => {
-                text
-                    .setValue(this.plugin.settings.recentFilesCount.toString())
-                    .onChange(async (value) => {
-                        this.plugin.settings.recentFilesCount = parseInt(value);
-                        await this.plugin.saveSettings(false);
-                    });
-            });
-
-        // 設定是否顯示隨機筆記模式
-        new Setting(containerEl)
-            .setName(t('show_random_note_mode'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showRandomNoteMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showRandomNoteMode = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
-        // 隨機筆記模式的顯示資料筆數
-        new Setting(containerEl)
-            .setName(t('random_note_count'))
-            .addText(text => {
-                text
-                    .setValue(this.plugin.settings.randomNoteCount.toString())
-                    .onChange(async (value) => {
-                        this.plugin.settings.randomNoteCount = parseInt(value);
-                        await this.plugin.saveSettings(false);
                     });
             });
 

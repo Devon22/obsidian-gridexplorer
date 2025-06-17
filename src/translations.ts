@@ -42,6 +42,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': '未命名',
         'files': '個檔案',
         'add': '新增',
+        'root': '根目錄',
 
         // 視圖標題
         'grid_view_title': '網格視圖',
@@ -53,6 +54,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': '所有檔案',
         'recent_files_mode': '最近檔案',
         'random_note_mode': '隨機筆記',
+        'tasks_mode': '任務',
 
         // 排序選項
         'sort_name_asc': '名稱 (A → Z)',
@@ -124,6 +126,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': '隨機筆記模式顯示筆數',
         'random_note_notes_only': '僅筆記',
         'random_note_include_media_files': '包含媒體檔案',
+        'show_tasks_mode': '顯示任務模式',
+        'task_filter': '任務分類',
+        'uncompleted': '未完成',
+        'completed': '已完成',
+        'all': '全部',
         
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
@@ -235,6 +242,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': 'Untitled',
         'files': 'files',
         'add': 'Add',
+        'root': 'Root',
 
         // View Titles
         'grid_view_title': 'Grid view',
@@ -246,6 +254,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': 'All files',
         'recent_files_mode': 'Recent files',
         'random_note_mode': 'Random note',
+        'tasks_mode': 'Tasks',
 
         // Sort Options
         'sort_name_asc': 'Name (A → Z)',
@@ -317,6 +326,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': 'Random note count',
         'random_note_notes_only': 'Notes Only',
         'random_note_include_media_files': 'Include Media Files',
+        'show_tasks_mode': 'Show tasks mode',
+        'task_filter': 'Task filter',
+        'uncompleted': 'Uncompleted',
+        'completed': 'Completed',
+        'all': 'All',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Show "Parent Folder" item',
@@ -428,6 +442,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': '未命名',
         'files': '个文件',
         'add': '添加',
+        'root': '根目录',
 
         // 视图标题
         'grid_view_title': '网格视图',
@@ -439,6 +454,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': '所有文件',
         'recent_files_mode': '最近文件',
         'random_note_mode': '随机笔记',
+        'tasks_mode': '任务',
 
         // 排序选项
         'sort_name_asc': '名称 (A → Z)',
@@ -510,6 +526,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': '随机笔记模式显示笔数',
         'random_note_notes_only': '仅笔记',
         'random_note_include_media_files': '包含媒体文件',
+        'show_tasks_mode': '显示任务模式',
+        'task_filter': '任务分类',
+        'uncompleted': '未完成',
+        'completed': '已完成',
+        'all': '全部',
         
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
@@ -621,6 +642,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': '無題',
         'files': 'ファイル',
         'add': '追加',
+        'root': 'ルート',
 
         // ビュータイトル
         'grid_view_title': 'グリッドビュー',
@@ -632,6 +654,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': 'すべてのファイル',
         'recent_files_mode': '最近のファイル',
         'random_note_mode': 'ランダムノート',
+        'tasks_mode': 'タスク',
 
         // 並べ替えオプション
         'sort_name_asc': '名前 (A → Z)',
@@ -703,6 +726,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': 'ランダムノートモード表示筆数',
         'random_note_notes_only': 'ノートのみ',
         'random_note_include_media_files': 'メディアファイルを含む',
+        'show_tasks_mode': 'タスクモードを表示',
+        'task_filter': 'タスクフィルタ',
+        'uncompleted': '未完了',
+        'completed': '完了',
+        'all': 'すべて',
         
         // "親フォルダ"オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
@@ -814,6 +842,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': 'Без названия',
         'files': 'файлы',
         'add': 'Добавить',
+        'root': 'Корень',
 
         // View Titles
         'grid_view_title': 'Сеточный вид',
@@ -825,6 +854,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': 'Все файлы',
         'recent_files_mode': 'Недавние файлы',
         'random_note_mode': 'Случайная заметка',
+        'tasks_mode': 'Задачи',
 
         // Sort Options
         'sort_name_asc': 'Имя (А → Я)',
@@ -896,6 +926,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': 'Количество случайных заметок',
         'random_note_notes_only': 'Только заметки',
         'random_note_include_media_files': 'Включить медиафайлы',
+        'show_tasks_mode': 'Показывать режим задач',
+        'task_filter': 'Фильтр задач',
+        'uncompleted': 'Незавершенные',
+        'completed': 'Завершенные',
+        'all': 'Все',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показывать элемент "Родительская папка"',
@@ -1007,6 +1042,7 @@ export const TRANSLATIONS: Translations = {
         'untitled': 'Без назви',
         'files': 'файли',
         'add': 'Додати',
+        'root': 'Корень',
 
         // View Titles
         'grid_view_title': 'Сітковий вигляд',
@@ -1018,6 +1054,7 @@ export const TRANSLATIONS: Translations = {
         'all_files_mode': 'Усі файли',
         'recent_files_mode': 'Останні файли',
         'random_note_mode': 'Випадкова нотатка',
+        'tasks_mode': 'Задачі',
 
         // Sort Options
         'sort_name_asc': 'Назва (А → Я)',
@@ -1089,6 +1126,11 @@ export const TRANSLATIONS: Translations = {
         'random_note_count': 'Кількість випадкових нотаток',
         'random_note_notes_only': 'Тільки нотатки',
         'random_note_include_media_files': 'Включити медіафайли',
+        'show_tasks_mode': 'Показувати режим завдань',
+        'task_filter': 'Фільтр завдань',
+        'uncompleted': 'Незавершені',
+        'completed': 'Завершені',
+        'all': 'Всі',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показувати елемент "Батьківська папка"',

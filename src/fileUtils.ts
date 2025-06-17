@@ -324,6 +324,39 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         
         bookmarks.forEach(processBookmarkItem);
         return Array.from(bookmarkedFiles) as TFile[];
+    } else if (sourceMode === 'tasks') {
+        // 任務模式
+        const filesWithTasks = new Set<TFile>();
+        const markdownFiles = app.vault.getMarkdownFiles();
+        
+        for (const file of markdownFiles) {
+            try {
+                const content = await app.vault.cachedRead(file);
+                let shouldAdd = false;
+                // 用 gridView.taskFilter 匹配 uncompleted、completed、all 任務
+                if (gridView.taskFilter === 'uncompleted') {
+                    // 只匹配未完成的任務: - [ ] 或 * [ ]
+                    shouldAdd = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                } else if (gridView.taskFilter === 'completed') {
+                    // 只匹配所有任務均已完成的檔案（至少有一個已完成且沒有未完成）
+                    const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                    const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                    shouldAdd = hasCompleted && !hasIncomplete;
+                } else if (gridView.taskFilter === 'all') {
+                    // 匹配任何任務（已完成或未完成皆可）
+                    const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                    const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                    shouldAdd = hasIncomplete || hasCompleted;
+                }
+                
+                if (shouldAdd) {
+                    filesWithTasks.add(file);
+                }
+            } catch (error) {
+                console.error(`Error reading file ${file.path}:`, error);
+            }
+        }
+        return sortFiles(Array.from(filesWithTasks), gridView);
     } else if (sourceMode === 'all-files') {
         // 所有筆記模式
         const allVaultFiles = app.vault.getFiles().filter(file => {
