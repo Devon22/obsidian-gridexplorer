@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath } from 'obsidian';
 import { showFolderSelectionModal } from './FolderSelectionModal';
 import { findFirstImageInNote } from './mediaUtils';
 import { MediaModal } from './MediaModal';
@@ -186,100 +186,7 @@ export class GridView extends ItemView {
                 }
             }
         });
-            
-        // 為頂部按鈕區域添加右鍵選單事件
-        headerButtonsDiv.addEventListener('contextmenu', (event: MouseEvent) => {
-            // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-            if (event.target === headerButtonsDiv) {
-                event.preventDefault();
-                const menu = new Menu();
-                menu.addItem((item) => {
-                    item
-                        .setTitle(t('open_new_grid_view'))
-                        .setIcon('grid')
-                        .onClick(() => {
-                            const { workspace } = this.app;
-                            let leaf = null;
-                            workspace.getLeavesOfType('grid-view');
-                            switch (this.plugin.settings.defaultOpenLocation) {
-                                case 'left':
-                                    leaf = workspace.getLeftLeaf(false);
-                                    break;
-                                case 'right':
-                                    leaf = workspace.getRightLeaf(false);
-                                    break;
-                                case 'tab':
-                                default:
-                                    leaf = workspace.getLeaf('tab');
-                                    break;
-                            }
-                            if (!leaf) {
-                                // 如果無法獲取指定位置的 leaf，則回退到新分頁
-                                leaf = workspace.getLeaf('tab');
-                            }
-                            leaf.setViewState({ type: 'grid-view', active: true });
-                            // 設定資料來源
-                            if (leaf.view instanceof GridView) {
-                                leaf.view.setSource('folder', '/');
-                            }
-                            // 確保視圖是活躍的
-                            workspace.revealLeaf(leaf);
-                        });
-                });
-                //如果目前是資料夾模式且有資料夾筆記，則增加"打開資料夾筆記"選項
-                if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                    const folderName = this.sourcePath.split('/').pop() || '';
-                    const notePath = `${this.sourcePath}/${folderName}.md`;
-                    const noteFile = this.app.vault.getAbstractFileByPath(notePath);
-                    if (noteFile instanceof TFile) {
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('open_folder_note'))
-                                .setIcon('panel-left-open') 
-                                .onClick(() => {
-                                    this.app.workspace.getLeaf().openFile(noteFile);
-                                });
-                        });
-                    }
-                }
-                // 最小化模式選項
-                menu.addItem((item) => {
-                    item
-                        .setTitle(t('min_mode'))
-                        .setIcon('minimize-2')
-                        .setChecked(this.minMode)
-                        .onClick(() => {
-                            this.minMode = !this.minMode;
-                            this.app.workspace.requestSaveLayout();
-                            this.render();
-                        });
-                });
-                // 顯示忽略資料夾選項
-                menu.addItem((item) => {
-                    item
-                        .setTitle(t('show_ignored_folders'))
-                        .setIcon('folder-open-dot')
-                        .setChecked(this.showIgnoredFolders)
-                        .onClick(() => {
-                            this.showIgnoredFolders = !this.showIgnoredFolders;
-                            this.app.workspace.requestSaveLayout();
-                            this.render();
-                        });
-                });
-                menu.addItem((item) => {
-                    item
-                        .setTitle(t('open_settings'))
-                        .setIcon('settings')
-                        .onClick(() => {
-                            // 打開插件設定頁面
-                            (this.app as any).setting.open();
-                            (this.app as any).setting.openTabById(this.plugin.manifest.id);
-                        });
-                });
-                menu.showAtMouseEvent(event);
-            }
-        });
-
+        
         // 添加新增筆記按鈕
         const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
         newNoteButton.addEventListener('click', async () => {                
@@ -362,97 +269,6 @@ export class GridView extends ItemView {
             });
             menu.showAtMouseEvent(event);
         });
-
-        // 添加回上層按鈕（僅在資料夾模式且不在根目錄時顯示）
-        if (this.sourceMode === 'folder' && this.sourcePath !== '/' && this.searchQuery === '') {
-            const upButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('go_up') } });
-            upButton.addEventListener('click', () => {
-                const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                this.setSource('folder', parentPath, true);
-                this.clearSelection();
-            });
-            setIcon(upButton, 'arrow-up');
-
-            if(Platform.isDesktop) {
-                // 為上層按鈕添加拖曳目標功能
-                upButton.addEventListener('dragover', (event) => {
-                    // 防止預設行為以允許放置
-                    event.preventDefault();
-                    // 設定拖曳效果為移動
-                    event.dataTransfer!.dropEffect = 'move';
-                    // 顯示可放置的視覺提示
-                    upButton.addClass('ge-dragover');
-                });
-                
-                upButton.addEventListener('dragleave', () => {
-                    // 移除視覺提示
-                    upButton.removeClass('ge-dragover');
-                });
-                
-                upButton.addEventListener('drop', async (event) => {
-                    // 防止預設行為
-                    event.preventDefault();
-                    // 移除視覺提示
-                    upButton.removeClass('ge-dragover');
-                    
-                    // 獲取上一層資料夾路徑
-                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    if (!parentPath) return;
-                    
-                    // 獲取資料夾物件
-                    const folder = this.app.vault.getAbstractFileByPath(parentPath);
-                    if (!(folder instanceof TFolder)) return;
-                    
-                    // 檢查是否有多個檔案被拖曳
-                    const filesData = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                    if (filesData) {
-                        try {
-                            // 解析檔案路徑列表
-                            const filePaths = JSON.parse(filesData);
-                            
-                            // 移動所有檔案
-                            for (const filePath of filePaths) {
-                                const file = this.app.vault.getAbstractFileByPath(filePath);
-                                if (file instanceof TFile) {
-                                    // 計算新的檔案路徑
-                                    const newPath = `${parentPath}/${file.name}`;
-                                    // 移動檔案
-                                    await this.app.fileManager.renameFile(file, newPath);
-                                }
-                            }
-                            
-                            // 重新渲染視圖
-                            this.render();
-                        } catch (error) {
-                            console.error('An error occurred while moving multiple files to parent folder:', error);
-                        }
-                        return;
-                    }
-                    
-                    // 如果沒有多個檔案資料，嘗試獲取單個檔案路徑（向後兼容）
-                    const filePath = event.dataTransfer?.getData('text/plain');
-                    if (!filePath) return;
-                    
-                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                    
-                    // 獲取檔案物件
-                    const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
-                    
-                    if (file instanceof TFile) {
-                        try {
-                            // 計算新的檔案路徑
-                            const newPath = `${parentPath}/${file.name}`;
-                            // 移動檔案
-                            await this.app.fileManager.renameFile(file, newPath);
-                            // 重新渲染視圖
-                            this.render();
-                        } catch (error) {
-                            console.error('An error occurred while moving the file to parent folder:', error);
-                        }
-                    }
-                });
-            }
-        }
 
         // 添加重新選擇資料夾按鈕
         const reselectButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('reselect') }  });
@@ -722,6 +538,226 @@ export class GridView extends ItemView {
             });
         }
 
+        // 添加設定按鈕
+        if (this.searchQuery === '') {
+            const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
+            setIcon(moreOptionsButton, 'ellipsis-vertical');
+            const menu = new Menu();
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('open_new_grid_view'))
+                    .setIcon('grid')
+                    .onClick(() => {
+                        const { workspace } = this.app;
+                        let leaf = null;
+                        workspace.getLeavesOfType('grid-view');
+                        switch (this.plugin.settings.defaultOpenLocation) {
+                            case 'left':
+                                leaf = workspace.getLeftLeaf(false);
+                                break;
+                            case 'right':
+                                leaf = workspace.getRightLeaf(false);
+                                break;
+                            case 'tab':
+                            default:
+                                leaf = workspace.getLeaf('tab');
+                                break;
+                        }
+                        if (!leaf) {
+                            // 如果無法獲取指定位置的 leaf，則回退到新分頁
+                            leaf = workspace.getLeaf('tab');
+                        }
+                        leaf.setViewState({ type: 'grid-view', active: true });
+                        // 設定資料來源
+                        if (leaf.view instanceof GridView) {
+                            leaf.view.setSource('folder', '/');
+                        }
+                        // 確保視圖是活躍的
+                        workspace.revealLeaf(leaf);
+                    });
+            });
+            //如果目前是資料夾模式且有資料夾筆記，則增加"打開資料夾筆記"選項
+            if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
+                const folder = this.app.vault.getAbstractFileByPath(this.sourcePath);
+                const folderName = this.sourcePath.split('/').pop() || '';
+                const notePath = `${this.sourcePath}/${folderName}.md`;
+                const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+                if (noteFile instanceof TFile) {
+                    //打開資料夾筆記
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('open_folder_note'))
+                            .setIcon('panel-left-open') 
+                            .onClick(() => {
+                                this.app.workspace.getLeaf().openFile(noteFile);
+                            });
+                    });
+                    //編輯資料夾筆記設定
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('edit_folder_note_settings'))
+                            .setIcon('settings-2')
+                            .onClick(() => {
+                                if (folder instanceof TFolder) {
+                                    showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
+                                }
+                            });
+                    });
+                    //刪除資料夾筆記
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('delete_folder_note'))
+                            .setIcon('folder-x')
+                            .onClick(() => {
+                                this.app.fileManager.trashFile(noteFile as TFile);
+                            });
+                    });
+                } else {
+                    //建立Folder note
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(t('create_folder_note'))
+                            .setIcon('file-cog')
+                            .onClick(() => {
+                                if (folder instanceof TFolder) {
+                                    showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
+                                }
+                            });
+                    });
+                }
+            }
+            // 最小化模式選項
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('min_mode'))
+                    .setIcon('minimize-2')
+                    .setChecked(this.minMode)
+                    .onClick(() => {
+                        this.minMode = !this.minMode;
+                        this.app.workspace.requestSaveLayout();
+                        this.render();
+                    });
+            });
+            // 顯示忽略資料夾選項
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('show_ignored_folders'))
+                    .setIcon('folder-open-dot')
+                    .setChecked(this.showIgnoredFolders)
+                    .onClick(() => {
+                        this.showIgnoredFolders = !this.showIgnoredFolders;
+                        this.app.workspace.requestSaveLayout();
+                        this.render();
+                    });
+            });
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('open_settings'))
+                    .setIcon('settings')
+                    .onClick(() => {
+                        // 打開插件設定頁面
+                        (this.app as any).setting.open();
+                        (this.app as any).setting.openTabById(this.plugin.manifest.id);
+                    });
+            });
+
+            moreOptionsButton.addEventListener('click', (event) => {
+                menu.showAtMouseEvent(event);
+            });
+        }
+        
+        // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
+        if (this.sourceMode === 'folder' && this.searchQuery === '' && this.sourcePath !== '/') {
+            const pathParts = this.sourcePath.split('/');
+            const parentPath = pathParts.slice(0, -1).join('/') || '/';
+            let parentFolderName = pathParts.slice(-2, -1)[0] || '/';
+            const currentFolderName = pathParts.pop() || t('root');
+
+            // 若為根目錄，以 'root' 顯示
+            if (parentPath === '/' || parentFolderName === '/' || parentFolderName === '') {
+                parentFolderName = t('root');
+            }
+
+            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+
+            // 建立可點擊的上層資料夾名稱
+            const customFolderIcon = this.plugin.settings.customFolderIcon;
+            const parentFolderLink = folderNameContainer.createEl('a', {
+                text: `${customFolderIcon} ${parentFolderName}`.trim(),
+                cls: 'ge-parent-folder-link'
+            });
+
+            parentFolderLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.setSource('folder', parentPath, true);
+                this.clearSelection();
+            });
+
+            // 分隔符號
+            folderNameContainer.createEl('span', { text: ' > ' });
+
+            // 目前資料夾名稱
+            folderNameContainer.createEl('span', { text: currentFolderName });
+
+            if (Platform.isDesktop) {
+                // 為上層按鈕添加拖曳目標功能
+                parentFolderLink.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    event.dataTransfer!.dropEffect = 'move';
+                    parentFolderLink.addClass('ge-dragover');
+                });
+
+                parentFolderLink.addEventListener('dragleave', () => {
+                    parentFolderLink.removeClass('ge-dragover');
+                });
+
+                parentFolderLink.addEventListener('drop', async (event) => {
+                    event.preventDefault();
+                    parentFolderLink.removeClass('ge-dragover');
+
+                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
+                    if (!parentPath) return;
+
+                    const folder = this.app.vault.getAbstractFileByPath(parentPath);
+                    if (!(folder instanceof TFolder)) return;
+
+                    const filesData = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
+                    if (filesData) {
+                        try {
+                            const filePaths = JSON.parse(filesData);
+                            for (const filePath of filePaths) {
+                                const file = this.app.vault.getAbstractFileByPath(filePath);
+                                if (file instanceof TFile) {
+                                    const newPath = normalizePath(`${parentPath}/${file.name}`);
+                                    await this.app.fileManager.renameFile(file, newPath);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('An error occurred while moving multiple files to parent folder:', error);
+                        }
+                        return;
+                    }
+
+                    const filePath = event.dataTransfer?.getData('text/plain');
+                    if (!filePath) return;
+
+                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
+                    const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
+
+                    if (file instanceof TFile) {
+                        try {
+                            const newPath = normalizePath(`${parentPath}/${file.name}`);
+                            await this.app.fileManager.renameFile(file, newPath);
+                            this.render();
+                        } catch (error) {
+                            console.error('An error occurred while moving the file to parent folder:', error);
+                        }
+                    }
+                });
+            }
+        }
+
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -735,8 +771,20 @@ export class GridView extends ItemView {
             const noteFile = this.app.vault.getAbstractFileByPath(notePath);
             if (noteFile instanceof TFile) {
                 const metadata = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
-                if (metadata && Array.isArray(metadata['pinned'])) {
-                    this.pinnedList = metadata['pinned'] as string[];
+                if (metadata) {
+                    if (Array.isArray(metadata['pinned'])) {
+                        if (this.plugin.settings.folderNoteDisplaySettings === 'pinned') {
+                            // 先過濾掉所有重複的資料夾筆記
+                            this.pinnedList = metadata['pinned'].filter((name: string) => name !== `${folderName}.md`);
+                            // 將資料夾筆記添加到最前面
+                            this.pinnedList.unshift(`${folderName}.md`);
+                        } else {
+                            this.pinnedList = metadata['pinned'];
+                        }
+                    } else if (this.plugin.settings.folderNoteDisplaySettings === 'pinned') {
+                        // 如果沒有置頂清單，則建立一個僅包含資料夾筆記的清單
+                        this.pinnedList = [`${folderName}.md`];
+                    }
                 } else {
                     this.pinnedList = [];
                 }
@@ -762,7 +810,7 @@ export class GridView extends ItemView {
     }
 
     async grid_render() {
-        const container = this.containerEl.children[1] as HTMLElement;
+        const container = this.containerEl.querySelector('.view-content') as HTMLElement;
         container.empty();
         container.addClass('ge-grid-container');
 
@@ -803,45 +851,6 @@ export class GridView extends ItemView {
                 this.plugin.statusBarItem.setText('');
             }
             return;
-        }
-
-        // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
-        if (this.sourceMode === 'folder' && this.searchQuery === '' && 
-            this.plugin.settings.showParentFolderItem && this.sourcePath !== '/') {
-            const pathParts = this.sourcePath.split('/');
-            const parentPath = pathParts.slice(0, -1).join('/') || '/';
-            let parentFolderName = pathParts.slice(-2, -1)[0] || '/';
-            const currentFolderName = pathParts.pop() || t('root');
-
-            // 若為根目錄，以 'root' 顯示
-            if (parentPath === '/' || parentFolderName === '/' || parentFolderName === '') {
-                parentFolderName = t('root');
-            }
-
-            const folderNameContainer = container.createDiv('ge-foldername-content');
-
-            if (folderNameContainer) {
-                // 建立可點擊的上層資料夾名稱
-                const customFolderIcon = this.plugin.settings.customFolderIcon;
-                const parentFolderLink = folderNameContainer.createEl('a', {
-                    text: `${customFolderIcon} ${parentFolderName}`.trim(),
-                    cls: 'ge-parent-folder-link'
-                });
-
-                // 點擊後跳轉到上層資料夾
-                parentFolderLink.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this.setSource('folder', parentPath, true);
-                    this.clearSelection();
-                });
-
-                // 分隔符號
-                folderNameContainer.createEl('span', { text: ' > ' });
-
-                // 目前資料夾名稱
-                folderNameContainer.createEl('span', { text: currentFolderName });
-            }
         }
 
         // 如果是資料夾模式，先顯示所有子資料夾
@@ -989,6 +998,7 @@ export class GridView extends ItemView {
                         const notePath = `${folder.path}/${folder.name}.md`;
                         let noteFile = this.app.vault.getAbstractFileByPath(notePath);
                         if (noteFile instanceof TFile) {
+                            //打開資料夾筆記
                             menu.addItem((item) => {
                                 item
                                     .setTitle(t('open_folder_note'))
@@ -997,6 +1007,7 @@ export class GridView extends ItemView {
                                         this.app.workspace.getLeaf().openFile(noteFile);
                                     });
                             });
+                            //編輯資料夾筆記設定
                             menu.addItem((item) => {
                                 item
                                     .setTitle(t('edit_folder_note_settings'))
@@ -1014,10 +1025,6 @@ export class GridView extends ItemView {
                                     .setIcon('folder-x')
                                     .onClick(() => {
                                         this.app.fileManager.trashFile(noteFile as TFile);
-                                        // 重新渲染視圖
-                                        setTimeout(() => {
-                                            this.render();
-                                        }, 100);
                                     });
                             });
                         } else {
@@ -1087,8 +1094,8 @@ export class GridView extends ItemView {
                     });
                 }
                 
-                // 資料夾渲染完插入 break（僅當有資料夾時或有顯示回上一層資料夾項目時）
-                if (subfolders.length > 0 || (subfolders.length === 0 && this.plugin.settings.dateDividerMode !== 'none' && this.plugin.settings.showParentFolderItem)) {
+                // 資料夾渲染完插入 break（僅當有資料夾）
+                if (subfolders.length > 0) {
                     container.createDiv('ge-break');
                 }
             }
@@ -1223,6 +1230,16 @@ export class GridView extends ItemView {
             pinnedFiles.sort((a, b) => this.pinnedList.indexOf(a.name) - this.pinnedList.indexOf(b.name));
             const otherFiles = files.filter(f => !this.pinnedList.includes(f.name));
             files = [...pinnedFiles, ...otherFiles];
+        }
+        
+        if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
+            if (this.plugin.settings.folderNoteDisplaySettings === 'hidden') {
+                const currentFolder = this.app.vault.getAbstractFileByPath(this.sourcePath);
+                if (currentFolder instanceof TFolder) {
+                    const folderName = currentFolder.name;
+                    files = files.filter(f => f.name !== `${folderName}.md`);
+                }
+            }
         }
 
         // 創建 Intersection Observer
@@ -1599,6 +1616,14 @@ export class GridView extends ItemView {
                 this.gridItems.push(fileEl); // 添加到網格項目數組
                 fileEl.dataset.filePath = file.path;
                 
+                // 如果檔案與父資料夾同名，添加 ge-foldernote 類別
+                const parentPath = file.parent?.path || '';
+                const parentName = parentPath.split('/').pop() || '';
+                const fileName = file.basename;
+                if (parentName === fileName) {
+                    fileEl.addClass('ge-foldernote');
+                }
+                
                 // 創建左側內容區，包含圖示和標題
                 const contentArea = fileEl.createDiv('ge-content-area');
                 
@@ -1897,7 +1922,7 @@ export class GridView extends ItemView {
                                 if (file instanceof TFile) {
                                     try {
                                         // 計算新的檔案路徑
-                                        const newPath = `${folderPath}/${file.name}`;
+                                        const newPath = normalizePath(`${folderPath}/${file.name}`);
                                         // 移動檔案
                                         await this.app.fileManager.renameFile(file, newPath);
                                     } catch (error) {
@@ -1905,10 +1930,9 @@ export class GridView extends ItemView {
                                     }
                                 }
                             }
-                            
-                            // 重新渲染視圖
-                            // this.render();
+
                             return;
+
                         } catch (error) {
                             console.error('Error parsing dragged files data:', error);
                         }
@@ -1931,11 +1955,10 @@ export class GridView extends ItemView {
                     if (file instanceof TFile && folder instanceof TFolder) {
                         try {
                             // 計算新的檔案路徑
-                            const newPath = `${folderPath}/${file.name}`;
+                            const newPath = normalizePath(`${folderPath}/${file.name}`);
                             // 移動檔案
                             await this.app.fileManager.renameFile(file, newPath);
-                            // 重新渲染視圖
-                            // this.render();
+
                         } catch (error) {
                             console.error('An error occurred while moving the file:', error);
                         }

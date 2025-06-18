@@ -61,6 +61,10 @@ Available colors:
 - purple
 - pink
 
+
+CSS Class： `.ge-grid-item.ge-foldernote`
+
+
 ## Settings
 
 In the plugin's settings page, you can:

@@ -61,6 +61,10 @@ color: red
 - purple
 - pink
 
+
+CSS Class： `.ge-grid-item.ge-foldernote`
+
+
 ## 設定
 
 プラグインの設定ページでは、以下のことができます：

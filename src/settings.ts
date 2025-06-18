@@ -16,7 +16,6 @@ export interface GallerySettings {
     showMediaFiles: boolean; // 是否顯示圖片和影片
     showVideoThumbnails: boolean; // 是否顯示影片縮圖
     defaultOpenLocation: string; // 預設開啟位置
-    showParentFolderItem: boolean; // 是否显示"返回上级文件夹"选项
     reuseExistingLeaf: boolean; // 是否重用現有的網格視圖
     showBookmarksMode: boolean; // 是否顯示書籤模式
     showSearchMode: boolean; // 是否顯示搜尋結果模式
@@ -38,6 +37,7 @@ export interface GallerySettings {
     showNoteTags: boolean; // 是否顯示筆記標籤
     dateDividerMode: string; // 日期分隔器模式：none, year, month, day
     showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
+    folderNoteDisplaySettings: string; // 資料夾筆記設定
 }
 
 // 預設設定
@@ -55,7 +55,6 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showMediaFiles: true, // 預設顯示圖片和影片
     showVideoThumbnails: true, // 預設顯示影片縮圖
     defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
-    showParentFolderItem: false, // 預設不顯示"返回上層資料夾"選項
     reuseExistingLeaf: false, // 預設不重用現有的網格視圖
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
@@ -77,6 +76,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showNoteTags: false, // 預設不顯示筆記標籤
     dateDividerMode: 'none', // 預設不使用日期分隔器
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
+    folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
 };
 
 // 設定頁面類別
@@ -436,19 +436,6 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
         });
-
-        // 顯示"回上層資料夾"選項設定
-        new Setting(containerEl)
-            .setName(t('show_parent_folder_item'))
-            .setDesc(t('show_parent_folder_item_desc'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showParentFolderItem)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showParentFolderItem = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
             
         // 顯示筆記標籤設定
         new Setting(containerEl)
@@ -565,7 +552,25 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 await this.plugin.saveSettings();
             }));
         
+        // 資料夾筆記設定區域
+        containerEl.createEl('h3', { text: t('folder_note_settings') });
         
+        // 資料夾筆記設定 (預設、置頂、隱藏)
+        new Setting(containerEl)
+            .setName(t('foldernote_display_settings'))
+            .setDesc(t('foldernote_display_settings_desc'))
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('default', t('default'))
+                    .addOption('pinned', t('pinned'))
+                    .addOption('hidden', t('hidden'))
+                    .setValue(this.plugin.settings.folderNoteDisplaySettings)
+                    .onChange(async (value) => {
+                        this.plugin.settings.folderNoteDisplaySettings = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
         // 忽略資料夾設定區域
         containerEl.createEl('h3', { text: t('ignored_folders_settings') });
 

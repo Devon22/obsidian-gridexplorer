@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFolder } from 'obsidian';
+import { App, Modal, Setting, TFolder, normalizePath } from 'obsidian';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
 import { GridView } from './GridView';
@@ -57,7 +57,9 @@ export class FolderRenameModal extends Modal {
 
     async renameFolder() {
         try {
-            await this.app.fileManager.renameFile(this.folder, this.newName);
+            const parentPath = this.folder.parent ? this.folder.parent.path : '';
+            const newPath = normalizePath(parentPath ? `${parentPath}/${this.newName}` : this.newName);
+            await this.app.fileManager.renameFile(this.folder, newPath);
             // 重新渲染視圖
             setTimeout(() => {
                 this.gridView.render();

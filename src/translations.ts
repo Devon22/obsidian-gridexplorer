@@ -43,6 +43,7 @@ export const TRANSLATIONS: Translations = {
         'files': '個檔案',
         'add': '新增',
         'root': '根目錄',
+        'more_options': '更多選項',
 
         // 視圖標題
         'grid_view_title': '網格視圖',
@@ -130,7 +131,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': '任務分類',
         'uncompleted': '未完成',
         'completed': '已完成',
+        'foldernote_display_settings': '資料夾筆記顯示設定',
+        'foldernote_display_settings_desc': '設定資料夾筆記的顯示方式',
         'all': '全部',
+        'default': '預設',
+        'hidden': '隱藏',
         
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
@@ -243,6 +248,7 @@ export const TRANSLATIONS: Translations = {
         'files': 'files',
         'add': 'Add',
         'root': 'Root',
+        'more_options': 'More options',
 
         // View Titles
         'grid_view_title': 'Grid view',
@@ -330,7 +336,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': 'Task filter',
         'uncompleted': 'Uncompleted',
         'completed': 'Completed',
+        'foldernote_display_settings': 'Folder note display settings',
+        'foldernote_display_settings_desc': 'Set the display mode of folder notes',
         'all': 'All',
+        'default': 'Default',
+        'hidden': 'Hidden',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Show "Parent Folder" item',
@@ -443,6 +453,7 @@ export const TRANSLATIONS: Translations = {
         'files': '个文件',
         'add': '添加',
         'root': '根目录',
+        'more_options': '更多选项',
 
         // 视图标题
         'grid_view_title': '网格视图',
@@ -530,7 +541,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': '任务分类',
         'uncompleted': '未完成',
         'completed': '已完成',
+        'foldernote_display_settings': '文件夹笔记显示设置',
+        'foldernote_display_settings_desc': '设置文件夹笔记的显示方式',
         'all': '全部',
+        'default': '默认',
+        'hidden': '隐藏',
         
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
@@ -643,6 +658,7 @@ export const TRANSLATIONS: Translations = {
         'files': 'ファイル',
         'add': '追加',
         'root': 'ルート',
+        'more_options': 'もっと選択肢',
 
         // ビュータイトル
         'grid_view_title': 'グリッドビュー',
@@ -730,7 +746,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': 'タスクフィルタ',
         'uncompleted': '未完了',
         'completed': '完了',
+        'foldernote_display_settings': 'フォルダノートの表示設定',
+        'foldernote_display_settings_desc': 'フォルダノートの表示方法を設定します',
         'all': 'すべて',
+        'default': 'デフォルト',
+        'hidden': '隠す',
         
         // "親フォルダ"オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
@@ -843,6 +863,7 @@ export const TRANSLATIONS: Translations = {
         'files': 'файлы',
         'add': 'Добавить',
         'root': 'Корень',
+        'more_options': 'Больше опций',
 
         // View Titles
         'grid_view_title': 'Сеточный вид',
@@ -930,7 +951,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': 'Фильтр задач',
         'uncompleted': 'Незавершенные',
         'completed': 'Завершенные',
+        'foldernote_display_settings': 'Настройки отображения заметок папок',
+        'foldernote_display_settings_desc': 'Установить режим отображения заметок папок',
         'all': 'Все',
+        'default': 'По умолчанию',
+        'hidden': 'Скрытые',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показывать элемент "Родительская папка"',
@@ -1043,6 +1068,7 @@ export const TRANSLATIONS: Translations = {
         'files': 'файли',
         'add': 'Додати',
         'root': 'Корень',
+        'more_options': 'Більше опцій',
 
         // View Titles
         'grid_view_title': 'Сітковий вигляд',
@@ -1130,7 +1156,11 @@ export const TRANSLATIONS: Translations = {
         'task_filter': 'Фільтр завдань',
         'uncompleted': 'Незавершені',
         'completed': 'Завершені',
+        'foldernote_display_settings': 'Налаштування відображення нотаток папки',
+        'foldernote_display_settings_desc': 'Встановіть режим відображення нотаток папки',
         'all': 'Всі',
+        'default': 'По умолчанию',
+        'hidden': 'Сховати',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показувати елемент "Батьківська папка"',

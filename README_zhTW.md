@@ -61,6 +61,10 @@ color: red
 - purple
 - pink
 
+
+CSS Class： `.ge-grid-item.ge-foldernote`
+
+
 ## 設定
 
 在插件的設定頁面中，您可以：

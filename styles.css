@@ -16,6 +16,13 @@
     background-color: var(--background-modifier-hover);
 }
 
+/* ascii tree prefix */
+.ge-folder-tree-prefix {
+    font-family: monospace;
+    white-space: pre;
+    color: var(--text-muted);
+}
+
 /* Grid 樣式 */
 .ge-grid-container {
     display: grid;
@@ -327,11 +334,10 @@
 }
 
 .ge-foldername-content {
-    grid-column: 1 / -1;
-    margin-top: -2px;
-    margin-bottom: -3px;
-    margin-left: 7px;
     justify-content: center;
+    padding: 8px;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .ge-foldername-content span {
@@ -341,6 +347,7 @@
 
 /* 為資料夾名稱、分隔符等元素添加間距 */
 .ge-foldername-content > *:nth-child(1) {
+    margin-left: 11px;
     margin-right: 3px;
 }
 
@@ -357,6 +364,11 @@
     border-radius: 4px;
     background-color: var(--background-modifier-hover);
     text-decoration: none;
+}
+
+.ge-parent-folder-link.ge-dragover {
+    border: 2px dashed var(--interactive-accent);
+    transform: scale(1.05);
 }
 
 /* 搜尋對話框樣式 */

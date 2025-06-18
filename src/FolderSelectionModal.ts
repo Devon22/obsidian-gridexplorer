@@ -246,10 +246,32 @@ export class FolderSelectionModal extends Modal {
             
         // 建立資料夾選項
         folders.forEach(folder => {
+            // 計算資料夾層級
+            const depth = (folder.path.match(/\//g) || []).length;
+            const displayName = folder.path.split('/').pop() || '/';
+            
             const folderOption = this.folderOptionsContainer.createEl('div', {
                 cls: 'ge-grid-view-folder-option',
-                text: `📁 ${folder.path || '/'}`
+                attr: {
+                    'data-depth': depth.toString(),
+                    'data-path': folder.path
+                }
             });
+            
+            // 產生 ascii tree 前綴
+            const prefixSpan = document.createElement('span');
+            prefixSpan.className = 'ge-folder-tree-prefix';
+            prefixSpan.textContent = depth > 0 ? '   '.repeat(depth - 1) + '└ ' : '';
+            folderOption.appendChild(prefixSpan);
+
+            // 資料夾圖示與名稱
+            const icon = document.createElement('span');
+            icon.textContent = '📁 ';
+            folderOption.appendChild(icon);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = displayName;
+            folderOption.appendChild(nameSpan);
 
             folderOption.addEventListener('click', () => {
                 if (this.activeView) {
@@ -359,7 +381,8 @@ export class FolderSelectionModal extends Modal {
         
         this.folderOptions.forEach(option => {
             const text = option.textContent?.toLowerCase() || '';
-            if (searchTerm === '' || text.includes(searchTerm)) {
+            const fullPath = option.getAttribute('data-path')?.toLowerCase() || '';
+            if (searchTerm === '' || text.includes(searchTerm) || fullPath.includes(searchTerm)) {
                 option.style.display = 'block';
                 hasVisibleOptions = true;
             } else {

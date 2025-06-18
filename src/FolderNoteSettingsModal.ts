@@ -7,6 +7,7 @@ export interface FolderNoteSettings {
     sort: string;
     color: string;
     icon: string;
+    isPinned: boolean;
 }
 
 export function showFolderNoteSettingsModal(app: App, plugin: GridExplorerPlugin, folder: TFolder, gridView: GridView) {
@@ -20,7 +21,8 @@ export class FolderNoteSettingsModal extends Modal {
     settings: FolderNoteSettings = {
         sort: '',
         color: '',
-        icon: '📁'
+        icon: '📁',
+        isPinned: false
     };
     existingFile: TFile | null = null;
     
@@ -105,6 +107,19 @@ export class FolderNoteSettingsModal extends Modal {
                     });
             });
 
+        // 置頂勾選框
+        new Setting(contentEl)
+            .setName(t('pinned'))
+            .setDesc(t('pinned_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.settings.isPinned)
+                    .onChange(value => {
+                        this.settings.isPinned = value;
+                    });
+            });
+
+
         // 按鈕區域
         const buttonSetting = new Setting(contentEl);
 
@@ -142,6 +157,16 @@ export class FolderNoteSettingsModal extends Modal {
                 if ('icon' in fileCache.frontmatter) {
                     this.settings.icon = fileCache.frontmatter.icon || '📁';
                 }            
+                
+                // 讀取置頂設定
+                if (fileCache.frontmatter?.pinned && Array.isArray(fileCache.frontmatter.pinned)) {
+                    this.settings.isPinned = fileCache.frontmatter.pinned.some((item: any) => {
+                        if (!item) return false;
+                        const pinnedName = item.toString();
+                        const pinnedNameWithoutExt = pinnedName.replace(/\.\w+$/, '');
+                        return pinnedNameWithoutExt === this.folder.name;
+                    });
+                }           
             }
         } catch (error) {
             console.error('無法讀取資料夾筆記設定', error);
@@ -183,6 +208,27 @@ export class FolderNoteSettingsModal extends Modal {
                     frontmatter['icon'] = this.settings.icon;
                 } else {
                     delete frontmatter['icon'];
+                }
+                const folderName = `${this.folder.name}.md`;
+                if (this.settings.isPinned) {
+                    // 如果原本就有 pinned 陣列，則添加或更新
+                    if (Array.isArray(frontmatter['pinned'])) {
+                        if (!frontmatter['pinned'].includes(folderName)) {
+                            frontmatter['pinned'] = [folderName, ...frontmatter['pinned']];
+                        }
+                    } else {
+                        // 如果沒有 pinned 陣列，則創建一個新的
+                        frontmatter['pinned'] = [folderName];
+                    }
+                } else if (Array.isArray(frontmatter['pinned'])) {
+                    // 如果取消置頂，則從陣列中移除
+                    frontmatter['pinned'] = frontmatter['pinned'].filter(
+                        (item: any) => item !== folderName
+                    );
+                    // 如果陣列為空，則刪除該欄位
+                    if (frontmatter['pinned'].length === 0) {
+                        delete frontmatter['pinned'];
+                    }
                 }
             });
 
