@@ -113,8 +113,9 @@ export class GridView extends ItemView {
     // 1. 若已有相同紀錄先移除，確保唯一
     // 2. 插入到陣列開頭，代表最新使用
     // 3. 超過上限時裁切
-    private pushHistory(mode: string, path: string) {
-        const key = JSON.stringify({ mode, path });
+    private pushHistory(mode: string, path: string | null) {
+        const sanitizedPath = path ?? '';
+        const key = JSON.stringify({ mode, path: sanitizedPath });
         const existingIndex = this.recentSources.indexOf(key);
         if (existingIndex !== -1) {
             this.recentSources.splice(existingIndex, 1);
@@ -123,7 +124,7 @@ export class GridView extends ItemView {
         const limit = 10;
         if (this.recentSources.length > limit) {
             this.recentSources.length = limit;
-        }
+        }        
     }
 
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
@@ -445,100 +446,7 @@ export class GridView extends ItemView {
             });
         }
 
-        if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
-            this.plugin.settings.showMediaFiles && this.searchQuery === '') {
-            // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
-            const randomNoteSettingsButton = headerButtonsDiv.createEl('button', {
-                attr: { 'aria-label': this.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only') } 
-            });
-            this.randomNoteIncludeMedia ? setIcon(randomNoteSettingsButton, 'file-image') : setIcon(randomNoteSettingsButton, 'file-text');
-
-            // 建立下拉選單
-            const menu = new Menu();
-            menu.addItem((item) => {
-                item.setTitle(t('random_note_notes_only'))
-                    .setIcon('file-text')
-                    .setChecked(!this.randomNoteIncludeMedia)
-                    .onClick(() => {
-                        this.randomNoteIncludeMedia = false;
-                        randomNoteSettingsButton.textContent = t('random_note_notes_only');
-                        setIcon(randomNoteSettingsButton, 'file-text');
-                        this.render();
-                    });
-            });
-            menu.addItem((item) => {
-                item.setTitle(t('random_note_include_media_files'))
-                    .setIcon('file-image')
-                    .setChecked(this.randomNoteIncludeMedia)
-                    .onClick(() => {
-                        this.randomNoteIncludeMedia = true;
-                        randomNoteSettingsButton.textContent = t('random_note_include_media_files');
-                        setIcon(randomNoteSettingsButton, 'file-image')
-                        this.render();
-                    });
-            });
-
-            // 點擊按鈕時顯示下拉選單
-            randomNoteSettingsButton.addEventListener('click', (event) => {
-                menu.showAtMouseEvent(event);
-            });
-        }
-
-        if (this.sourceMode === 'tasks' && this.searchQuery === '') {
-            // 建立任務分類按鈕，區分未完成、已完成、全部
-            const taskFilterButton = headerButtonsDiv.createEl('button', {
-                attr: { 'aria-label': t('task_filter') }
-            });
-            if (this.taskFilter === 'uncompleted') {
-                setIcon(taskFilterButton, 'square');
-            } else if (this.taskFilter === 'completed') {
-                setIcon(taskFilterButton, 'square-check-big');
-            } else {
-                setIcon(taskFilterButton, 'square-asterisk');
-            }
-            // 建立下拉選單，uncompleted、completed、all
-            const menu = new Menu();
-            menu.addItem((item) => {
-                item.setTitle(t('uncompleted'))
-                    .setChecked(this.taskFilter === 'uncompleted')
-                    .setIcon('square')
-                    .onClick(() => {
-                        this.taskFilter = 'uncompleted';
-                        taskFilterButton.textContent = t('uncompleted');
-                        setIcon(taskFilterButton, 'square');
-                        this.render();
-                    });
-            });
-            menu.addItem((item) => {
-                item.setTitle(t('completed'))
-                    .setChecked(this.taskFilter === 'completed')
-                    .setIcon('square-check-big')
-                    .onClick(() => {
-                        this.taskFilter = 'completed';
-                        taskFilterButton.textContent = t('completed');
-                        setIcon(taskFilterButton, 'square-check-big');
-                        this.render();
-                    });
-            });
-            menu.addItem((item) => {
-                item.setTitle(t('all'))
-                    .setChecked(this.taskFilter === 'all')
-                    .setIcon('square-asterisk')
-                    .onClick(() => {
-                        this.taskFilter = 'all';
-                        taskFilterButton.textContent = t('all');
-                        setIcon(taskFilterButton, 'square-asterisk');
-                        this.render();
-                    });
-            });
-            
-            // 點擊按鈕時顯示下拉選單
-            taskFilterButton.addEventListener('click', (event) => {
-                menu.showAtMouseEvent(event);
-            });
-        }
-
-        // 添加設定按鈕
+        // 添加更多選項按鈕
         if (this.searchQuery === '') {
             const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
             setIcon(moreOptionsButton, 'ellipsis-vertical');
@@ -576,6 +484,8 @@ export class GridView extends ItemView {
                         workspace.revealLeaf(leaf);
                     });
             });
+            menu.addSeparator();
+
             //如果目前是資料夾模式且有資料夾筆記，則增加"打開資料夾筆記"選項
             if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
                 const folder = this.app.vault.getAbstractFileByPath(this.sourcePath);
@@ -625,7 +535,65 @@ export class GridView extends ItemView {
                             });
                     });
                 }
+                menu.addSeparator();
             }
+
+            // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
+            if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
+                this.plugin.settings.showMediaFiles && this.searchQuery === '') {
+                menu.addItem((item) => {
+                    item.setTitle(t('random_note_notes_only'))
+                        .setIcon('file-text')
+                        .setChecked(!this.randomNoteIncludeMedia)
+                        .onClick(() => {
+                            this.randomNoteIncludeMedia = false;
+                            this.render();
+                        });
+                });
+                menu.addItem((item) => {
+                    item.setTitle(t('random_note_include_media_files'))
+                        .setIcon('file-image')
+                        .setChecked(this.randomNoteIncludeMedia)
+                        .onClick(() => {
+                            this.randomNoteIncludeMedia = true;
+                            this.render();
+                        });
+                });
+                menu.addSeparator();
+            }
+
+            // 任務模式選項
+            if (this.sourceMode === 'tasks' && this.searchQuery === '') {
+                menu.addItem((item) => {
+                    item.setTitle(t('uncompleted'))
+                        .setChecked(this.taskFilter === 'uncompleted')
+                        .setIcon('square')
+                        .onClick(() => {
+                            this.taskFilter = 'uncompleted';
+                            this.render();
+                        });
+                });
+                menu.addItem((item) => {
+                    item.setTitle(t('completed'))
+                        .setChecked(this.taskFilter === 'completed')
+                        .setIcon('square-check-big')
+                        .onClick(() => {
+                            this.taskFilter = 'completed';
+                            this.render();
+                        });
+                });
+                menu.addItem((item) => {
+                    item.setTitle(t('all'))
+                        .setChecked(this.taskFilter === 'all')
+                        .setIcon('square-asterisk')
+                        .onClick(() => {
+                            this.taskFilter = 'all';
+                            this.render();
+                        });
+                });
+                menu.addSeparator();
+            }
+
             // 最小化模式選項
             menu.addItem((item) => {
                 item
@@ -650,6 +618,7 @@ export class GridView extends ItemView {
                         this.render();
                     });
             });
+            menu.addSeparator();
             menu.addItem((item) => {
                 item
                     .setTitle(t('open_settings'))
@@ -666,8 +635,10 @@ export class GridView extends ItemView {
             });
         }
         
-        // 如果是資料夾模式且沒有搜尋結果，顯示目前資料夾名稱
-        if (this.sourceMode === 'folder' && this.searchQuery === '' && this.sourcePath !== '/') {
+        // 顯示目前資料夾及上層資料夾名稱
+        if (this.sourceMode === 'folder' && 
+            (this.searchQuery === '' || (this.searchQuery && !this.searchAllFiles)) && 
+            this.sourcePath !== '/') {
             const pathParts = this.sourcePath.split('/');
             const parentPath = pathParts.slice(0, -1).join('/') || '/';
             let parentFolderName = pathParts.slice(-2, -1)[0] || '/';
@@ -692,6 +663,78 @@ export class GridView extends ItemView {
                 event.stopPropagation();
                 this.setSource('folder', parentPath, true);
                 this.clearSelection();
+            });
+
+            parentFolderLink.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const menu = new Menu();
+                const pathParts = parentPath.split('/').filter(part => part.trim() !== '');
+                
+                // 定義路徑項目的類型
+                interface PathItem {
+                    name: string;
+                    path: string;
+                }
+                
+                const paths: PathItem[] = [];
+                let pathAccumulator = '';
+                
+                // 先建立所有路徑
+                pathParts.forEach(part => {
+                    pathAccumulator = pathAccumulator ? `${pathAccumulator}/${part}` : part;
+                    paths.push({
+                        name: part,
+                        path: pathAccumulator
+                    });
+                });
+                
+                // 添加當前目錄（最上層）
+                if (paths.length > 0) {
+                    const current = paths[paths.length - 1];
+                    menu.addItem((item) => {
+                        item.setTitle(current.name)
+                            .setIcon('folder-open')
+                            .onClick(() => {
+                                this.setSource('folder', current.path, true);
+                                this.clearSelection();
+                            });
+                        return item;
+                    });
+                }
+                
+                // 添加父目錄（從深到淺）
+                for (let i = paths.length - 2; i >= 0; i--) {
+                    const path = paths[i];
+                    menu.addItem((item) => {
+                        item.setTitle(path.name)
+                            .setIcon('folder')
+                            .onClick(() => {
+                                this.setSource('folder', path.path, true);
+                                this.clearSelection();
+                            });
+                        return item;
+                    });
+                }
+                
+                // 如果不是根目錄，添加分隔線和根目錄選項
+                if (paths.length > 0) {
+                    menu.addSeparator();
+                }
+                
+                // 添加根目錄選項（最下層）
+                menu.addItem((item) => {
+                    item.setTitle(t('root'))
+                        .setIcon('folder')
+                        .onClick(() => {
+                            this.setSource('folder', '/', true);
+                            this.clearSelection();
+                        });
+                    return item;
+                });
+                
+                menu.showAtMouseEvent(event);
             });
 
             // 分隔符號
@@ -755,6 +798,84 @@ export class GridView extends ItemView {
                         }
                     }
                 });
+            }
+        } else if (!this.searchAllFiles) {
+            // 顯示目前模式名稱
+            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+            let modeName = '';
+            let modeIcon = '';
+
+            // 根據目前模式設定對應的圖示和名稱
+            switch (this.sourceMode) {
+                case 'bookmarks':
+                    modeIcon = '📑';
+                    modeName = t('bookmarks_mode');
+                    break;
+                case 'search':
+                    modeIcon = '🔍';
+                    modeName = t('search_results');
+                    const searchLeaf = (this.app as any).workspace.getLeavesOfType('search')[0];
+                    if (searchLeaf) {
+                        const searchView: any = searchLeaf.view;
+                        const searchInputEl: HTMLInputElement | null = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
+                        const currentQuery = searchInputEl?.value.trim();
+                        if (currentQuery && currentQuery.length > 0) {
+                            modeName += `: ${currentQuery}`;
+                        } else if (this.searchQuery) {
+                            modeName += `: ${this.searchQuery}`;
+                        }
+                    }
+                    break;
+                case 'backlinks':
+                    modeIcon = '🔗';
+                    modeName = t('backlinks_mode');
+                    const activeFile = this.app.workspace.getActiveFile();
+                    if (activeFile) {
+                        modeName += `: ${activeFile.basename}`;
+                    }
+                    break;
+                case 'outgoinglinks':
+                    modeIcon = '🔗';
+                    modeName = t('outgoinglinks_mode');
+                    const currentFile = this.app.workspace.getActiveFile();
+                    if (currentFile) {
+                        modeName += `: ${currentFile.basename}`;
+                    }
+                    break;
+                case 'recent-files':
+                    modeIcon = '📅';
+                    modeName = t('recent_files_mode');
+                    break;
+                case 'all-files':
+                    modeIcon = '📔';
+                    modeName = t('all_files_mode');
+                    break;
+                case 'random-note':
+                    modeIcon = '🎲';
+                    modeName = t('random_note_mode');
+                    break;
+                case 'tasks':
+                    modeIcon = '☑️';
+                    modeName = t('tasks_mode');
+                    break;
+                default:
+                    modeIcon = '📁';
+                    modeName = t('root');
+            }
+
+            // 顯示模式名稱
+            folderNameContainer.createEl('span', { 
+                text: `${modeIcon} ${modeName}`.trim(),
+                cls: 'ge-mode-title'
+            });
+
+            switch (this.sourceMode) {
+                case 'tasks':
+                    folderNameContainer.createEl('span', { text: ' > ' });
+                    folderNameContainer.createEl('span', { text: t(`${this.taskFilter}`) });
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -993,6 +1114,7 @@ export class GridView extends ItemView {
                                     workspace.revealLeaf(leaf);
                                 });
                         });
+                        menu.addSeparator();
 
                         // 檢查同名筆記是否存在
                         const notePath = `${folder.path}/${folder.name}.md`;
@@ -1040,6 +1162,8 @@ export class GridView extends ItemView {
                                     });
                             });
                         }
+                        menu.addSeparator();
+
                         if (!this.plugin.settings.ignoredFolders.includes(folder.path)) {
                             //加入"忽略此資料夾"選項
                             menu.addItem((item) => {

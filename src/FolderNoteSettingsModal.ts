@@ -109,8 +109,8 @@ export class FolderNoteSettingsModal extends Modal {
 
         // 置頂勾選框
         new Setting(contentEl)
-            .setName(t('pinned'))
-            .setDesc(t('pinned_desc'))
+            .setName(t('foldernote_pinned'))
+            .setDesc(t('foldernote_pinned_desc'))
             .addToggle(toggle => {
                 toggle
                     .setValue(this.settings.isPinned)

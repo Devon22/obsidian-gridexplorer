@@ -335,14 +335,21 @@
 
 .ge-foldername-content {
     justify-content: center;
-    padding: 8px;
+    padding: 10px 8px 9px 8px;
     background-color: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
+    font-size: var(--font-ui-medium);
 }
 
 .ge-foldername-content span {
     display: inline-flex;
     align-items: center;
+    
+}
+
+.ge-foldername-content span.ge-mode-title {
+    padding-left: 5px;
+    padding-right: 3px;
 }
 
 /* 為資料夾名稱、分隔符等元素添加間距 */
