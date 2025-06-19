@@ -799,7 +799,7 @@ export class GridView extends ItemView {
                     }
                 });
             }
-        } else if (!this.searchAllFiles) {
+        } else if (!(this.searchQuery !== '' && this.searchAllFiles)) {
             // 顯示目前模式名稱
             const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
             let modeName = '';
