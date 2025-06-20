@@ -336,38 +336,64 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         bookmarks.forEach(processBookmarkItem);
         return Array.from(bookmarkedFiles) as TFile[];
     } else if (sourceMode === 'tasks') {
-        // 任務模式 - 使用 Tasks 插件 API
+        const filesWithTasks = new Set<TFile>();
         const tasksPlugin = app.plugins.plugins['obsidian-tasks-plugin'];
-        if (!tasksPlugin) {
-            new Notice('Tasks plugin not found');
-            return [];
-        }
-        
-        try {
-            // 獲取所有任務
-            const allTasks = tasksPlugin.getTasks ? tasksPlugin.getTasks() : [];
-            const filesWithTasks = new Set<TFile>();
-            
-            // 過濾任務
-            for (const task of allTasks) {
-                const file = app.vault.getAbstractFileByPath(task.path);
-                if (!(file instanceof TFile)) continue;
-                
-                // 根據過濾條件檢查任務
-                if (gridView.taskFilter === 'uncompleted' && !task.isDone) {
-                    filesWithTasks.add(file);
-                } else if (gridView.taskFilter === 'completed' && task.isDone) {
-                    filesWithTasks.add(file);
-                } else if (gridView.taskFilter === 'all') {
-                    filesWithTasks.add(file);
+        if (tasksPlugin) {
+            // 任務模式 - 使用 Tasks 插件 API
+            try {
+                // 獲取所有任務
+                const allTasks = tasksPlugin.getTasks ? tasksPlugin.getTasks() : [];
+
+                // 過濾任務
+                for (const task of allTasks) {
+                    const file = app.vault.getAbstractFileByPath(task.path);
+                    if (!(file instanceof TFile)) continue;
+                    
+                    // 根據過濾條件檢查任務
+                    if (gridView.taskFilter === 'uncompleted' && !task.isDone) {
+                        filesWithTasks.add(file);
+                    } else if (gridView.taskFilter === 'completed' && task.isDone) {
+                        filesWithTasks.add(file);
+                    } else if (gridView.taskFilter === 'all') {
+                        filesWithTasks.add(file);
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting tasks from Tasks plugin:', error);
+                return [];
+            }
+        } else {
+            const markdownFiles = app.vault.getMarkdownFiles();
+            for (const file of markdownFiles) {
+                try {
+                    const content = await app.vault.cachedRead(file);
+                    let shouldAdd = false;
+                    // 用 gridView.taskFilter 匹配 uncompleted、completed、all 任務
+                    if (gridView.taskFilter === 'uncompleted') {
+                        // 只匹配未完成的任務: - [ ] 或 * [ ]
+                        shouldAdd = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                    } else if (gridView.taskFilter === 'completed') {
+                        // 只匹配所有任務均已完成的檔案（至少有一個已完成且沒有未完成）
+                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        shouldAdd = hasCompleted && !hasIncomplete;
+                    } else if (gridView.taskFilter === 'all') {
+                        // 匹配任何任務（已完成或未完成皆可）
+                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        shouldAdd = hasIncomplete || hasCompleted;
+                    }
+                    
+                    if (shouldAdd) {
+                        filesWithTasks.add(file);
+                    }
+                } catch (error) {
+                    console.error(`Error reading file ${file.path}:`, error);
+                    return [];
                 }
             }
-            
-            return sortFiles(Array.from(filesWithTasks), gridView);
-        } catch (error) {
-            console.error('Error getting tasks from Tasks plugin:', error);
-            return [];
         }
+        return sortFiles(Array.from(filesWithTasks), gridView);
     } else if (sourceMode === 'all-files') {
         // 所有筆記模式
         const allVaultFiles = app.vault.getFiles().filter(file => {

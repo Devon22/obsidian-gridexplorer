@@ -243,7 +243,6 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         // 顯示任務模式
         new Setting(containerEl)
             .setName(`☑️ ${t('show_tasks_mode')}`)
-            .setDesc(t('show_tasks_mode_desc'))
             .addToggle(toggle => {
                 toggle
                     .setValue(this.plugin.settings.showTasksMode)
