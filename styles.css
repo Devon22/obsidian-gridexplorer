@@ -241,15 +241,6 @@
     color: var(--text-normal);
 }
 
-/* 上層資料夾的特殊樣式 */
-.ge-grid-item.parent-folder {
-    background-color: var(--background-secondary-alt);
-}
-
-.ge-grid-item.parent-folder:hover {
-    background-color: var(--background-modifier-hover);
-}
-
 /* 調整資料夾項目的高度 */
 .ge-grid-item.ge-folder-item .ge-content-area {
     min-height: 0px;

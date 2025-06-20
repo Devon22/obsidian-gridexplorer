@@ -103,6 +103,9 @@ export class GridView extends ItemView {
         } else if (this.sourceMode === 'all-files') {
             return t('all_files_mode');
         } else if (this.sourceMode === 'folder') {
+            if (this.sourcePath === '/') {
+                return t('root');
+            }
             return this.sourcePath;
         } else {
             return '';

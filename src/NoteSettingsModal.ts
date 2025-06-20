@@ -71,25 +71,27 @@ export class NoteSettingsModal extends Modal {
         }
 
         // 顏色選項
-        new Setting(contentEl)
-            .setName(t('note_color'))
-            .setDesc(t('note_color_desc'))
-            .addDropdown(dropdown => {
-                dropdown
-                    .addOption('', t('no_color'))
-                    .addOption('red', t('color_red'))
-                    .addOption('orange', t('color_orange'))
-                    .addOption('yellow', t('color_yellow'))
-                    .addOption('green', t('color_green'))
-                    .addOption('cyan', t('color_cyan'))
-                    .addOption('blue', t('color_blue'))
-                    .addOption('purple', t('color_purple'))
-                    .addOption('pink', t('color_pink'))
-                    .setValue(this.settings.color)
-                    .onChange(value => {
-                        this.settings.color = value;
-                    });
-            });
+        if (this.files[0].extension === "md") {
+            new Setting(contentEl)
+                .setName(t('note_color'))
+                .setDesc(t('note_color_desc'))
+                .addDropdown(dropdown => {
+                    dropdown
+                        .addOption('', t('no_color'))
+                        .addOption('red', t('color_red'))
+                        .addOption('orange', t('color_orange'))
+                        .addOption('yellow', t('color_yellow'))
+                        .addOption('green', t('color_green'))
+                        .addOption('cyan', t('color_cyan'))
+                        .addOption('blue', t('color_blue'))
+                        .addOption('purple', t('color_purple'))
+                        .addOption('pink', t('color_pink'))
+                        .setValue(this.settings.color)
+                        .onChange(value => {
+                            this.settings.color = value;
+                        });
+                });
+        }
 
         // 置頂勾選框
         if (this.files[0].parent && this.files[0].parent !== this.app.vault.getRoot()) {
