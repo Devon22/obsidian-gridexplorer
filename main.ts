@@ -218,7 +218,7 @@ export default class GridExplorerPlugin extends Plugin {
             (this.app.workspace as any).on('tag-wrangler:contextmenu', (menu: Menu, tagName: string) => {
                 // 截斷過長的文字，最多顯示 20 個字元
                 const truncatedText = tagName.length > 20 ? tagName.substring(0, 20) + '...' : tagName;
-                const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
+                const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「#${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
 
                 menu.addItem(item => {
                     item
@@ -230,7 +230,7 @@ export default class GridExplorerPlugin extends Plugin {
                             const view = await this.activateView('folder','/');
                             if (view instanceof GridView) {
                                 // 設定搜尋模式和關鍵字
-                                view.searchQuery = tagName;
+                                view.searchQuery = `#${tagName}`;
                                 // 設定搜尋範圍 (預設搜尋所有檔案，不含媒體)
                                 view.searchAllFiles = true;
                                 view.searchMediaFiles = false;

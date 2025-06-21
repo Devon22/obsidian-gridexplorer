@@ -1269,21 +1269,108 @@ export class GridView extends ItemView {
 
             // 根據搜尋關鍵字進行過濾（不分大小寫）
             const searchTerms = this.searchQuery.toLowerCase().split(/\s+/).filter(term => term.trim() !== '');
+            
+            // 分離標籤搜尋和一般搜尋
+            const tagTerms = searchTerms.filter(term => term.startsWith('#')).map(term => term.substring(1));
+            const normalTerms = searchTerms.filter(term => !term.startsWith('#'));
+            
             // 使用 Promise.all 來非同步地讀取所有檔案內容
             await Promise.all(
                 allFiles.map(async file => {
                     const fileName = file.name.toLowerCase();
-                    // 檢查檔案名稱是否包含所有搜尋字串
-                    const matchesFileName = searchTerms.every(term => fileName.includes(term));
-                    if (matchesFileName) {
-                        files.push(file);
-                    } else if (file.extension === 'md') {
-                        // 只對 Markdown 檔案進行內容搜尋
-                        const content = (await this.app.vault.cachedRead(file)).toLowerCase();
-                        // 檢查檔案內容是否包含所有搜尋字串
-                        const matchesContent = searchTerms.every(term => content.includes(term));
-                        if (matchesContent) {
+                    // 檢查檔案名稱是否包含所有一般搜尋字串
+                    const matchesFileName = normalTerms.length === 0 || normalTerms.every(term => fileName.includes(term));
+                    
+                    // 如果只有標籤搜尋詞且不是 Markdown 檔案，直接跳過（因為標籤只存在於 Markdown 檔案中）
+                    if (tagTerms.length > 0 && normalTerms.length === 0 && file.extension !== 'md') {
+                        return;
+                    }
+                    
+                    // 如果沒有標籤搜尋詞，只有一般搜尋詞
+                    if (tagTerms.length === 0) {
+                        if (matchesFileName) {
                             files.push(file);
+                        } else if (file.extension === 'md') {
+                            // 只對 Markdown 檔案進行內容搜尋
+                            const content = (await this.app.vault.cachedRead(file)).toLowerCase();
+                            // 檢查檔案內容是否包含所有一般搜尋字串
+                            const matchesContent = normalTerms.every(term => content.includes(term));
+                            if (matchesContent) {
+                                files.push(file);
+                            }
+                        }
+                        return;
+                    }
+                    
+                    // 處理標籤搜尋
+                    if (file.extension === 'md') {
+                        // 檢查檔案是否包含所有標籤
+                        const fileCache = this.app.metadataCache.getFileCache(file);
+                        let matchesTags = false;
+                        
+                        if (fileCache && fileCache.tags && Array.isArray(fileCache.tags)) {
+                            // 檢查內文中的標籤
+                            const tags = fileCache.tags;
+                            matchesTags = tagTerms.every(tag => 
+                                tags.some((t: any) => t && t.tag && t.tag.toLowerCase() === '#' + tag)
+                            );
+                        }
+                        
+                        // 如果前面的標籤檢查沒有匹配，檢查 frontmatter 中的標籤
+                        if (!matchesTags && fileCache && fileCache.frontmatter && fileCache.frontmatter.tags) {
+                            let frontmatterTags = fileCache.frontmatter.tags;
+                            if (typeof frontmatterTags === 'string') {
+                                // 如果是字串，分割成陣列
+                                const tagArray = frontmatterTags.split(/[,\s]+/).filter(t => t.trim() !== '');
+                                matchesTags = tagTerms.every(tag => 
+                                    tagArray.some(t => {
+                                        // 去除可能的 # 符號再比較
+                                        const cleanTag = t.toLowerCase().replace("#", '');
+                                        
+                                        // 直接比較
+                                        if (cleanTag === tag) return true;
+                                        
+                                        // 如果是空格分隔的多個標籤，分割並檢查
+                                        const subTags = cleanTag.split(/\s+/).filter(st => st.trim() !== '');
+                                        return subTags.some(st => st === tag);
+                                    })
+                                );
+                            } else if (Array.isArray(frontmatterTags)) {
+                                // 如果是陣列，直接檢查
+                                matchesTags = tagTerms.every(tag => 
+                                    frontmatterTags.some(t => {
+                                        if (typeof t === 'string') {
+                                            // 去除可能的 # 符號再比較
+                                            const cleanTag = t.toLowerCase().replace("#", '');
+                                            
+                                            // 直接比較
+                                            if (cleanTag === tag) return true;
+                                            
+                                            // 如果是空格分隔的多個標籤，分割並檢查
+                                            const subTags = cleanTag.split(/\s+/).filter(st => st.trim() !== '');
+                                            return subTags.some(st => st === tag);
+                                        }
+                                        return false;
+                                    })
+                                );
+                            }
+                        }
+                        
+                        // 如果標籤匹配，且檔名或內容也匹配（如果有一般搜尋詞的話），則加入結果
+                        if (matchesTags) {
+                            if (matchesFileName) {
+                                files.push(file);
+                            } else if (normalTerms.length > 0) {
+                                // 如果有一般搜尋詞，還需檢查內容
+                                const content = (await this.app.vault.cachedRead(file)).toLowerCase();
+                                const matchesContent = normalTerms.every(term => content.includes(term));
+                                if (matchesContent) {
+                                    files.push(file);
+                                }
+                            } else {
+                                // 如果只有標籤搜尋詞，且標籤匹配，則加入結果
+                                files.push(file);
+                            }
                         }
                     }
                 })
