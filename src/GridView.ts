@@ -1653,10 +1653,36 @@ export class GridView extends ItemView {
                                             text: tag.startsWith('#') ? tag : `#${tag}`
                                         });
                                         
+                                        //添加右鍵選單事件，點擊後開啟選單，點擊選單中的選項後追加標籤到搜尋關鍵字內並重新渲染
+                                        tagEl.addEventListener('contextmenu', (e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            const menu = new Menu();
+                                            menu.addItem(item => item
+                                                .setTitle(t('add_to_search'))
+                                                .onClick(() => {
+                                                    const tagText = tag.startsWith('#') ? tag : `#${tag}`;
+                                                    if (this.searchQuery.includes(tagText)) {
+                                                        return;
+                                                    }
+                                                    this.searchQuery += ` ${tagText}`;
+                                                    this.searchAllFiles = true; 
+                                                    this.searchMediaFiles = false;
+                                                    this.render(true);
+                                                    return false;
+                                                })
+                                            );
+                                            menu.showAtPosition({
+                                                x: e.clientX,
+                                                y: e.clientY
+                                            });
+                                        });
+
                                         // 添加點擊事件，點擊後設置搜尋關鍵字並重新渲染
                                         tagEl.addEventListener('click', (e) => {
+                                            e.preventDefault();
                                             e.stopPropagation(); // 防止事件冒泡到卡片
-                                            const tagText = tag.startsWith('#') ? tag.substring(1) : tag;
+                                            const tagText = tag.startsWith('#') ? tag : `#${tag}`;
                                             if (this.searchQuery === tagText) {
                                                 return;
                                             }

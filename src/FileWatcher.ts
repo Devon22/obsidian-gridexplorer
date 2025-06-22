@@ -25,6 +25,10 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
+                    if(this.gridView.searchQuery !== '' && this.gridView.searchAllFiles) {
+                        this.scheduleRender();
+                        return;
+                    }
                     if(this.gridView.sourceMode === 'random-note') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
@@ -32,12 +36,12 @@ export class FileWatcher {
                             this.scheduleRender();
                         }
                     } else if (this.gridView.sourceMode === 'folder') {
-                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
+                        if (this.gridView.sourcePath) {
                             const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                             if (fileDirPath === this.gridView.sourcePath) {
                                 this.scheduleRender();
-                            } 
-                        }
+                            }
+                        } 
                     } else if (this.gridView.sourceMode === 'backlinks') {
                         if(isDocumentFile(file)) {
                             this.scheduleRender();
@@ -53,21 +57,20 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('delete', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note') {
-                        return;
-                    } else if (this.gridView.sourceMode === 'recent-files') {
-                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
-                            this.scheduleRender();
+                    // 如果有 GridView 實例
+                    if (this.gridView) {
+                        // 找到當前檔案在 GridView 中的索引
+                        const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) => 
+                            item.dataset.filePath === file.path
+                        );
+
+                        // 如果找到了對應的項目，移除項目
+                        if (gridItemIndex >= 0) {
+                            this.gridView.gridItems[gridItemIndex].remove();
+                            this.gridView.gridItems.splice(gridItemIndex, 1);
+                            const gridContainer = this.gridView.containerEl.querySelector('.ge-grid-container') as HTMLElement;
+                            this.cleanupDateDividers(gridContainer);
                         }
-                    } else if (this.gridView.sourceMode === 'folder') {
-                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
-                            const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
-                            if (fileDirPath === this.gridView.sourcePath) {
-                                this.scheduleRender();
-                            } 
-                        }
-                    } else {
-                        this.scheduleRender();
                     }
                 }
             })
@@ -77,18 +80,36 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('rename', (file, oldPath) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.sourceMode === 'random-note') {
-                        return;
-                    } else if (this.gridView.sourceMode === 'folder') {
-                        if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
-                            const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
-                            const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
-                            if (fileDirPath === this.gridView.sourcePath || oldDirPath === this.gridView.sourcePath) {
-                                this.scheduleRender();
-                            } 
+                    const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
+                    const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
+                    // 來源與目標路徑不同，表示移動檔案
+                    if (fileDirPath !== oldDirPath) {
+                        if (this.gridView.sourceMode === 'folder') {
+                            if (this.gridView.sourcePath && this.gridView.searchQuery === '') {
+                                if (fileDirPath === this.gridView.sourcePath || oldDirPath === this.gridView.sourcePath) {
+                                    this.scheduleRender();
+                                    return;
+                                } 
+                            }
                         }
-                    } else {
-                        this.scheduleRender();
+                    }
+
+                    // 來源與目標路徑相同，表示更改檔名
+                    if (this.gridView) {
+                        // 找到當前GridView中的索引
+                        const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) => 
+                            item.dataset.filePath === oldPath
+                        );
+
+                        // 如果找到了對應的項目，更改title和path
+                        if (gridItemIndex >= 0) {
+                            const getitle = this.gridView.gridItems[gridItemIndex].querySelector('.ge-grid-item .ge-title');
+                            if (getitle) {
+                                this.gridView.gridItems[gridItemIndex].dataset.filePath = file.path;
+                                getitle.textContent = file.basename;
+                                getitle.setAttribute('title', file.basename);
+                            }
+                        }
                     }
                 }
             })
@@ -123,10 +144,37 @@ export class FileWatcher {
         }
         // 200ms 延遲，可視需求調整
         this.renderTimer = window.setTimeout((): void => {
-            console.log('123');
             this.gridView.render();
             this.renderTimer = null;
         }, 200);
     }
 
+    private cleanupDateDividers(container: HTMLElement | null): void {
+        if (!container) return;
+        
+        const dateDividers = Array.from(container.querySelectorAll('.ge-date-divider'));
+        
+        for (let i = dateDividers.length - 1; i >= 0; i--) {
+            const currentDivider = dateDividers[i];
+            const nextDivider = dateDividers[i + 1];
+            let nextElement = currentDivider.nextElementSibling;
+            let hasItemsBetween = false;
+            
+            while (nextElement && (!nextDivider || nextElement !== nextDivider)) {
+                if (!(nextElement as HTMLElement).classList.contains('ge-date-divider')) {
+                    hasItemsBetween = true;
+                    break;
+                }
+                nextElement = nextElement.nextElementSibling;
+            }
+            
+            if (!nextDivider) {
+                hasItemsBetween = currentDivider.nextElementSibling !== null;
+            }
+            
+            if (!hasItemsBetween) {
+                currentDivider.remove();
+            }
+        }
+    }
 }

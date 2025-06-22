@@ -44,6 +44,7 @@ export const TRANSLATIONS: Translations = {
         'add': '新增',
         'root': '根目錄',
         'more_options': '更多選項',
+        'add_to_search': '加入搜尋',
 
         // 視圖標題
         'grid_view_title': '網格視圖',
@@ -251,6 +252,7 @@ export const TRANSLATIONS: Translations = {
         'add': 'Add',
         'root': 'Root',
         'more_options': 'More options',
+        'add_to_search': 'Add to search',
 
         // View Titles
         'grid_view_title': 'Grid view',
@@ -458,6 +460,7 @@ export const TRANSLATIONS: Translations = {
         'add': '添加',
         'root': '根目录',
         'more_options': '更多选项',
+        'add_to_search': '加入搜索',
 
         // 视图标题
         'grid_view_title': '网格视图',
@@ -665,6 +668,7 @@ export const TRANSLATIONS: Translations = {
         'add': '追加',
         'root': 'ルート',
         'more_options': 'もっと選択肢',
+        'add_to_search': '検索に追加',
 
         // ビュータイトル
         'grid_view_title': 'グリッドビュー',
@@ -872,6 +876,7 @@ export const TRANSLATIONS: Translations = {
         'add': 'Добавить',
         'root': 'Корень',
         'more_options': 'Больше опций',
+        'add_to_search': 'Добавить в поиск',
 
         // View Titles
         'grid_view_title': 'Сеточный вид',
@@ -1079,6 +1084,7 @@ export const TRANSLATIONS: Translations = {
         'add': 'Додати',
         'root': 'Корень',
         'more_options': 'Більше опцій',
+        'add_to_search': 'Додати до пошуку',
 
         // View Titles
         'grid_view_title': 'Сітковий вигляд',

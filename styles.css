@@ -946,3 +946,28 @@
 .ge-setting-number-input {
     width: 60px;
 }
+
+/* 標籤自動完成下拉選單 */
+.ge-tag-suggestions {
+    position: relative;
+    margin-top: 4px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.ge-tag-suggestion-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ge-tag-suggestion-item:hover,
+.ge-tag-suggestion-item.is-selected {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent, white);
+}

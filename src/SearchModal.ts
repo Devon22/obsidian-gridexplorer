@@ -32,9 +32,84 @@ export class SearchModal extends Modal {
         clearButton.style.display = this.defaultQuery ? 'flex' : 'none';
         setIcon(clearButton, 'x');
 
-        // 監聽輸入框變化來控制清空按鈕的顯示
+        // 建立標籤建議容器
+        const tagSuggestionContainer = contentEl.createDiv('ge-tag-suggestions');
+        tagSuggestionContainer.style.display = 'none';
+
+        // 取得並快取所有標籤 (移除 # 前綴)
+        const allTagsArr: string[] = Object.keys(((this.app.metadataCache as any).getTags?.() || {})).map((t) => t.substring(1));
+
+        let tagSuggestions: string[] = [];
+        let selectedSuggestionIndex = -1;
+
+        const updateTagSuggestions = () => {
+            const match = searchInput.value.substring(0, searchInput.selectionStart || 0).match(/#([^#\s]*)$/);
+            if (!match) {
+                tagSuggestionContainer.style.display = 'none';
+                tagSuggestionContainer.empty();
+                selectedSuggestionIndex = -1;
+                return;
+            }
+            const query = match[1].toLowerCase();
+            tagSuggestions = allTagsArr.filter((t) => t.toLowerCase().startsWith(query)).slice(0, 10);
+
+            if (tagSuggestions.length === 0) {
+                tagSuggestionContainer.style.display = 'none';
+                selectedSuggestionIndex = -1;
+                return;
+            }
+
+            tagSuggestionContainer.empty();
+            tagSuggestions.forEach((tag, idx) => {
+                const item = tagSuggestionContainer.createDiv('ge-tag-suggestion-item');
+                item.textContent = `#${tag}`;
+                if (idx === selectedSuggestionIndex) item.addClass('is-selected');
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    applySuggestion(idx);
+                });
+            });
+            tagSuggestionContainer.style.display = 'block';
+        };
+
+        const applySuggestion = (index: number) => {
+            if (index < 0 || index >= tagSuggestions.length) return;
+            const value = searchInput.value;
+            const cursor = searchInput.selectionStart || 0;
+            const beforeMatch = value.substring(0, cursor).replace(/#([^#\\s]*)$/, `#${tagSuggestions[index]} `);
+            const afterCursor = value.substring(cursor);
+            searchInput.value = beforeMatch + afterCursor;
+            const newCursorPos = beforeMatch.length;
+            searchInput.setSelectionRange(newCursorPos, newCursorPos);
+            tagSuggestionContainer.style.display = 'none';
+            tagSuggestionContainer.empty();
+            selectedSuggestionIndex = -1;
+            clearButton.style.display = searchInput.value ? 'flex' : 'none';
+        };
+
+        // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
         searchInput.addEventListener('input', () => {
             clearButton.style.display = searchInput.value ? 'flex' : 'none';
+            updateTagSuggestions();
+        });
+
+        // 處理上下鍵及 Enter 選擇建議
+        searchInput.addEventListener('keydown', (e) => {
+            if (tagSuggestionContainer.style.display === 'none') return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % tagSuggestions.length;
+                updateTagSuggestions();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedSuggestionIndex = (selectedSuggestionIndex - 1 + tagSuggestions.length) % tagSuggestions.length;
+                updateTagSuggestions();
+            } else if (e.key === 'Enter') {
+                if (selectedSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    applySuggestion(selectedSuggestionIndex);
+                }
+            }
         });
 
         // 清空按鈕點擊事件
