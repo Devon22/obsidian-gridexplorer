@@ -44,7 +44,9 @@ export const TRANSLATIONS: Translations = {
         'add': '新增',
         'root': '根目錄',
         'more_options': '更多選項',
-        'add_to_search': '加入搜尋',
+        'add_tag_to_search': '加入搜尋',
+        'remove_tag_from_search': '從搜尋中移除',
+        'global_search': '全域搜尋',
 
         // 視圖標題
         'grid_view_title': '網格視圖',
@@ -112,6 +114,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': '設定是否在摘要中顯示CodeBlock的內容',
         'enable_file_watcher': '啟用檔案監控',
         'enable_file_watcher_desc': '啟用後會自動偵測檔案變更並更新視圖，關閉後需手動點擊重新整理按鈕',
+        'intercept_all_tag_clicks': '攔截所有標籤點擊事件',
+        'intercept_all_tag_clicks_desc': '啟用後會攔截所有標籤點擊事件，並在網格視圖中打開標籤',    
         'reset_to_default' : '重置為預設值',
         'reset_to_default_desc': '將所有設定重置為預設值',
         'settings_reset_notice': '設定值已重置為預設值',
@@ -252,7 +256,9 @@ export const TRANSLATIONS: Translations = {
         'add': 'Add',
         'root': 'Root',
         'more_options': 'More options',
-        'add_to_search': 'Add to search',
+        'add_tag_to_search': 'Add to search',
+        'remove_tag_from_search': 'Remove from search',
+        'global_search': 'Global search',
 
         // View Titles
         'grid_view_title': 'Grid view',
@@ -320,6 +326,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': 'Set whether to show code block in the summary',
         'enable_file_watcher': 'Enable file watcher',
         'enable_file_watcher_desc': 'When enabled, the view will automatically update when files change. If disabled, you need to click the refresh button manually',
+        'intercept_all_tag_clicks': 'Intercept all tag clicks',
+        'intercept_all_tag_clicks_desc': 'When enabled, all tag clicks will be intercepted and opened in the grid view',
         'reset_to_default': 'Reset to default',
         'reset_to_default_desc': 'Reset all settings to default values',
         'settings_reset_notice': 'Settings have been reset to default values',
@@ -460,7 +468,9 @@ export const TRANSLATIONS: Translations = {
         'add': '添加',
         'root': '根目录',
         'more_options': '更多选项',
-        'add_to_search': '加入搜索',
+        'add_tag_to_search': '加入搜索',
+        'remove_tag_from_search': '从搜索中移除',
+        'global_search': '全域搜索',
 
         // 视图标题
         'grid_view_title': '网格视图',
@@ -528,6 +538,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': '设置是否在摘要中显示CodeBlock的內容',
         'enable_file_watcher': '启用文件监控',
         'enable_file_watcher_desc': '启用后会自动检测文件变更并更新视图，关闭后需手动点击刷新按钮',
+        'intercept_all_tag_clicks': '攔截所有標籤點擊事件',
+        'intercept_all_tag_clicks_desc': '啟用後會攔截所有標籤點擊事件，並在網格視圖中打開標籤',
         'reset_to_default': '重置为默认值',
         'reset_to_default_desc': '将所有设置重置为默认值',
         'settings_reset_notice': '设置值已重置为默认值',
@@ -668,7 +680,9 @@ export const TRANSLATIONS: Translations = {
         'add': '追加',
         'root': 'ルート',
         'more_options': 'もっと選択肢',
-        'add_to_search': '検索に追加',
+        'add_tag_to_search': '検索に追加',
+        'remove_tag_from_search': '検索から削除',
+        'global_search': 'グローバル検索',
 
         // ビュータイトル
         'grid_view_title': 'グリッドビュー',
@@ -736,6 +750,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': '要約にCodeBlockを表示するかどうかを設定',
         'enable_file_watcher': 'ファイル監視を有効にする',
         'enable_file_watcher_desc': '有効にすると、ファイルの変更を自動的に検出してビューを更新します。無効の場合は、更新ボタンを手動でクリックする必要があります',
+        'intercept_all_tag_clicks': 'すべてのタグクリックを攔截する',
+        'intercept_all_tag_clicks_desc': '有効にすると、すべてのタグクリックを攔截し、グリッドビューでタグを開きます',
         'reset_to_default': 'デフォルトに戻す',
         'reset_to_default_desc': 'すべての設定をデフォルト値に戻',
         'settings_reset_notice': '設定値がデフォルト値にリセットされました',
@@ -876,7 +892,9 @@ export const TRANSLATIONS: Translations = {
         'add': 'Добавить',
         'root': 'Корень',
         'more_options': 'Больше опций',
-        'add_to_search': 'Добавить в поиск',
+        'add_tag_to_search': 'Добавить в поиск',
+        'remove_tag_from_search': 'Удалить из поиска',
+        'global_search': 'Глобальный поиск',
 
         // View Titles
         'grid_view_title': 'Сеточный вид',
@@ -944,6 +962,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': 'Установите, чтобы показывать CodeBlock в кратком описании',
         'enable_file_watcher': 'Включить наблюдение за файлами',
         'enable_file_watcher_desc': 'При включении вид будет автоматически обновляться при изменении файлов. Если отключено, нужно вручную нажимать кнопку обновления',
+        'intercept_all_tag_clicks': 'Поймать все клики по тегу',
+        'intercept_all_tag_clicks_desc': 'При включении все клики по тегу будут пойматься и открыться в сетке',
         'reset_to_default': 'Сбросить на значения по умолчанию',
         'reset_to_default_desc': 'Сбросить все настройки на значения по умолчанию',
         'settings_reset_notice': 'Настройки сброшены на значения по умолчанию',
@@ -1084,7 +1104,9 @@ export const TRANSLATIONS: Translations = {
         'add': 'Додати',
         'root': 'Корень',
         'more_options': 'Більше опцій',
-        'add_to_search': 'Додати до пошуку',
+        'add_tag_to_search': 'Додати до пошуку',
+        'remove_tag_from_search': 'Видалити з пошуку',
+        'global_search': 'Глобальний пошук',
 
         // View Titles
         'grid_view_title': 'Сітковий вигляд',
@@ -1152,6 +1174,8 @@ export const TRANSLATIONS: Translations = {
         'show_code_block_in_summary_desc': 'Встановіть, щоб показувати CodeBlock в короткому описі',
         'enable_file_watcher': 'Увімкнути спостереження за файлами',
         'enable_file_watcher_desc': 'При увімкненні вигляд автоматично оновлюватиметься при зміні файлів. Якщо вимкнено, потрібно вручну натискати кнопку оновлення',
+        'intercept_all_tag_clicks': 'Поймати всі кліки по тегу',
+        'intercept_all_tag_clicks_desc': 'При увімкненні всі кліки по тегу будуть поймані та відображатися в сетці',
         'reset_to_default': 'Скинути до стандартних значень',
         'reset_to_default_desc': 'Скинути всі налаштування до стандартних значень',
         'settings_reset_notice': 'Налаштування скинуто до стандартних значень',

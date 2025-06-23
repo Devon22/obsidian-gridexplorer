@@ -150,8 +150,11 @@ export class GridView extends ItemView {
             }
         }
 
-        this.sourceMode = mode;
-        this.sourcePath = path;
+        if(mode !== '') this.sourceMode = mode; 
+        if(path !== '') this.sourcePath = path;
+        if(this.sourceMode === '') this.sourceMode = 'folder';
+        if(this.sourcePath === '') this.sourcePath = '/';
+
         this.render(resetScroll);
         // 通知 Obsidian 保存視圖狀態
         this.app.workspace.requestSaveLayout();
@@ -880,6 +883,13 @@ export class GridView extends ItemView {
                 default:
                     break;
             }
+        } else if (this.searchQuery !== '' && this.searchAllFiles) {
+            // 顯示全域搜尋名稱
+            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+            folderNameContainer.createEl('span', { 
+                text: `🔍 ${t('global_search')}`,
+                cls: 'ge-mode-title'
+            });
         }
 
         // 創建內容區域
@@ -1657,21 +1667,32 @@ export class GridView extends ItemView {
                                         tagEl.addEventListener('contextmenu', (e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
+                                            const tagText = tag.startsWith('#') ? tag : `#${tag}`;
                                             const menu = new Menu();
-                                            menu.addItem(item => item
-                                                .setTitle(t('add_to_search'))
-                                                .onClick(() => {
-                                                    const tagText = tag.startsWith('#') ? tag : `#${tag}`;
-                                                    if (this.searchQuery.includes(tagText)) {
-                                                        return;
-                                                    }
-                                                    this.searchQuery += ` ${tagText}`;
-                                                    this.searchAllFiles = true; 
-                                                    this.searchMediaFiles = false;
-                                                    this.render(true);
-                                                    return false;
-                                                })
-                                            );
+                                            //添加加入搜尋選項
+                                            if (!this.searchQuery.includes(tagText)) {
+                                                menu.addItem(item => item
+                                                    .setTitle(t('add_tag_to_search'))
+                                                    .setIcon('circle-plus')
+                                                    .onClick(() => {
+                                                        this.searchQuery += ` ${tagText}`;
+                                                        this.render(true);
+                                                        return false;
+                                                    })
+                                                );
+                                            }
+                                            // 添加刪除標籤選項
+                                            if (this.searchQuery.includes(tagText)) {
+                                                menu.addItem(item => item
+                                                    .setTitle(t('remove_tag_from_search'))
+                                                    .setIcon('circle-minus')
+                                                    .onClick(() => {
+                                                        this.searchQuery = this.searchQuery.replace(tagText, '');
+                                                        this.render(true);
+                                                        return false;
+                                                    })
+                                                );
+                                            }
                                             menu.showAtPosition({
                                                 x: e.clientX,
                                                 y: e.clientY
@@ -1687,8 +1708,6 @@ export class GridView extends ItemView {
                                                 return;
                                             }
                                             this.searchQuery = tagText;
-                                            this.searchAllFiles = true; 
-                                            this.searchMediaFiles = false;
                                             this.render(true);
                                             return false;
                                         });
@@ -2104,12 +2123,12 @@ export class GridView extends ItemView {
                                     for (const f of selectedFiles) {
                                         await this.app.fileManager.trashFile(f);
                                     }
-                                    // 清除選中狀態
-                                    this.clearSelection();
                                 } else {
                                     // 刪除單個檔案
                                     await this.app.fileManager.trashFile(file);
                                 }
+                                // 清除選中狀態
+                                this.clearSelection();
                             });
                     });
                     menu.showAtMouseEvent(event);

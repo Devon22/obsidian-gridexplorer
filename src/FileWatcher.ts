@@ -149,6 +149,7 @@ export class FileWatcher {
         }, 200);
     }
 
+    // 清理日期分隔線
     private cleanupDateDividers(container: HTMLElement | null): void {
         if (!container) return;
         

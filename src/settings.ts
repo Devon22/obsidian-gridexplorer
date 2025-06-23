@@ -38,6 +38,7 @@ export interface GallerySettings {
     dateDividerMode: string; // 日期分隔器模式：none, year, month, day
     showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: string; // 資料夾筆記設定
+    interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
 }
 
 // 預設設定
@@ -61,7 +62,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showBacklinksMode: true, // 預設顯示反向連結模式
     showOutgoinglinksMode: false, // 預設不顯示外部連結模式
     showAllFilesMode: false, // 預設不顯示所有檔案模式
-    showRandomNoteMode: false, // 預設不顯示隨機筆記模式
+    showRandomNoteMode: true, // 預設顯示隨機筆記模式
     showRecentFilesMode: true, // 預設顯示最近筆記模式
     showTasksMode: false, // 預設不顯示任務模式
     recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     dateDividerMode: 'none', // 預設不使用日期分隔器
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
+    interceptAllTagClicks: false, // 預設不攔截所有tag點擊事件
 };
 
 // 設定頁面類別
@@ -406,6 +408,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.enableFileWatcher)
                     .onChange(async (value) => {
                         this.plugin.settings.enableFileWatcher = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 攔截所有tag點擊事件
+        new Setting(containerEl)
+            .setName(t('intercept_all_tag_clicks'))
+            .setDesc(t('intercept_all_tag_clicks_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.interceptAllTagClicks)
+                    .onChange(async (value) => {
+                        this.plugin.settings.interceptAllTagClicks = value;
                         await this.plugin.saveSettings();
                     });
             });

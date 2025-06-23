@@ -99,9 +99,9 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 註冊狀態列項目
         this.statusBarItem = this.addStatusBarItem();
-        this.statusBarItem.onClickEvent(() => {
-            this.activateView();
-        });
+        // this.statusBarItem.onClickEvent(() => {
+        //     this.activateView();
+        // });
 
         // 註冊資料夾的右鍵選單
         this.registerEvent(
@@ -197,13 +197,10 @@ export default class GridExplorerPlugin extends Plugin {
                             .onClick(async () => {
                                 const selectedText = editor.getSelection();
                                 // 取得或啟用 GridView
-                                const view = await this.activateView('folder','/');
+                                const view = await this.activateView('','');
                                 if (view instanceof GridView) {
                                     // 設定搜尋模式和關鍵字
                                     view.searchQuery = selectedText;
-                                    // 設定搜尋範圍 (預設搜尋所有檔案，不含媒體)
-                                    view.searchAllFiles = true;
-                                    view.searchMediaFiles = false;
                                     // 重新渲染視圖
                                     view.render(true); // resetScroll = true
                                 }
@@ -227,13 +224,10 @@ export default class GridExplorerPlugin extends Plugin {
                         .setSection?.("view")
                         .onClick(async () => {
                             // 取得或啟用 GridView
-                            const view = await this.activateView('folder','/');
+                            const view = await this.activateView('','');
                             if (view instanceof GridView) {
                                 // 設定搜尋模式和關鍵字
                                 view.searchQuery = `#${tagName}`;
-                                // 設定搜尋範圍 (預設搜尋所有檔案，不含媒體)
-                                view.searchAllFiles = true;
-                                view.searchMediaFiles = false;
                                 // 重新渲染視圖
                                 view.render(true); // resetScroll = true
                             }
@@ -241,6 +235,67 @@ export default class GridExplorerPlugin extends Plugin {
                 });
             })
         );
+
+        // 攔截所有tag點擊事件
+        this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
+            // 如果未啟用攔截所有tag點擊事件，則跳過
+            if (!this.settings.interceptAllTagClicks) return;
+            // 只處理左鍵
+            if (evt.button !== 0) return;
+
+            // 從觸發點往上找，看是否碰到 tag 連結
+            const el = (evt.target as HTMLElement).closest(
+                'a.tag,        /* 預覽模式中的 #tag */\n' +
+                '.tag-pane-tag, /* 標籤面板中的 tag */\n' +
+                'span.cm-hashtag, /* 編輯器中的 tag */\n' +
+                '.metadata-property[data-property-key="tags"] .multi-select-pill /* 屬性面板中的 tag */'
+            ) as HTMLElement | null;
+            if (!el) return;            // 不是 tag 點擊就跳過
+
+            // 取出 tag 名稱（去掉前導 #）
+            let tagName = '';
+            if (el.matches('span.cm-hashtag')) {
+                // 編輯器模式：可能被拆成多個 span，需組合
+                const collect = [] as string[];
+                let curr: HTMLElement | null = el;
+                // 向左收集
+                while (curr && curr.matches('span.cm-hashtag') && !curr.classList.contains('cm-formatting')) {
+                    collect.unshift(curr.textContent ?? '');
+                    curr = curr.previousElementSibling as HTMLElement | null;
+                    if (curr && (!curr.matches('span.cm-hashtag') || curr.classList.contains('cm-formatting'))) break;
+                }
+                // 向右收集
+                curr = el.nextElementSibling as HTMLElement | null;
+                while (curr && curr.matches('span.cm-hashtag') && !curr.classList.contains('cm-formatting')) {
+                    collect.push(curr.textContent ?? '');
+                    curr = curr.nextElementSibling as HTMLElement | null;
+                }
+                tagName = collect.join('').trim();
+            } else if (el.classList.contains('tag-pane-tag')) {
+                // Tag Pane 中的元素，需避開計數器
+                const inner = el.querySelector('.tag-pane-tag-text, .tree-item-inner-text') as HTMLElement | null;
+                tagName = inner?.textContent?.trim() ?? '';
+            } else if (el.matches('.metadata-property[data-property-key="tags"] .multi-select-pill')) {
+                // Frontmatter/Properties view
+                tagName = el.textContent?.trim() ?? '';
+            } else {
+                // 預覽模式中的連結 a.tag
+                tagName = (el.getAttribute('data-tag') ?? el.textContent ?? '').trim();
+            }
+            tagName = tagName.replace(/^#/, '');
+            if (!tagName) return;
+
+            // 阻止 Obsidian 自己的處理（開搜尋窗）
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            // 叫出 GridView，並把搜尋字串設成這個 tag
+            const view = await this.activateView('', '');
+            if (view instanceof GridView) {
+                view.searchQuery = `#${tagName}`;
+                view.render(true); // resetScroll
+            }
+        }, true); // 用 capture，可在其他 listener 前先吃到
     }
 
     async openNoteInRecentFiles(file: TFile) {
@@ -300,7 +355,7 @@ export default class GridExplorerPlugin extends Plugin {
         }
     }
 
-    async activateView(mode = 'bookmarks', path = '') {
+    async activateView(mode = 'folder', path = '') {
         const { workspace } = this.app;
 
         let leaf = null;
