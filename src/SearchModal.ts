@@ -20,20 +20,33 @@ export class SearchModal extends Modal {
         // 創建搜尋輸入框容器
         const searchContainer = contentEl.createDiv('ge-search-container');
 
+        // 創建搜尋輸入框容器
+        const searchInputWrapper = searchContainer.createDiv('ge-search-input-wrapper');
+        
+        // 創建標籤顯示區域
+        const tagDisplayArea = searchInputWrapper.createDiv('ge-search-tag-display-area');
+        
         // 創建搜尋輸入框
-        const searchInput = searchContainer.createEl('input', {
+        const searchInput = searchInputWrapper.createEl('input', {
             type: 'text',
             value: this.defaultQuery,
-            placeholder: t('search_placeholder')
+            placeholder: t('search_placeholder'),
+            cls: 'ge-search-input'
         });
 
+        // 創建輸入框容器包裝層
+        const inputContainer = searchInputWrapper.createDiv('ge-input-container');
+        
+        // 將輸入框移動到容器中
+        inputContainer.appendChild(searchInput);
+        
         // 創建清空按鈕
-        const clearButton = searchContainer.createDiv('ge-search-clear-button'); //這裡不是用 ge-clear-button
+        const clearButton = inputContainer.createDiv('ge-search-clear-button'); //這裡不是用 ge-clear-button
         clearButton.style.display = this.defaultQuery ? 'flex' : 'none';
         setIcon(clearButton, 'x');
 
         // 建立標籤建議容器
-        const tagSuggestionContainer = contentEl.createDiv('ge-tag-suggestions');
+        const tagSuggestionContainer = contentEl.createDiv('ge-search-tag-suggestions');
         tagSuggestionContainer.style.display = 'none';
 
         // 取得並快取所有標籤 (移除 # 前綴)
@@ -61,7 +74,7 @@ export class SearchModal extends Modal {
 
             tagSuggestionContainer.empty();
             tagSuggestions.forEach((tag, idx) => {
-                const item = tagSuggestionContainer.createDiv('ge-tag-suggestion-item');
+                const item = tagSuggestionContainer.createDiv('ge-search-tag-suggestion-item');
                 item.textContent = `#${tag}`;
                 if (idx === selectedSuggestionIndex) item.addClass('is-selected');
                 item.addEventListener('mousedown', (e) => {
@@ -74,23 +87,28 @@ export class SearchModal extends Modal {
 
         const applySuggestion = (index: number) => {
             if (index < 0 || index >= tagSuggestions.length) return;
-            const value = searchInput.value;
+            const value = searchInput.value.trim();
             const cursor = searchInput.selectionStart || 0;
             const beforeMatch = value.substring(0, cursor).replace(/#([^#\\s]*)$/, `#${tagSuggestions[index]} `);
             const afterCursor = value.substring(cursor);
             searchInput.value = beforeMatch + afterCursor;
+            searchInput.value = searchInput.value.trim();
             const newCursorPos = beforeMatch.length;
             searchInput.setSelectionRange(newCursorPos, newCursorPos);
             tagSuggestionContainer.style.display = 'none';
             tagSuggestionContainer.empty();
             selectedSuggestionIndex = -1;
             clearButton.style.display = searchInput.value ? 'flex' : 'none';
+            
+            // 更新標籤按鈕顯示
+            renderTagButtons();
         };
 
         // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
         searchInput.addEventListener('input', () => {
             clearButton.style.display = searchInput.value ? 'flex' : 'none';
             updateTagSuggestions();
+            renderTagButtons();
         });
 
         // 處理上下鍵及 Enter 選擇建議
@@ -116,6 +134,8 @@ export class SearchModal extends Modal {
         clearButton.addEventListener('click', () => {
             searchInput.value = '';
             clearButton.style.display = 'none';
+            tagDisplayArea.empty();
+            tagDisplayArea.style.display = 'none';
             searchInput.focus();
         });
 
@@ -192,6 +212,86 @@ export class SearchModal extends Modal {
             text: t('cancel')
         });
 
+        // 解析輸入內容並渲染成按鈕
+        const renderTagButtons = () => {
+            // 清空現有標籤顯示區域
+            tagDisplayArea.empty();
+            
+            // 獲取輸入值
+            const inputValue = searchInput.value.trim();
+            
+            // 如果輸入為空，隱藏標籤顯示區域
+            if (!inputValue) {
+                tagDisplayArea.style.display = 'none';
+                return;
+            }
+            
+            // 使用空格分割輸入內容
+            const terms = inputValue.split(/\s+/);
+            
+            // 如果沒有分割出任何詞彙，隱藏標籤顯示區域
+            if (terms.length === 0) {
+                tagDisplayArea.style.display = 'none';
+                return;
+            }
+            
+            // 顯示標籤顯示區域
+            tagDisplayArea.style.display = 'flex';
+            
+            // 分析輸入內容中各詞彙的位置
+            let currentIndex = 0;
+            const termPositions: {term: string, startIndex: number, endIndex: number}[] = [];
+            
+            terms.forEach(term => {
+                if (!term) return; // 跳過空詞彙
+                
+                // 尋找該詞彙在原始輸入中的位置
+                const startIndex = inputValue.indexOf(term, currentIndex);
+                if (startIndex === -1) return; // 如果找不到，跳過
+                
+                const endIndex = startIndex + term.length;
+                
+                termPositions.push({
+                    term: term,
+                    startIndex: startIndex,
+                    endIndex: endIndex
+                });
+                
+                currentIndex = endIndex;
+            });
+            
+            // 為每個詞彙創建按鈕
+            termPositions.forEach(termInfo => {
+                const tagButton = tagDisplayArea.createDiv('ge-search-tag-button');
+                tagButton.textContent = termInfo.term;
+                
+                // 判斷是否為標籤，如果是則添加特殊樣式
+                if (termInfo.term.startsWith('#')) {
+                    tagButton.addClass('is-tag');
+                }
+                
+                // 創建刪除按鈕
+                const deleteButton = tagButton.createDiv('ge-search-tag-delete-button');
+                setIcon(deleteButton, 'x');
+                
+                // 點擊刪除按鈕時從輸入框中移除該詞彙
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newValue = 
+                        inputValue.substring(0, termInfo.startIndex) + 
+                        inputValue.substring(termInfo.endIndex);
+                    searchInput.value = newValue.trim();
+                    
+                    // 觸發輸入事件以更新UI
+                    const inputEvent = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(inputEvent);
+                    
+                    // 聚焦回輸入框
+                    searchInput.focus();
+                });
+            });
+        };
+
         // 綁定搜尋事件
         const performSearch = () => {
             this.gridView.searchQuery = searchInput.value;
@@ -215,6 +315,9 @@ export class SearchModal extends Modal {
             this.close();
         });
 
+        // 初始渲染標籤按鈕
+        renderTagButtons();
+        
         // 自動聚焦到搜尋輸入框，並將游標移到最後
         searchInput.focus();
         searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);

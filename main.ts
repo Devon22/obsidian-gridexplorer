@@ -243,6 +243,9 @@ export default class GridExplorerPlugin extends Plugin {
             // 只處理左鍵
             if (evt.button !== 0) return;
 
+            // 若點擊的是屬性面板中 tag pill 的刪除按鈕，直接跳過
+            if ((evt.target as HTMLElement).closest('.multi-select-pill-remove-button')) return;
+
             // 從觸發點往上找，看是否碰到 tag 連結
             const el = (evt.target as HTMLElement).closest(
                 'a.tag,        /* 預覽模式中的 #tag */\n' +
@@ -296,6 +299,88 @@ export default class GridExplorerPlugin extends Plugin {
                 view.render(true); // resetScroll
             }
         }, true); // 用 capture，可在其他 listener 前先吃到
+
+        this.setupCanvasDropHandlers();
+    }
+
+    private setupCanvasDropHandlers() {
+        const setup = () => {
+            this.app.workspace.getLeavesOfType('canvas').forEach(leaf => {
+                const canvasView = leaf.view as any;
+                if (canvasView.gridExplorerDropHandler) {
+                    return;
+                }
+                canvasView.gridExplorerDropHandler = true;
+
+                const canvasEl = canvasView.containerEl;
+
+                const dragoverHandler = (evt: DragEvent) => {
+                    // 只處理來自 Grid Explorer 的檔案拖曳，以顯示正確的游標
+                    if (evt.dataTransfer?.types.includes('application/obsidian-grid-explorer-files')) {
+                        evt.preventDefault();
+                        evt.dataTransfer.dropEffect = 'copy';
+                    }
+                };
+
+                const dropHandler = async (evt: DragEvent) => {
+                    // 只處理來自 Grid Explorer 的拖曳事件
+                    if (!evt.dataTransfer?.types.includes('application/obsidian-grid-explorer-files')) {
+                        return; // 如果不是，則不做任何事，讓事件繼續傳遞給 Canvas 的預設處理器
+                    }
+
+                    // 來自 Grid Explorer 的拖曳，處理它並阻止預設行為
+                    evt.preventDefault();
+                    evt.stopPropagation();
+
+                    let filePath: string | undefined;
+
+                    const data = evt.dataTransfer.getData('application/obsidian-grid-explorer-files');
+                    try {
+                        const paths = JSON.parse(data);
+                        // 目前我們只支援單一檔案拖放
+                        if (Array.isArray(paths) && paths.length === 1) {
+                            filePath = paths[0];
+                        }
+                    } catch (e) {
+                        console.error("Grid Explorer: Failed to parse drop data from Grid Explorer.", e);
+                    }
+
+                    // 如果無法取得檔案路徑，則中止操作
+                    if (!filePath) {
+                        return;
+                    }
+
+                    const tfile = this.app.vault.getAbstractFileByPath(filePath);
+                    if (!(tfile instanceof TFile)) {
+                        console.warn('Grid Explorer: Dropped item is not a TFile or could not be found.', filePath);
+                        return;
+                    }
+
+                    const canvas = canvasView.canvas;
+                    if (!canvas) {
+                        return;
+                    }
+
+                    const pos = canvas.posFromEvt(evt);
+
+                    const newNode = canvas.createFileNode({
+                        file: tfile,
+                        pos: pos,
+                        size: { width: 400, height: 400 }, // 預設大小
+                        focus: true, // 建立後自動對焦
+                    });
+
+                    canvas.addNode(newNode);
+                    await canvas.requestSave();
+                };
+
+                this.registerDomEvent(canvasEl, 'dragover', dragoverHandler);
+                this.registerDomEvent(canvasEl, 'drop', dropHandler, true); // 使用捕獲階段，以優先處理事件
+            });
+        };
+
+        this.registerEvent(this.app.workspace.on('layout-change', setup));
+        setup(); // 首次執行設定
     }
 
     async openNoteInRecentFiles(file: TFile) {

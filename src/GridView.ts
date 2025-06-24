@@ -196,30 +196,8 @@ export class GridView extends ItemView {
         
         // 添加新增筆記按鈕
         const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
-        newNoteButton.addEventListener('click', async () => {                
-            let newFileName = `${t('untitled')}.md`;
-            let newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
-
-            // 檢查檔案是否已存在，如果存在則遞增編號
-            let counter = 1;
-            while (this.app.vault.getAbstractFileByPath(newFilePath)) {
-                newFileName = `${t('untitled')} ${counter}.md`;
-                newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
-                counter++;
-            }
-
-            try {
-                // 建立新筆記
-                const newFile = await this.app.vault.create(newFilePath, '');
-                // 開啟新筆記
-                await this.app.workspace.getLeaf().openFile(newFile);                
-            } catch (error) {
-                console.error('An error occurred while creating a new note:', error);
-            }
-        });
         setIcon(newNoteButton, 'square-pen');
-
-        newNoteButton.addEventListener('contextmenu', (event) => {
+        newNoteButton.addEventListener('click', (event) => {                
             event.preventDefault();
             const menu = new Menu();
             // 新增筆記
@@ -272,6 +250,32 @@ export class GridView extends ItemView {
                     } catch (error) {
                         console.error('An error occurred while creating a new folder:', error);
                     }
+                });
+            });
+            // 新增畫布
+            menu.addItem((item) => {
+                item.setTitle(t('new_canvas'))
+                .setIcon('layout-dashboard')
+                .onClick(async () => {
+                    let newFileName = `${t('untitled')}.canvas`;
+                        let newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
+
+                        // 檢查檔案是否已存在，如果存在則遞增編號
+                        let counter = 1;
+                        while (this.app.vault.getAbstractFileByPath(newFilePath)) {
+                            newFileName = `${t('untitled')} ${counter}.canvas`;
+                            newFilePath = !this.sourcePath || this.sourcePath === '/' ? newFileName : `${this.sourcePath}/${newFileName}`;
+                            counter++;
+                        }
+
+                        try {
+                            // 建立新筆記
+                            const newFile = await this.app.vault.create(newFilePath, '');
+                            // 開啟新筆記
+                            await this.app.workspace.getLeaf().openFile(newFile);
+                        } catch (error) {
+                            console.error('An error occurred while creating a new canvas:', error);
+                        }
                 });
             });
             menu.showAtMouseEvent(event);
@@ -1318,52 +1322,39 @@ export class GridView extends ItemView {
                         const fileCache = this.app.metadataCache.getFileCache(file);
                         let matchesTags = false;
                         
-                        if (fileCache && fileCache.tags && Array.isArray(fileCache.tags)) {
-                            // 檢查內文中的標籤
-                            const tags = fileCache.tags;
-                            matchesTags = tagTerms.every(tag => 
-                                tags.some((t: any) => t && t.tag && t.tag.toLowerCase() === '#' + tag)
-                            );
-                        }
-                        
-                        // 如果前面的標籤檢查沒有匹配，檢查 frontmatter 中的標籤
-                        if (!matchesTags && fileCache && fileCache.frontmatter && fileCache.frontmatter.tags) {
-                            let frontmatterTags = fileCache.frontmatter.tags;
-                            if (typeof frontmatterTags === 'string') {
-                                // 如果是字串，分割成陣列
-                                const tagArray = frontmatterTags.split(/[,\s]+/).filter(t => t.trim() !== '');
-                                matchesTags = tagTerms.every(tag => 
-                                    tagArray.some(t => {
-                                        // 去除可能的 # 符號再比較
-                                        const cleanTag = t.toLowerCase().replace("#", '');
-                                        
-                                        // 直接比較
-                                        if (cleanTag === tag) return true;
-                                        
-                                        // 如果是空格分隔的多個標籤，分割並檢查
-                                        const subTags = cleanTag.split(/\s+/).filter(st => st.trim() !== '');
-                                        return subTags.some(st => st === tag);
-                                    })
-                                );
-                            } else if (Array.isArray(frontmatterTags)) {
-                                // 如果是陣列，直接檢查
-                                matchesTags = tagTerms.every(tag => 
-                                    frontmatterTags.some(t => {
-                                        if (typeof t === 'string') {
-                                            // 去除可能的 # 符號再比較
-                                            const cleanTag = t.toLowerCase().replace("#", '');
-                                            
-                                            // 直接比較
-                                            if (cleanTag === tag) return true;
-                                            
-                                            // 如果是空格分隔的多個標籤，分割並檢查
-                                            const subTags = cleanTag.split(/\s+/).filter(st => st.trim() !== '');
-                                            return subTags.some(st => st === tag);
-                                        }
-                                        return false;
-                                    })
-                                );
+                        if (fileCache) {
+                            const collectedTags: string[] = [];
+
+                            // 內文標籤
+                            if (Array.isArray(fileCache.tags)) {
+                                for (const t of fileCache.tags) {
+                                    if (t && t.tag) {
+                                        const clean = t.tag.toLowerCase().replace(/^#/, '');
+                                        collectedTags.push(...clean.split(/\s+/).filter(st => st.trim() !== ''));
+                                    }
+                                }
                             }
+
+                            // frontmatter 標籤
+                            if (fileCache.frontmatter && fileCache.frontmatter.tags) {
+                                const fmTags = fileCache.frontmatter.tags;
+                                if (typeof fmTags === 'string') {
+                                    collectedTags.push(
+                                        ...fmTags.split(/[,\s]+/)
+                                            .map(t => t.toLowerCase().replace(/^#/, ''))
+                                            .filter(t => t.trim() !== '')
+                                    );
+                                } else if (Array.isArray(fmTags)) {
+                                    for (const t of fmTags) {
+                                        if (typeof t === 'string') {
+                                            const clean = t.toLowerCase().replace(/^#/, '');
+                                            collectedTags.push(...clean.split(/\s+/).filter(st => st.trim() !== ''));
+                                        }
+                                    }
+                                }
+                            }
+
+                            matchesTags = tagTerms.every(tag => collectedTags.includes(tag));
                         }
                         
                         // 如果標籤匹配，且檔名或內容也匹配（如果有一般搜尋詞的話），則加入結果

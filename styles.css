@@ -377,6 +377,125 @@
     align-items: center;
 }
 
+.ge-search-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.ge-input-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.ge-search-clear-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    z-index: 10;
+}
+
+.ge-search-clear-button:hover {
+    color: var(--text-accent);
+}
+
+.ge-search-clear-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 標籤顯示區域 */
+.ge-search-tag-display-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 5px;
+    margin-bottom: 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    align-items: center;
+}
+
+.ge-search-tag-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    background-color: var(--background-modifier-active-hover);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+    padding-right: 24px;
+    height: 24px;
+    border: none;
+}
+
+.ge-search-tag-delete-button {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    opacity: 0.8;
+}
+
+.ge-search-tag-delete-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    opacity: 1;
+}
+
+.ge-search-tag-delete-button svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* 標籤自動完成下拉選單 */
+.ge-search-tag-suggestions {
+    position: relative;
+    margin-top: 4px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.ge-search-tag-suggestion-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ge-search-tag-suggestion-item:hover,
+.ge-search-tag-suggestion-item.is-selected {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent, white);
+}
+
 .ge-search-container input {
     width: 100%;
     padding: 8px 12px;
@@ -947,27 +1066,3 @@
     width: 60px;
 }
 
-/* 標籤自動完成下拉選單 */
-.ge-tag-suggestions {
-    position: relative;
-    margin-top: 4px;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    max-height: 150px;
-    overflow-y: auto;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-}
-
-.ge-tag-suggestion-item {
-    padding: 4px 8px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.ge-tag-suggestion-item:hover,
-.ge-tag-suggestion-item.is-selected {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent, white);
-}
