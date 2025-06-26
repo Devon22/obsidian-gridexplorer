@@ -247,6 +247,23 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': '將資料夾筆記固定在最上方',
         'display_minimized': '最小化顯示',
         'display_minimized_desc': '將此筆記以最小化方式顯示',
+
+        //TODO: please check the translation!
+        // Quick Access Settings and Commands
+
+        'quick_access_settings_title': '快速存取設定',
+        'quick_access_folder_name': '快速存取資料夾',
+        'quick_access_folder_desc': '設定「開啟快速存取資料夾」命令所使用的資料夾',
+        'root_folder': '根資料夾',
+        'quick_access_mode_name': '快速存取模式',
+        'quick_access_mode_desc': '設定「開啟快速存取模式」命令所使用的預設模式',
+        'use_quick_access_as_new_tab_view': '將快速存取作為新分頁使用',
+        'use_quick_access_as_new_tab_view_desc': '將預設的「新分頁」畫面替換為所選快速存取選項（資料夾或模式）的網格檢視。此設定僅在「預設開啟位置」設為「在新分頁開啟」時有效！',
+        'default_new_tab': '預設',
+        'use_quick_access_folder': '使用快速存取資料夾',
+        'use_quick_access_mode': '使用快速存取模式',
+        'open_quick_access_folder': '開啟快速存取資料夾',
+        'open_quick_access_mode': '開啟快速存取模式',
     },
     'en': {
         // Notifications
@@ -474,6 +491,22 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': 'Pin this folder note at the top',
         'display_minimized': 'Display minimized',
         'display_minimized_desc': 'Show this note in minimized mode',
+
+        // Quick Access Settings and Commands
+
+        'quick_access_settings_title': 'Quick Access Settings',
+        'quick_access_folder_name': 'Quick access folder',
+        'quick_access_folder_desc': 'Set the folder used by the "Open quick access folder" command',
+        'root_folder': 'Root Folder',
+        'quick_access_mode_name': 'Quick access mode',
+        'quick_access_mode_desc': 'Set the default mode used by the "Open quick access mode" command',
+        'use_quick_access_as_new_tab_view': 'Use Quick Access as a new tab view',
+        'use_quick_access_as_new_tab_view_desc': 'Replace the default "New Tab" view with a Grid View of the selected Quick Access option (folder or mode). Only works if default open location is set to "Open in new tab"!',
+        'default_new_tab': 'Default New Tab',
+        'use_quick_access_folder': 'Use quick access folder',
+        'use_quick_access_mode': 'Use quick access mode',
+        'open_quick_access_folder': 'Open quick access folder',
+        'open_quick_access_mode': 'Open quick access mode',
     },
     'zh': {
         // 通知信息
@@ -701,6 +734,23 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': '将文件夹笔记固定在顶部',
         'display_minimized': '最小化显示',
         'display_minimized_desc': '将此笔记以最小化方式显示',
+
+        //TODO: please check the translation!
+        // Quick Access Settings and Commands
+
+                'quick_access_settings_title': '快速访问设置',
+        'quick_access_folder_name': '快速访问文件夹',
+        'quick_access_folder_desc': '设置“打开快速访问文件夹”命令使用的文件夹',
+        'root_folder': '根文件夹',
+        'quick_access_mode_name': '快速访问模式',
+        'quick_access_mode_desc': '设置“打开快速访问模式”命令使用的默认模式',
+        'use_quick_access_as_new_tab_view': '将快速访问用作新标签页',
+        'use_quick_access_as_new_tab_view_desc': '将默认的“新标签页”视图替换为所选快速访问选项（文件夹或模式）的网格视图。此设置仅在“默认打开位置”设为“在新标签页打开”时生效！',
+        'default_new_tab': '默认',
+        'use_quick_access_folder': '使用快速访问文件夹',
+        'use_quick_access_mode': '使用快速访问模式',
+        'open_quick_access_folder': '打开快速访问文件夹',
+        'open_quick_access_mode': '打开快速访问模式',
     },
     'ja': {
         // 通知メッジ
@@ -928,6 +978,23 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': 'フォルダーノートを最上部に固定',
         'display_minimized': '最小化表示',
         'display_minimized_desc': 'このノートを最小化モードで表示',
+
+        //TODO: please check the translation!
+        // Quick Access Settings and Commands
+
+        'quick_access_settings_title': 'クイックアクセス設定',
+        'quick_access_folder_name': 'クイックアクセスフォルダー',
+        'quick_access_folder_desc': '「クイックアクセス フォルダーを開く」コマンドで使用するフォルダーを設定します',
+        'root_folder': 'ルートフォルダー',
+        'quick_access_mode_name': 'クイックアクセスモード',
+        'quick_access_mode_desc': '「クイックアクセスモードを開く」コマンドで使用する既定のモードを設定します',
+        'use_quick_access_as_new_tab_view': 'クイックアクセスを新しいタブとして使用する',
+        'use_quick_access_as_new_tab_view_desc': '既定の「新しいタブ」の表示を、選択したクイックアクセスオプション（フォルダーまたはモード）のグリッド表示に置き換えます。この設定は、「デフォルトの開く場所」が「新しいタブで開く」に設定されている場合にのみ有効です！',
+        'default_new_tab': '既定',
+        'use_quick_access_folder': 'クイックアクセスフォルダーを使用する',
+        'use_quick_access_mode': 'クイックアクセスモードを使用する',
+        'open_quick_access_folder': 'クイックアクセス フォルダーを開く',
+        'open_quick_access_mode': 'クイックアクセスモードを開く',
     },
     'ru': {
         // Notifications
@@ -1155,6 +1222,22 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': 'Закрепить заметки папки вверху',
         'display_minimized': 'Минимальный вид',
         'display_minimized_desc': 'Показывать эту заметку в минимальном режиме',
+
+        // Quick Access Settings and Commands
+
+        'quick_access_settings_title': 'Настройки Быстрого доступа',
+        'quick_access_folder_name': 'Папка быстрого доступа',
+        'quick_access_folder_desc': 'Установите папку, используемую командой «Открыть папку быстрого доступа»',
+        'root_folder': 'Корневая папка',
+        'quick_access_mode_name': 'Режим быстрого доступа',
+        'quick_access_mode_desc': 'Установите режим по умолчанию, используемый командой «Открыть быстрый доступ по режиму»',
+        'use_quick_access_as_new_tab_view': 'Использовать Быстрый доступ как новую вкладку',
+        'use_quick_access_as_new_tab_view_desc': 'Замените стандартный вид «Новая вкладка» на сеточный вид выбранной опции Быстрого доступа (папки или режима). Работает, только если «Место открытия по умолчанию» установлено на «Открыть в новой вкладке»!',
+        'default_new_tab': 'По умолчанию',
+        'use_quick_access_folder': 'Использовать папку быстрого доступа',
+        'use_quick_access_mode': 'Использовать режим быстрого доступа',
+        'open_quick_access_folder': 'Открыть папку быстрого доступа',
+        'open_quick_access_mode': 'Открыть быстрый доступ по режиму',
     },
     'uk': {
         // Notifications
@@ -1382,5 +1465,21 @@ export const TRANSLATIONS: Translations = {
         'foldernote_pinned_desc': 'Закріпити нотатки папки угорі',
         'display_minimized': 'Мінімізований вигляд',
         'display_minimized_desc': 'Показувати цю нотатку у мінімізованому режимі',
+
+        // Quick Access Settings and Commands
+                
+        'quick_access_settings_title': 'Налаштування Швидкого доступу',
+        'quick_access_folder_name': 'Папка швидкого доступу',
+        'quick_access_folder_desc': 'Встановіть папку, що використовується командою «Відкрити папку швидкого доступу»',
+        'root_folder': 'Коренева папка',
+        'quick_access_mode_name': 'Режим швидкого доступу',
+        'quick_access_mode_desc': 'Встановіть режим за замовчуванням, що використовується командою «Відкрити швидкий доступ за режимом»',
+        'use_quick_access_as_new_tab_view': 'Використовувати Швидкий доступ як нову вкладку',
+        'use_quick_access_as_new_tab_view_desc': 'Замініть стандартний вид «Нова вкладка» на сітковий вид обраної опції Швидкого доступу (папки або режиму). Працює, лише якщо «Місце відкриття за замовчуванням» встановлено на «Відкрити в новій вкладці»!',
+        'default_new_tab': 'За замовчуванням',
+        'use_quick_access_folder': 'Використовувати папку швидкого доступу',
+        'use_quick_access_mode': 'Використовувати режим швидкого доступу',
+        'open_quick_access_folder': 'Відкрити папку швидкого доступу',
+        'open_quick_access_mode': 'Відкрити швидкий доступ за режимом',
     }
 }

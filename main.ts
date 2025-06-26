@@ -1,4 +1,4 @@
-import { Plugin, TFolder, TFile, App, Menu } from 'obsidian';
+import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './src/GridView';
 import { showFolderSelectionModal } from './src/FolderSelectionModal';
 import { showNoteSettingsModal } from './src/NoteSettingsModal';
@@ -89,6 +89,35 @@ export default class GridExplorerPlugin extends Plugin {
                     // 如果沒有當前筆記，則打開根目錄
                     this.openNoteInFolder(this.app.vault.getRoot());
                 }
+            }
+        });
+
+        // Open quick access folder command
+        this.addCommand({
+            id: 'open-quick-access-folder',
+            name: t('open_quick_access_folder'),
+            callback: async () => {
+                let targetPath = this.settings.quickAccessCommandPath;
+                if (!targetPath) {
+                    targetPath = this.app.vault.getRoot().path;
+                }
+
+                const targetFile = this.app.vault.getAbstractFileByPath(targetPath);
+
+                if (targetFile instanceof TFolder) {
+                    this.openNoteInFolder(targetFile);
+                } else {
+                    this.openNoteInFolder(this.app.vault.getRoot());
+                }
+            }
+        });
+
+        // Open quick access mode command
+        this.addCommand({
+            id: 'open-quick-access-mode',
+            name: t('open_quick_access_mode'),
+            callback: async () => {
+                this.activateView(this.settings.quickAccessModeType);
             }
         });
 
@@ -301,6 +330,25 @@ export default class GridExplorerPlugin extends Plugin {
         }, true); // 用 capture，可在其他 listener 前先吃到
 
         this.setupCanvasDropHandlers();
+
+        // Override new tab behavior (for useQuickAccessAsNewTabMode setting)
+        const { workspace } = this.app;
+
+        workspace.onLayoutReady(() => {
+            // Create a WeakSet to store existing leaves to find new created leaves after plugin load.
+            const existingLeaves = new WeakSet<WorkspaceLeaf>();
+            workspace.iterateAllLeaves((leaf) => {
+                existingLeaves.add(leaf);
+            });
+
+            // Registers layout-change event listener when the workspace layout changes, including new tabs being created.
+            this.registerEvent(
+                workspace.on("layout-change", () => {
+                    this.checkForNewTab(existingLeaves);
+                }),
+            );
+
+        });
     }
 
     private setupCanvasDropHandlers() {
@@ -481,6 +529,70 @@ export default class GridExplorerPlugin extends Plugin {
         // 確保視圖是活躍的
         workspace.revealLeaf(leaf);
         return leaf.view;
+    }
+
+    // Function to check for new tabs and convert them to grid-view (for useQuickAccessAsNewTabMode setting)
+    checkForNewTab(existingLeaves: WeakSet<WorkspaceLeaf>) {
+        // Only proceed if the new tab override setting is not set to default
+        if (this.settings.useQuickAccessAsNewTabMode === 'default') {
+            return;
+        }
+
+        // Only proceed if the default open location is set to 'tab'
+        if (this.settings.defaultOpenLocation !== 'tab') {
+            return;
+        }
+
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (existingLeaves.has(leaf)) return;
+            existingLeaves.add(leaf);
+            if (!this.tabIsEmpty(leaf)) return;
+
+            const gridViewLeaves = this.app.workspace.getLeavesOfType('grid-view');
+            const openInFolder = this.settings.useQuickAccessAsNewTabMode === 'folder';
+            const mode = openInFolder ? 'folder' : this.settings.quickAccessModeType;
+            let path = '';
+
+            if (openInFolder) {
+                path = this.settings.quickAccessCommandPath || this.app.vault.getRoot().path;
+                const targetFile = this.app.vault.getAbstractFileByPath(path);
+                if (!(targetFile instanceof TFolder)) {
+                    path = this.app.vault.getRoot().path;
+                }
+            }
+
+            // Check if setting "reuseExistingLeaf" is enabled and if there are existing grid-view leaves
+            if (this.settings.reuseExistingLeaf && gridViewLeaves.length > 0) {
+                const leafToReuse = gridViewLeaves[0];
+                const isSidebarLeaf = leafToReuse.getRoot() !== this.app.workspace.rootSplit;
+
+                // If the only view is in the sidebar, ignore to prevent infinite loop
+                if (!isSidebarLeaf) {
+                    if (leafToReuse.view instanceof GridView) {
+                        leafToReuse.view.setSource(mode, path);
+                    }
+
+                    this.app.workspace.revealLeaf(leafToReuse);
+
+                    // Close the new empty tab
+                    leaf.detach();
+
+                    return;
+                }
+            }
+
+            // Convert the new empty tab into a grid-view if all conditions are met
+            leaf.setViewState({ type: 'grid-view', active: true }).then(() => {
+                if (leaf.view instanceof GridView) {
+                    leaf.view.setSource(mode, path);
+                }
+            });
+        });
+    }
+
+    // Checks if a given WorkspaceLeaf is currently empty (is New Tab).
+    tabIsEmpty(leaf: WorkspaceLeaf): boolean {
+        return leaf.getViewState()?.type === "empty";
     }
 
     async loadSettings() {

@@ -48,6 +48,9 @@ export interface GallerySettings {
     folderNoteDisplaySettings: string; // 資料夾筆記設定
     interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
     customModes: CustomMode[]; // 自訂模式
+    quickAccessCommandPath: string; // Path used by "Open quick access folder" command
+    quickAccessModeType: 'bookmarks' | 'search' | 'recent-files' | 'all-files' | 'random-note' | 'tasks'; // View types used by "Open quick access view" command
+    useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
 }
 
 // 預設設定
@@ -96,6 +99,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
             dataviewCode: 'return dv.pages("#Book");',
         }
     ], // 自訂模式
+    quickAccessCommandPath: '', // Path used by "Open quick access folder" command
+    useQuickAccessAsNewTabMode: 'default',
+    quickAccessModeType: 'all-files', // Default quick access view type
 };
 
 // 設定頁面類別
@@ -120,7 +126,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         this.plugin.settings.customModes.forEach((mode, index) => {
             const setting = new Setting(customModesContainer)
                 .setName(`${mode.icon} ${mode.displayName}`);
-            
+
             // 讓設定項目可以被拖曳
             setting.settingEl.setAttr('draggable', 'true');
 
@@ -220,7 +226,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
-        
+
         // 設定是否顯示搜尋結果模式
         new Setting(containerEl)
             .setName(`🔍 ${t('show_search_mode')}`)
@@ -232,7 +238,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
-        
+
         // 設定是否顯示反向連結模式
         new Setting(containerEl)
             .setName(`🔗 ${t('show_backlinks_mode')}`)
@@ -285,15 +291,15 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 在設定描述區域添加數字輸入框
         const recentDescEl = recentFilesSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
-        
+
         recentDescEl.createEl('span', { text: t('recent_files_count') });
-        
+
         const recentInput = recentDescEl.createEl('input', {
             type: 'number',
             value: this.plugin.settings.recentFilesCount.toString(),
             cls: 'ge-setting-number-input'
         });
-        
+
         recentInput.addEventListener('change', async (e) => {
             const target = e.target as HTMLInputElement;
             const value = parseInt(target.value);
@@ -321,15 +327,15 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // 在設定描述區域添加數字輸入框
         const descEl = randomNoteSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
-        
+
         descEl.createEl('span', { text: t('random_note_count') });
-        
+
         const input = descEl.createEl('input', {
             type: 'number',
             value: this.plugin.settings.randomNoteCount.toString(),
             cls: 'ge-setting-number-input'
         });
-        
+
         input.addEventListener('change', async (e) => {
             const target = e.target as HTMLInputElement;
             const value = parseInt(target.value);
@@ -550,7 +556,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
         });
-            
+
         // 顯示筆記標籤設定
         new Setting(containerEl)
             .setName(t('show_note_tags'))
@@ -623,7 +629,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
-        
+
         //筆記標題的字型大小
         new Setting(containerEl)
             .setName(t('title_font_size'))
@@ -638,8 +644,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             });
-        
-                
+
+
         // 筆記摘要的字數設定
         new Setting(containerEl)
             .setName(t('summary_length'))
@@ -665,10 +671,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 this.plugin.settings.showCodeBlocksInSummary = value;
                 await this.plugin.saveSettings();
             }));
-        
+
         // 資料夾筆記設定區域
         containerEl.createEl('h3', { text: t('folder_note_settings') });
-        
+
         // 資料夾筆記設定 (預設、置頂、隱藏)
         new Setting(containerEl)
             .setName(t('foldernote_display_settings'))
@@ -685,17 +691,79 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
+            // Quick Access Settings
+            containerEl.createEl('h3', { text: t('quick_access_settings_title') });
+
+            // Quick Access Folder Setting
+            new Setting(containerEl)
+            .setName(t('quick_access_folder_name'))
+            .setDesc(t('quick_access_folder_desc'))
+            .addDropdown(dropdown => {
+                const folders = this.app.vault.getAllFolders()
+                    .filter(folder => folder.path !== '/')
+                    .sort((a, b) => a.path.localeCompare(b.path));
+
+                dropdown.addOption('/', t('root_folder'));
+
+                folders.forEach(folder => {
+                    dropdown.addOption(folder.path, folder.path);
+                });
+
+                dropdown.setValue(this.plugin.settings.quickAccessCommandPath || '/'); // Default to root if empty
+                dropdown.onChange(async (value) => {
+                    this.plugin.settings.quickAccessCommandPath = value;
+                    await this.plugin.saveSettings();
+                });
+            });
+
+
+            // Quick Access View Setting
+            new Setting(containerEl)
+            .setName(t('quick_access_mode_name'))
+            .setDesc(t('quick_access_mode_desc'))
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('all-files', t('all_files_mode'))
+                    .addOption('bookmarks', t('bookmarks_mode'))
+                    .addOption('search', t('search_results'))
+                    .addOption('recent-files', t('recent_files_mode'))
+                    .addOption('random-note', t('random_note_mode'))
+                    .addOption('tasks', t('tasks_mode'))
+                    .setValue(this.plugin.settings.quickAccessModeType)
+                    .onChange(async (value: 'bookmarks' | 'search' | 'recent-files' | 'all-files' | 'random-note' | 'tasks') => {
+                        this.plugin.settings.quickAccessModeType = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+            // Use Quick Access as a new tab view
+            new Setting(containerEl)
+            .setName(t('use_quick_access_as_new_tab_view'))
+            .setDesc(t('use_quick_access_as_new_tab_view_desc'))
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('default', t('default_new_tab'))
+                    .addOption('folder', t('use_quick_access_folder'))
+                    .addOption('mode', t('use_quick_access_mode'))
+                    .setValue(this.plugin.settings.useQuickAccessAsNewTabMode)
+                    .onChange(async (value: 'default' | 'folder' | 'mode') => {
+                        this.plugin.settings.useQuickAccessAsNewTabMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+
         // 忽略資料夾設定區域
         containerEl.createEl('h3', { text: t('ignored_folders_settings') });
 
         // 忽略的資料夾設定
         const ignoredFoldersContainer = containerEl.createDiv('ignored-folders-container');
-        
+
         new Setting(containerEl)
             .setName(t('ignored_folders'))
             .setDesc(t('ignored_folders_desc'))
             .setHeading();
-        
+
         // 新增資料夾選擇器
         new Setting(ignoredFoldersContainer)
             .setName(t('add_ignored_folder'))
@@ -704,10 +772,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 const folders = this.app.vault.getAllFolders()
                     .filter(folder => folder.path !== '/') // 排除根目錄
                     .sort((a, b) => a.path.localeCompare(b.path));
-                
+
                 // 新增空選項作為預設值
                 dropdown.addOption('', t('select_folders'));
-                
+
                 // 新增所有資料夾作為選項
                 folders.forEach(folder => {
                     // 只顯示尚未被忽略的資料夾
@@ -718,16 +786,16 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         dropdown.addOption(folder.path, folder.path);
                     }
                 });
-                
+
                 dropdown.onChange(async (value) => {
                     if (value) {
                         // 新增到忽略列表
                         this.plugin.settings.ignoredFolders.push(value);
                         await this.plugin.saveSettings();
-                        
+
                         // 重新渲染列表
                         this.renderIgnoredFoldersList(ignoredFoldersList);
-                        
+
                         // 重設下拉選單
                         dropdown.setValue('');
                         this.display();
@@ -738,17 +806,17 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         // 顯示目前已忽略的資料夾列表
         const ignoredFoldersList = ignoredFoldersContainer.createDiv('ge-ignored-folders-list');
         this.renderIgnoredFoldersList(ignoredFoldersList);
-        
+
         containerEl.appendChild(ignoredFoldersContainer);
 
         // 以字串忽略資料夾（可用正則表達式）設定
         const ignoredFolderPatternsContainer = containerEl.createDiv('ignored-folder-patterns-container');
-        
+
         new Setting(containerEl)
             .setName(t('ignored_folder_patterns'))
             .setDesc(t('ignored_folder_patterns_desc'))
             .setHeading();
-        
+
         // 新增字串模式輸入框
         const patternSetting = new Setting(ignoredFolderPatternsContainer)
             .setName(t('add_ignored_folder_pattern'))
@@ -771,15 +839,15 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     // 獲取輸入值
                     const inputEl = patternSetting.controlEl.querySelector('input') as HTMLInputElement;
                     const pattern = inputEl.value.trim();
-                    
+
                     if (pattern && !this.plugin.settings.ignoredFolderPatterns.includes(pattern)) {
                         // 新增到忽略模式列表
                         this.plugin.settings.ignoredFolderPatterns.push(pattern);
                         await this.plugin.saveSettings();
-                        
+
                         // 重新渲染列表
                         this.renderIgnoredFolderPatternsList(ignoredFolderPatternsList);
-                        
+
                         // 清空輸入框
                         inputEl.value = '';
                     }
@@ -789,7 +857,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         // 顯示目前已忽略的資料夾模式列表
         const ignoredFolderPatternsList = ignoredFolderPatternsContainer.createDiv('ge-ignored-folder-patterns-list');
         this.renderIgnoredFolderPatternsList(ignoredFolderPatternsList);
-        
+
         containerEl.appendChild(ignoredFolderPatternsContainer);
 
         containerEl.createEl('h3', { text: t('reset_to_default') });
@@ -807,36 +875,36 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     this.display();
                     new Notice(t('settings_reset_notice'));
                 }));
-        
+
     }
 
     // 渲染已忽略的資料夾列表
     renderIgnoredFoldersList(containerEl: HTMLElement) {
         containerEl.empty();
-        
+
         if (this.plugin.settings.ignoredFolders.length === 0) {
             containerEl.createEl('p', { text: t('no_ignored_folders') });
             return;
         }
-        
+
         const list = containerEl.createEl('ul', { cls: 'ge-ignored-folders-list' });
-        
+
         this.plugin.settings.ignoredFolders.forEach(folder => {
             const item = list.createEl('li', { cls: 'ge-ignored-folder-item' });
-            
+
             item.createSpan({ text: folder, cls: 'ge-ignored-folder-path' });
-            
-            const removeButton = item.createEl('button', { 
+
+            const removeButton = item.createEl('button', {
                 cls: 'ge-ignored-folder-remove',
                 text: t('remove')
             });
-            
+
             removeButton.addEventListener('click', async () => {
                 // 從忽略列表中移除
                 this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders
                     .filter(f => f !== folder);
                 await this.plugin.saveSettings();
-                
+
                 // 重新渲染列表
                 this.renderIgnoredFoldersList(containerEl);
                 this.display();
@@ -847,30 +915,30 @@ export class GridExplorerSettingTab extends PluginSettingTab {
     // 渲染已忽略的資料夾模式列表
     renderIgnoredFolderPatternsList(containerEl: HTMLElement) {
         containerEl.empty();
-        
+
         if (this.plugin.settings.ignoredFolderPatterns.length === 0) {
             containerEl.createEl('p', { text: t('no_ignored_folder_patterns') });
             return;
         }
-        
+
         const list = containerEl.createEl('ul', { cls: 'ge-ignored-folders-list' });
-        
+
         this.plugin.settings.ignoredFolderPatterns.forEach(pattern => {
             const item = list.createEl('li', { cls: 'ge-ignored-folder-item' });
-            
+
             item.createSpan({ text: pattern, cls: 'ge-ignored-folder-path' });
-            
-            const removeButton = item.createEl('button', { 
+
+            const removeButton = item.createEl('button', {
                 cls: 'ge-ignored-folder-remove',
                 text: t('remove')
             });
-            
+
             removeButton.addEventListener('click', async () => {
                 // 從忽略模式列表中移除
                 this.plugin.settings.ignoredFolderPatterns = this.plugin.settings.ignoredFolderPatterns
                     .filter(p => p !== pattern);
                 await this.plugin.saveSettings();
-                
+
                 // 重新渲染列表
                 this.renderIgnoredFolderPatternsList(containerEl);
             });
