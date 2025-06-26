@@ -1,6 +1,14 @@
-import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, ButtonComponent } from 'obsidian';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
+import { CustomModeModal } from './CustomModeModal';
+
+export interface CustomMode {
+    internalName: string;
+    icon: string;
+    displayName: string;
+    dataviewCode: string;
+}
 
 export interface GallerySettings {
     ignoredFolders: string[]; // 要忽略的資料夾路徑
@@ -39,6 +47,7 @@ export interface GallerySettings {
     showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: string; // 資料夾筆記設定
     interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
+    customModes: CustomMode[]; // 自訂模式
 }
 
 // 預設設定
@@ -79,6 +88,14 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
     interceptAllTagClicks: false, // 預設不攔截所有tag點擊事件
+    customModes: [
+        {
+            internalName: 'custom-1750837329297',
+            icon: '🧩',
+            displayName: 'My Books (Sample)',
+            dataviewCode: 'return dv.pages("#Book");',
+        }
+    ], // 自訂模式
 };
 
 // 設定頁面類別
@@ -94,18 +111,100 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        // 回復預設值按鈕
+        // 顯示模式設定區域
+        // 自訂模式設定
+        containerEl.createEl('h3', { text: t('custom_mode_settings') });
+
+        // 建立自訂模式的容器，以便實現拖曳排序
+        const customModesContainer = containerEl.createDiv();
+        this.plugin.settings.customModes.forEach((mode, index) => {
+            const setting = new Setting(customModesContainer)
+                .setName(`${mode.icon} ${mode.displayName}`);
+            
+            // 讓設定項目可以被拖曳
+            setting.settingEl.setAttr('draggable', 'true');
+
+            // 拖曳開始時，儲存被拖曳項目的索引
+            setting.settingEl.addEventListener('dragstart', (event: DragEvent) => {
+                if (event.dataTransfer) {
+                    event.dataTransfer.setData('text/plain', index.toString());
+                    event.dataTransfer.effectAllowed = 'move';
+                }
+            });
+
+            // 當拖曳到其他項目上時，允許放下
+            setting.settingEl.addEventListener('dragover', (event: DragEvent) => {
+                event.preventDefault();
+                if (event.dataTransfer) {
+                    event.dataTransfer.dropEffect = 'move';
+                }
+            });
+
+            // 放下項目時，更新順序
+            setting.settingEl.addEventListener('drop', async (event: DragEvent) => {
+                event.preventDefault();
+                if (!event.dataTransfer) return;
+
+                const fromIndexStr = event.dataTransfer.getData('text/plain');
+                if (!fromIndexStr) return;
+
+                const fromIndex = parseInt(fromIndexStr);
+                const toIndex = index;
+
+                if (fromIndex === toIndex) return;
+
+                // 重新排序陣列
+                const modes = this.plugin.settings.customModes;
+                const movedMode = modes.splice(fromIndex, 1)[0];
+                modes.splice(toIndex, 0, movedMode);
+
+                // 儲存設定並重新整理顯示
+                await this.plugin.saveSettings();
+                this.display();
+            });
+
+            // 編輯按鈕
+            setting.addButton((button: ButtonComponent) => {
+                button.setButtonText(t('edit'))
+                    .onClick(() => {
+                        // 找到正確的索引，以防萬一順序已變
+                        const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                        if (modeIndex === -1) return;
+                        new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
+                            this.plugin.settings.customModes[modeIndex] = result;
+                            this.plugin.saveSettings();
+                            this.display();
+                        }).open();
+                    });
+            });
+
+            // 移除按鈕
+            setting.addButton((button: ButtonComponent) => {
+                button.setButtonText(t('remove'))
+                    .setWarning()
+                    .onClick(() => {
+                        // 找到正確的索引，以防萬一順序已變
+                        const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                        if (modeIndex === -1) return;
+                        this.plugin.settings.customModes.splice(modeIndex, 1);
+                        this.plugin.saveSettings();
+                        this.display();
+                    });
+            });
+        });
+
         new Setting(containerEl)
-            .setName(t('reset_to_default'))
-            .setDesc(t('reset_to_default_desc'))
-            .addButton(button => button
-                .setButtonText(t('reset'))
-                .onClick(async () => {
-                    this.plugin.settings = { ...DEFAULT_SETTINGS };
-                    await this.plugin.saveSettings();
-                    this.display();
-                    new Notice(t('settings_reset_notice'));
-                }));
+            .addButton(button => {
+                button.setButtonText(t('add_custom_mode'))
+                    .setCta()
+                    .onClick(() => {
+                        new CustomModeModal(this.app, this.plugin, null, (result) => {
+                            this.plugin.settings.customModes.push(result);
+                            this.plugin.saveSettings();
+                            this.display();
+                        }).open();
+                    });
+            });
 
         // 顯示模式設定區域
         containerEl.createEl('h3', { text: t('display_mode_settings') });
@@ -693,6 +792,21 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         
         containerEl.appendChild(ignoredFolderPatternsContainer);
 
+        containerEl.createEl('h3', { text: t('reset_to_default') });
+
+        // 回復預設值按鈕
+        new Setting(containerEl)
+            .setName(t('reset_to_default'))
+            .setDesc(t('reset_to_default_desc'))
+            .addButton(button => button
+                .setButtonText(t('reset'))
+                .setWarning()
+                .onClick(async () => {
+                    this.plugin.settings = { ...DEFAULT_SETTINGS };
+                    await this.plugin.saveSettings();
+                    this.display();
+                    new Notice(t('settings_reset_notice'));
+                }));
         
     }
 

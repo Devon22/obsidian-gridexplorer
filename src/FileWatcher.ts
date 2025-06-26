@@ -127,10 +127,21 @@ export class FileWatcher {
         // 監聽當前開啟的檔案變更，讀取反向連結
         this.plugin.registerEvent(
             this.app.workspace.on('file-open', (file) => {
-                if (file instanceof TFile) {
-                    if ((this.gridView.sourceMode === 'backlinks' || this.gridView.sourceMode === 'outgoinglinks') 
-                        && this.gridView.searchQuery === '') {
+                if (file instanceof TFile && this.gridView.searchQuery === '') {
+                    const sourceMode = this.gridView.sourceMode;
+
+                    // 處理反向連結和出向連結
+                    if (sourceMode === 'backlinks' || sourceMode === 'outgoinglinks') {
                         this.scheduleRender();
+                        return;
+                    }
+
+                    // 處理自訂模式，僅當腳本包含 dv.current 時才觸發
+                    if (sourceMode.startsWith('custom-')) {
+                        const mode = this.plugin.settings.customModes.find(m => m.internalName === sourceMode);
+                        if (mode && mode.dataviewCode.includes('dv.current')) {
+                            this.scheduleRender();
+                        }
                     }
                 }
             })

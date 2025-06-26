@@ -76,6 +76,8 @@ export class GridView extends ItemView {
             return 'calendar-days';
         } else if (this.sourceMode === 'all-files') {
             return 'book-text';
+        } else if (this.sourceMode.startsWith('custom-')) {
+            return 'puzzle';
         } else if (this.sourceMode === 'folder') {
             return 'folder';
         } else {
@@ -102,6 +104,9 @@ export class GridView extends ItemView {
             return t('recent_files_mode');
         } else if (this.sourceMode === 'all-files') {
             return t('all_files_mode');
+        } else if (this.sourceMode.startsWith('custom-')) {
+            const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
+            return mode ? mode.displayName : t('custom_mode');
         } else if (this.sourceMode === 'folder') {
             if (this.sourcePath === '/') {
                 return t('root');
@@ -385,7 +390,10 @@ export class GridView extends ItemView {
         setIcon(refreshButton, 'refresh-ccw');
 
         // 添加排序按鈕
-        if (this.sourceMode !== 'bookmarks' && this.sourceMode !== 'recent-files' && this.sourceMode !== 'random-note') {
+        if (this.sourceMode !== 'bookmarks' && 
+            this.sourceMode !== 'recent-files' && 
+            this.sourceMode !== 'random-note' &&
+            !this.sourceMode.startsWith('custom-')) {
             const sortButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('sorting') }  });
             sortButton.addEventListener('click', (evt) => {
                 const menu = new Menu();
@@ -869,8 +877,18 @@ export class GridView extends ItemView {
                     modeName = t('tasks_mode');
                     break;
                 default:
-                    modeIcon = '📁';
-                    modeName = t('root');
+                    if (this.sourceMode.startsWith('custom-')) {
+                        const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
+                        modeIcon = mode ? mode.icon : '🧩';
+                        modeName = mode ? mode.displayName : t('custom_mode');
+                    } else { // folder mode
+                        modeIcon = '📁';
+                        if (this.sourcePath && this.sourcePath !== '/') {
+                            modeName = this.sourcePath.split('/').pop() || this.sourcePath;
+                        } else {
+                            modeName = t('root');
+                        }
+                    }
             }
 
             // 顯示模式名稱
@@ -1274,6 +1292,11 @@ export class GridView extends ItemView {
                     allFiles.forEach((file, index) => {
                         fileIndexMap.set(file, index);
                     });
+                } else if (this.sourceMode.startsWith('custom-')) {
+                    // 使用 Map 來記錄原始順序
+                    allFiles.forEach((file, index) => {
+                        fileIndexMap.set(file, index);
+                    });
                 } else if (this.sourceMode === 'search') {
                     allFiles = allFiles.filter(file =>
                         isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
@@ -1392,10 +1415,18 @@ export class GridView extends ItemView {
                     return indexA - indexB;
                 });
             } else if (this.sourceMode === 'random-note') {
+                // 臨時的排序類型
                 const sortType = this.sortType;
                 this.sortType = 'random';
                 files = sortFiles(files, this);
                 this.sortType = sortType;
+            } else if (this.sourceMode.startsWith('custom-')) {
+                // 保持原始順序
+                files.sort((a, b) => {
+                    const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+                    const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+                    return indexA - indexB;
+                });
             } else {
                 files = sortFiles(files, this);
             }
@@ -1767,7 +1798,8 @@ export class GridView extends ItemView {
             const shouldShowDateDividers = dateDividerMode !== 'none' && 
                 (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) &&
                 this.sourceMode !== 'random-note' &&
-                this.sourceMode !== 'bookmarks';
+                this.sourceMode !== 'bookmarks' &&
+                !this.sourceMode.startsWith('custom-');
 
             let lastDateString = '';
             let pinDividerAdded = false;

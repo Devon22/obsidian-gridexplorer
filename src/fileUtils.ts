@@ -394,6 +394,50 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             }
         }
         return sortFiles(Array.from(filesWithTasks), gridView);
+    } else if (sourceMode.startsWith('custom-')) {
+        const dvApi = app.plugins.plugins.dataview?.api;
+        if (!dvApi) {
+            new Notice('Dataview plugin is not enabled.');
+            return [];
+        }
+
+        const mode = settings.customModes.find(m => m.internalName === sourceMode);
+        if (!mode) {
+            new Notice(`Custom mode ${sourceMode} not found.`);
+            return [];
+        }
+
+        try {
+            const activeFile = app.workspace.getActiveFile();
+            if (activeFile) {
+                // 暫時添加 .current 到 dvApi 物件內
+                dvApi.current = () => dvApi.page(activeFile.path);
+            }
+
+            const func = new Function('app', 'dv', mode.dataviewCode);
+            const dvPagesResult = func(app, dvApi);
+            const dvPages = Array.isArray(dvPagesResult) ? dvPagesResult : Array.from(dvPagesResult || []);
+
+            if (!dvPages || dvPages.length === 0) {
+                return [];
+            }
+
+            const files = new Set<TFile>();
+
+            for (const page of dvPages) {
+                if (page.file?.path) {
+                    const file = app.vault.getAbstractFileByPath(page.file.path);
+                    if (file instanceof TFile) {
+                        files.add(file);
+                    }
+                }
+            }
+            return Array.from(files) as TFile[];
+        } catch (error) {
+            console.error('Grid Explorer: Error executing Dataview query.', error);
+            // new Notice('Error executing Dataview query. See console for details.');
+            return [];
+        }
     } else if (sourceMode === 'all-files') {
         // 所有筆記模式
         const allVaultFiles = app.vault.getFiles().filter(file => {

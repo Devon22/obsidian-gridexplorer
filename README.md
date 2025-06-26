@@ -13,14 +13,18 @@ This is a grid view plugin designed for Obsidian, aimed at providing a more intu
 - **Folder Mode**: Shows notes in a folder structure, supporting entry into subfolders.
 - **Bookmark Mode**: Allows quick access to notes in your bookmarks.
 - **Search Results Mode**: Displays Obsidian's search results.
-- **Custom Sorting**: Supports various sorting methods, including by name, modification time, and random sorting.
+- **Backlinks Mode**: Shows notes that link to the current note.
+- **Outgoing Links Mode**: Shows outgoing links from the current note, including media files.
+- **All Files Mode**: Lists all files in the vault.
+- **Recent Files Mode**: Lists the n most recently modified files.
+- **Random Files Mode**: Randomly lists n files.
+- **Custom Sorting**: Supports various sorting methods, including by name, modification time, random sorting, and per-folder custom sorting.
 - **Settings Options**: Allows customization of grid item width and default sorting method.
-- **Multilingual Support**: Currently supports English, Traditional Chinese,  Simplified Chinese, and Japanese.
+- **Multilingual Support**: Currently supports English, Traditional Chinese, Simplified Chinese, and Japanese.
 
 ## Installation
 
-1. Download the plugin and place it in the Obsidian plugins folder.
-2. Enable this plugin in Obsidian.
+Find "GridExplorer" in the Community plugins through the Obsidian app.
 
 ## Usage
 
@@ -61,9 +65,7 @@ Available colors:
 - purple
 - pink
 
-
-CSS Class： `.ge-grid-item.ge-foldernote`
-
+CSS Class: `.ge-grid-item.ge-foldernote`
 
 ## Settings
 

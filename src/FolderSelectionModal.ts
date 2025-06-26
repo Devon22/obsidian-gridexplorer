@@ -54,12 +54,32 @@ export class FolderSelectionModal extends Modal {
         // 鍵盤事件處理
         this.searchInput.addEventListener('keydown', this.handleKeyDown.bind(this));
 
+        // 建立自訂模式選項
+        if (this.plugin.settings.customModes.length > 0) {
+            this.plugin.settings.customModes.forEach(mode => {
+                const customOption = this.folderOptionsContainer.createEl('div', {
+                    cls: 'ge-grid-view-folder-option',
+                    text: `${mode.icon} ${mode.displayName}`
+                });
+
+                customOption.addEventListener('click', () => {
+                    if (this.activeView) {
+                        this.activeView.setSource(mode.internalName, '', true);
+                    } else {
+                        this.plugin.activateView(mode.internalName);
+                    }
+                    this.close();
+                });
+                this.folderOptions.push(customOption);
+            });
+        }
+        
         // 建立書籤選項
         if (this.plugin.settings.showBookmarksMode) {
             const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
             if (bookmarksPlugin?.enabled) {
                 const bookmarkOption = this.folderOptionsContainer.createEl('div', {
-                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    cls: 'ge-grid-view-folder-option',
                     text: `📑 ${t('bookmarks_mode')}`
                 });
 
@@ -84,7 +104,7 @@ export class FolderSelectionModal extends Modal {
                 if(searchInputEl) {
                     if (searchInputEl.value.trim().length > 0) {
                         const searchOption = this.folderOptionsContainer.createEl('div', {
-                            cls: 'ge-grid-view-folder-option ge-special-option',
+                            cls: 'ge-grid-view-folder-option',
                             text: `🔍 ${t('search_results')}: ${searchInputEl.value}`
                         });
 
@@ -108,7 +128,7 @@ export class FolderSelectionModal extends Modal {
             if (activeFile) {
                 const activeFileName = activeFile ? `: ${activeFile.basename}` : '';
                 const backlinksOption = this.folderOptionsContainer.createEl('div', {
-                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    cls: 'ge-grid-view-folder-option',
                     text: `🔗 ${t('backlinks_mode')}${activeFileName}`
                 });
 
@@ -130,7 +150,7 @@ export class FolderSelectionModal extends Modal {
             if (activeFile) {
                 const activeFileName = activeFile ? `: ${activeFile.basename}` : '';
                 const outgoinglinksOption = this.folderOptionsContainer.createEl('div', {
-                    cls: 'ge-grid-view-folder-option ge-special-option',
+                    cls: 'ge-grid-view-folder-option',
                     text: `🔗 ${t('outgoinglinks_mode')}${activeFileName}`
                 });
 
@@ -149,7 +169,7 @@ export class FolderSelectionModal extends Modal {
         // 建立最近檔案選項
         if (this.plugin.settings.showRecentFilesMode) {
             const recentFilesOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
+                cls: 'ge-grid-view-folder-option',
                 text: `📅 ${t('recent_files_mode')}`
             });
 
@@ -167,7 +187,7 @@ export class FolderSelectionModal extends Modal {
         // 建立所有筆記選項
         if (this.plugin.settings.showAllFilesMode) {
             const allFilesOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
+                cls: 'ge-grid-view-folder-option',
                 text: `📔 ${t('all_files_mode')}`
             });
 
@@ -185,7 +205,7 @@ export class FolderSelectionModal extends Modal {
         // 建立隨機筆記選項
         if (this.plugin.settings.showRandomNoteMode) {
             const randomNoteOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
+                cls: 'ge-grid-view-folder-option',
                 text: `🎲 ${t('random_note_mode')}`
             });
 
@@ -203,7 +223,7 @@ export class FolderSelectionModal extends Modal {
         // 建立任務選項
         if (this.plugin.settings.showTasksMode) {
             const tasksOption = this.folderOptionsContainer.createEl('div', {
-                cls: 'ge-grid-view-folder-option ge-special-option',
+                cls: 'ge-grid-view-folder-option',
                 text: `☑️ ${t('tasks_mode')}`
             });
 
