@@ -60,7 +60,9 @@ export class GridView extends ItemView {
     }
 
     getIcon() {
-        if (this.sourceMode === 'bookmarks') {
+        if (this.sourceMode.startsWith('custom-')) {
+            return 'puzzle';
+        } else if (this.sourceMode === 'bookmarks') {
             return 'bookmark';
         } else if (this.sourceMode === 'search') {
             return 'search';
@@ -68,16 +70,14 @@ export class GridView extends ItemView {
             return 'links-coming-in';
         } else if (this.sourceMode === 'outgoinglinks') {
             return 'links-going-out';
+        } else if (this.sourceMode === 'all-files') {
+            return 'book-text';
+        } else if (this.sourceMode === 'recent-files') {
+            return 'calendar-days';
         } else if (this.sourceMode === 'random-note') {
             return 'dice';
         } else if (this.sourceMode === 'tasks') {
             return 'square-check-big';
-        } else if (this.sourceMode === 'recent-files') {
-            return 'calendar-days';
-        } else if (this.sourceMode === 'all-files') {
-            return 'book-text';
-        } else if (this.sourceMode.startsWith('custom-')) {
-            return 'puzzle';
         } else if (this.sourceMode === 'folder') {
             return 'folder';
         } else {
@@ -86,7 +86,10 @@ export class GridView extends ItemView {
     }
 
     getDisplayText() {
-        if (this.sourceMode === '') {
+        if (this.sourceMode.startsWith('custom-')) {
+            const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
+            return mode ? mode.displayName : t('custom_mode');
+        } else if (this.sourceMode === '') {
             return t('grid_view_title');
         } else if (this.sourceMode === 'bookmarks') {
             return t('bookmarks_mode');
@@ -96,17 +99,14 @@ export class GridView extends ItemView {
             return t('backlinks_mode');
         } else if (this.sourceMode === 'outgoinglinks') {
             return t('outgoinglinks_mode');
+        } else if (this.sourceMode === 'all-files') {
+            return t('all_files_mode');
+        } else if (this.sourceMode === 'recent-files') {
+            return t('recent_files_mode');
         } else if (this.sourceMode === 'random-note') {
             return t('random_note_mode');
         } else if (this.sourceMode === 'tasks') {
             return t('tasks_mode');
-        } else if (this.sourceMode === 'recent-files') {
-            return t('recent_files_mode');
-        } else if (this.sourceMode === 'all-files') {
-            return t('all_files_mode');
-        } else if (this.sourceMode.startsWith('custom-')) {
-            const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
-            return mode ? mode.displayName : t('custom_mode');
         } else if (this.sourceMode === 'folder') {
             if (this.sourcePath === '/') {
                 return t('root');
@@ -332,23 +332,35 @@ export class GridView extends ItemView {
                                 displayText = t('outgoinglinks_mode');
                                 icon = 'links-going-out';
                                 break;
-                            case 'recent-files':
-                                displayText = t('recent_files_mode');
-                                icon = 'calendar-days';
-                                break;
                             case 'all-files':
                                 displayText = t('all_files_mode');
                                 icon = 'book-text';
+                                break;
+                            case 'recent-files':
+                                displayText = t('recent_files_mode');
+                                icon = 'calendar-days';
                                 break;
                             case 'random-note':
                                 displayText = t('random_note_mode');
                                 icon = 'dice';
                                 break;
+                            case 'tasks':
+                                displayText = t('tasks_mode');
+                                icon = 'square-check-big';
+                                break;
                             default:
-                                displayText = mode;
-                                icon = 'grid';
+                                if (mode.startsWith('custom-')) {
+                                    const customMode = this.plugin.settings.customModes.find(m => m.internalName === mode);
+                                    displayText = customMode ? customMode.displayName : t('custom_mode');
+                                    icon = 'puzzle';
+                                } else {
+                                    displayText = mode;
+                                    icon = 'grid';
+                                }
                         }
                         
+                        
+
                         // 添加歷史記錄到選單
                         menu.addItem((item) => {
                             item

@@ -8,6 +8,7 @@ export interface CustomMode {
     icon: string;
     displayName: string;
     dataviewCode: string;
+    enabled?: boolean; // 是否顯示此自訂模式，預設為 true
 }
 
 export interface GallerySettings {
@@ -49,7 +50,7 @@ export interface GallerySettings {
     interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
     customModes: CustomMode[]; // 自訂模式
     quickAccessCommandPath: string; // Path used by "Open quick access folder" command
-    quickAccessModeType: 'bookmarks' | 'search' | 'recent-files' | 'all-files' | 'random-note' | 'tasks'; // View types used by "Open quick access view" command
+    quickAccessModeType: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks'; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
 }
 
@@ -125,7 +126,15 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         const customModesContainer = containerEl.createDiv();
         this.plugin.settings.customModes.forEach((mode, index) => {
             const setting = new Setting(customModesContainer)
-                .setName(`${mode.icon} ${mode.displayName}`);
+                .setName(`${mode.icon} ${mode.displayName}`)
+                .addToggle(toggle => {
+                    toggle
+                        .setValue(mode.enabled ?? true)
+                        .onChange(async (value) => {
+                            mode.enabled = value;
+                            await this.plugin.saveSettings();
+                        });
+                });
 
             // 讓設定項目可以被拖曳
             setting.settingEl.setAttr('draggable', 'true');
@@ -203,12 +212,91 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .addButton(button => {
                 button.setButtonText(t('add_custom_mode'))
                     .setCta()
+                    .setTooltip(t('add_custom_mode'))
                     .onClick(() => {
-                        new CustomModeModal(this.app, this.plugin, null, (result) => {
+                        new CustomModeModal(this.app, this.plugin, null, async (result) => {
                             this.plugin.settings.customModes.push(result);
-                            this.plugin.saveSettings();
+                            await this.plugin.saveSettings();
                             this.display();
                         }).open();
+                    });
+            })
+            .addButton(button => {
+                button.setButtonText(t('export'))
+                    .setTooltip(t('export'))
+                    .onClick(() => {
+                        if (this.plugin.settings.customModes.length === 0) {
+                            new Notice(t('no_custom_modes_to_export'));
+                            return;
+                        }
+                        const data = JSON.stringify(this.plugin.settings.customModes, null, 2);
+                        const blob = new Blob([data], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'grid-explorer-custom-modes.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    });
+            })
+            .addButton(button => {
+                button.setButtonText(t('import'))
+                    .setTooltip(t('import'))
+                    .onClick(() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.json';
+                        input.onchange = async (e) => {
+                            const files = (e.target as HTMLInputElement).files;
+                            if (!files || files.length === 0) {
+                                return;
+                            }
+                            const file = files[0];
+
+                            const reader = new FileReader();
+                            reader.onload = async (e) => {
+                                if (!e.target || typeof e.target.result !== 'string') {
+                                    new Notice(t('import_error'));
+                                    return;
+                                }
+
+                                try {
+                                    const content = e.target.result;
+                                    const importedModes = JSON.parse(content);
+                                    if (Array.isArray(importedModes)) {
+                                        const validModes = importedModes.filter(m => m.internalName && m.displayName && m.dataviewCode);
+                                        if (validModes.length > 0) {
+                                            validModes.forEach(importedMode => {
+                                                const existingModeIndex = this.plugin.settings.customModes.findIndex(
+                                                    m => m.internalName === importedMode.internalName
+                                                );
+
+                                                if (existingModeIndex !== -1) {
+                                                    // Update existing mode
+                                                    this.plugin.settings.customModes[existingModeIndex] = importedMode;
+                                                } else {
+                                                    // Add new mode
+                                                    this.plugin.settings.customModes.push(importedMode);
+                                                }
+                                            });
+
+                                            await this.plugin.saveSettings();
+                                            this.display();
+                                            new Notice(t('import_success'));
+                                        } else {
+                                            new Notice(t('import_error'));
+                                        }
+                                    } else {
+                                        new Notice(t('import_error'));
+                                    }
+                                } catch (error) {
+                                    new Notice(t('import_error'));
+                                    console.error("Grid Explorer: Error importing custom modes", error);
+                                }
+                            };
+                            reader.readAsText(file);
+                        };
+                        input.click();
                     });
             });
 
@@ -571,91 +659,96 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 網格項目寬度設定
-        new Setting(containerEl)
+        const gridItemWidthSetting = new Setting(containerEl)
             .setName(t('grid_item_width'))
-            .setDesc(t('grid_item_width_desc'))
+            .setDesc(`${t('grid_item_width_desc')} (now: ${this.plugin.settings.gridItemWidth}px)`)
             .addSlider(slider => {
                 slider
                     .setLimits(200, 600, 10)
                     .setValue(this.plugin.settings.gridItemWidth)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
+                        gridItemWidthSetting.setDesc(`${t('grid_item_width_desc')} (now: ${value}px)`);
                         this.plugin.settings.gridItemWidth = value;
                         await this.plugin.saveSettings();
                     });
             });
 
         // 網格項目高度設定
-        new Setting(containerEl)
+        const gridItemHeightSetting = new Setting(containerEl)
             .setName(t('grid_item_height'))
-            .setDesc(t('grid_item_height_desc'))
+            .setDesc(`${t('grid_item_height_desc')} (now: ${this.plugin.settings.gridItemHeight === 0 ? 'auto' : this.plugin.settings.gridItemHeight})`)
             .addSlider(slider => {
                 slider
                     .setLimits(0, 600, 10)
                     .setValue(this.plugin.settings.gridItemHeight)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
+                        gridItemHeightSetting.setDesc(`${t('grid_item_height_desc')} (now: ${value === 0 ? 'auto' : value})`);
                         this.plugin.settings.gridItemHeight = value;
                         await this.plugin.saveSettings();
                     });
             });
 
         // 圖片區域寬度設定
-        new Setting(containerEl)
+        const imageAreaWidthSetting = new Setting(containerEl)
             .setName(t('image_area_width'))
-            .setDesc(t('image_area_width_desc'))
+            .setDesc(`${t('image_area_width_desc')} (now: ${this.plugin.settings.imageAreaWidth}px)`)
             .addSlider(slider => {
                 slider
                     .setLimits(50, 300, 10)
                     .setValue(this.plugin.settings.imageAreaWidth)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
+                        imageAreaWidthSetting.setDesc(`${t('image_area_width_desc')} (now: ${value}px)`);
                         this.plugin.settings.imageAreaWidth = value;
                         await this.plugin.saveSettings();
                     });
             });
 
         // 圖片區域高度設定
-        new Setting(containerEl)
+        const imageAreaHeightSetting = new Setting(containerEl)
             .setName(t('image_area_height'))
-            .setDesc(t('image_area_height_desc'))
+            .setDesc(`${t('image_area_height_desc')} (now: ${this.plugin.settings.imageAreaHeight}px)`)
             .addSlider(slider => {
                 slider
                     .setLimits(50, 300, 10)
                     .setValue(this.plugin.settings.imageAreaHeight)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
+                        imageAreaHeightSetting.setDesc(`${t('image_area_height_desc')} (now: ${value}px)`);
                         this.plugin.settings.imageAreaHeight = value;
                         await this.plugin.saveSettings();
                     });
             });
 
         //筆記標題的字型大小
-        new Setting(containerEl)
+        const titleFontSizeSetting = new Setting(containerEl)
             .setName(t('title_font_size'))
-            .setDesc(t('title_font_size_desc'))
+            .setDesc(`${t('title_font_size_desc')} (now: ${this.plugin.settings.titleFontSize.toFixed(2)})`)
             .addSlider(slider => {
                 slider
                 .setLimits(0.8, 1.5, 0.05)
                 .setValue(this.plugin.settings.titleFontSize)
                 .setDynamicTooltip()
                 .onChange(async (value) => {
+                    titleFontSizeSetting.setDesc(`${t('title_font_size_desc')} (now: ${value.toFixed(2)})`);
                     this.plugin.settings.titleFontSize = value;
                     await this.plugin.saveSettings();
                 });
             });
 
-
         // 筆記摘要的字數設定
-        new Setting(containerEl)
+        const summaryLengthSetting = new Setting(containerEl)
             .setName(t('summary_length'))
-            .setDesc(t('summary_length_desc'))
+            .setDesc(`${t('summary_length_desc')} (now: ${this.plugin.settings.summaryLength})`)
             .addSlider(slider => {
                 slider
                     .setLimits(50, 600, 25)
                     .setValue(this.plugin.settings.summaryLength)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
+                        summaryLengthSetting.setDesc(`${t('summary_length_desc')} (now: ${value})`);
                         this.plugin.settings.summaryLength = value;
                         await this.plugin.saveSettings();
                     });
@@ -691,67 +784,68 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-            // Quick Access Settings
-            containerEl.createEl('h3', { text: t('quick_access_settings_title') });
+        // Quick Access Settings
+        containerEl.createEl('h3', { text: t('quick_access_settings_title') });
 
-            // Quick Access Folder Setting
-            new Setting(containerEl)
-            .setName(t('quick_access_folder_name'))
-            .setDesc(t('quick_access_folder_desc'))
-            .addDropdown(dropdown => {
-                const folders = this.app.vault.getAllFolders()
-                    .filter(folder => folder.path !== '/')
-                    .sort((a, b) => a.path.localeCompare(b.path));
+        // Quick Access Folder Setting
+        new Setting(containerEl)
+        .setName(t('quick_access_folder_name'))
+        .setDesc(t('quick_access_folder_desc'))
+        .addDropdown(dropdown => {
+            const folders = this.app.vault.getAllFolders()
+                .filter(folder => folder.path !== '/')
+                .sort((a, b) => a.path.localeCompare(b.path));
 
-                dropdown.addOption('/', t('root_folder'));
+            dropdown.addOption('/', t('root'));
 
-                folders.forEach(folder => {
-                    dropdown.addOption(folder.path, folder.path);
-                });
+            folders.forEach(folder => {
+                dropdown.addOption(folder.path, folder.path);
+            });
 
-                dropdown.setValue(this.plugin.settings.quickAccessCommandPath || '/'); // Default to root if empty
-                dropdown.onChange(async (value) => {
-                    this.plugin.settings.quickAccessCommandPath = value;
+            dropdown.setValue(this.plugin.settings.quickAccessCommandPath || '/'); // Default to root if empty
+            dropdown.onChange(async (value) => {
+                this.plugin.settings.quickAccessCommandPath = value;
+                await this.plugin.saveSettings();
+            });
+        });
+
+
+        // Quick Access View Setting
+        new Setting(containerEl)
+        .setName(t('quick_access_mode_name'))
+        .setDesc(t('quick_access_mode_desc'))
+        .addDropdown(dropdown => {
+            dropdown
+                .addOption('bookmarks', t('bookmarks_mode'))
+                .addOption('search', t('search_results'))
+                .addOption('backlinks', t('backlinks_mode'))
+                .addOption('outgoinglinks', t('outgoinglinks_mode'))
+                .addOption('all-files', t('all_files_mode'))
+                .addOption('recent-files', t('recent_files_mode'))
+                .addOption('random-note', t('random_note_mode'))
+                .addOption('tasks', t('tasks_mode'))
+                .setValue(this.plugin.settings.quickAccessModeType)
+                .onChange(async (value: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks') => {
+                    this.plugin.settings.quickAccessModeType = value;
                     await this.plugin.saveSettings();
                 });
-            });
+        });
 
-
-            // Quick Access View Setting
-            new Setting(containerEl)
-            .setName(t('quick_access_mode_name'))
-            .setDesc(t('quick_access_mode_desc'))
-            .addDropdown(dropdown => {
-                dropdown
-                    .addOption('all-files', t('all_files_mode'))
-                    .addOption('bookmarks', t('bookmarks_mode'))
-                    .addOption('search', t('search_results'))
-                    .addOption('recent-files', t('recent_files_mode'))
-                    .addOption('random-note', t('random_note_mode'))
-                    .addOption('tasks', t('tasks_mode'))
-                    .setValue(this.plugin.settings.quickAccessModeType)
-                    .onChange(async (value: 'bookmarks' | 'search' | 'recent-files' | 'all-files' | 'random-note' | 'tasks') => {
-                        this.plugin.settings.quickAccessModeType = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
-            // Use Quick Access as a new tab view
-            new Setting(containerEl)
-            .setName(t('use_quick_access_as_new_tab_view'))
-            .setDesc(t('use_quick_access_as_new_tab_view_desc'))
-            .addDropdown(dropdown => {
-                dropdown
-                    .addOption('default', t('default_new_tab'))
-                    .addOption('folder', t('use_quick_access_folder'))
-                    .addOption('mode', t('use_quick_access_mode'))
-                    .setValue(this.plugin.settings.useQuickAccessAsNewTabMode)
-                    .onChange(async (value: 'default' | 'folder' | 'mode') => {
-                        this.plugin.settings.useQuickAccessAsNewTabMode = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
+        // Use Quick Access as a new tab view
+        new Setting(containerEl)
+        .setName(t('use_quick_access_as_new_tab_view'))
+        .setDesc(t('use_quick_access_as_new_tab_view_desc'))
+        .addDropdown(dropdown => {
+            dropdown
+                .addOption('default', t('default_new_tab'))
+                .addOption('folder', t('use_quick_access_folder'))
+                .addOption('mode', t('use_quick_access_mode'))
+                .setValue(this.plugin.settings.useQuickAccessAsNewTabMode)
+                .onChange(async (value: 'default' | 'folder' | 'mode') => {
+                    this.plugin.settings.useQuickAccessAsNewTabMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
 
         // 忽略資料夾設定區域
         containerEl.createEl('h3', { text: t('ignored_folders_settings') });

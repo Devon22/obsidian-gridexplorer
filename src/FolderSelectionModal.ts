@@ -54,9 +54,10 @@ export class FolderSelectionModal extends Modal {
         // 鍵盤事件處理
         this.searchInput.addEventListener('keydown', this.handleKeyDown.bind(this));
 
-        // 建立自訂模式選項
-        if (this.plugin.settings.customModes.length > 0) {
-            this.plugin.settings.customModes.forEach(mode => {
+        // 建立自訂模式選項（僅顯示啟用的）
+        const enabledCustomModes = this.plugin.settings.customModes.filter(m => m.enabled ?? true);
+        if (enabledCustomModes.length > 0) {
+            enabledCustomModes.forEach(mode => {
                 const customOption = this.folderOptionsContainer.createEl('div', {
                     cls: 'ge-grid-view-folder-option',
                     text: `${mode.icon} ${mode.displayName}`

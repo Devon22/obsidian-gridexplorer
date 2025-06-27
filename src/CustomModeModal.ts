@@ -24,6 +24,7 @@ export class CustomModeModal extends Modal {
         let icon = this.mode ? this.mode.icon : '🧩';
         let displayName = this.mode ? this.mode.displayName : '';
         let dataviewCode = this.mode ? this.mode.dataviewCode : '';
+        let enabled = this.mode ? (this.mode.enabled ?? true) : true;
 
         new Setting(contentEl)
             .setName(t('custom_mode_icon'))
@@ -71,7 +72,8 @@ export class CustomModeModal extends Modal {
                             internalName,
                             icon,
                             displayName,
-                            dataviewCode
+                            dataviewCode,
+                            enabled
                         });
                         this.close();
                     });
