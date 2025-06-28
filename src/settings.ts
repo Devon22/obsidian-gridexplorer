@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, ButtonComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent } from 'obsidian';
 import { t } from './translations';
 import GridExplorerPlugin from '../main';
 import { CustomModeModal } from './CustomModeModal';
@@ -105,7 +105,90 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     quickAccessModeType: 'all-files', // Default quick access view type
 };
 
-// 設定頁面類別
+// 資料夾選擇器
+class FolderSuggest extends AbstractInputSuggest<string> {
+    inputEl: HTMLInputElement;
+
+    constructor(app: App, inputEl: HTMLInputElement) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+    }
+
+    getSuggestions(inputStr: string): string[] {
+        const lowerCaseInputStr = inputStr.toLowerCase();
+        const allFolders = this.app.vault.getAllFolders();
+
+        const suggestions = allFolders
+            .map(folder => folder.path)
+            .filter(path => path.toLowerCase().includes(lowerCaseInputStr))
+            .sort((a, b) => a.localeCompare(b));
+        
+        if ('/'.includes(lowerCaseInputStr)) {
+            if (!suggestions.includes('/')) {
+                suggestions.unshift('/');
+            }
+        }
+
+        return suggestions;
+    }
+
+    renderSuggestion(suggestion: string, el: HTMLElement) {
+        el.setText(suggestion);
+    }
+
+    selectSuggestion(suggestion: string) {
+        this.inputEl.value = suggestion;
+        this.inputEl.trigger("input");
+        this.close();
+    }
+}
+
+// 忽略的資料夾選擇器
+class IgnoredFolderSuggest extends AbstractInputSuggest<string> {
+    inputEl: HTMLInputElement;
+
+    constructor(
+        app: App,
+        inputEl: HTMLInputElement,
+        private plugin: GridExplorerPlugin,
+        private settingTab: GridExplorerSettingTab
+    ) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+    }
+
+    getSuggestions(inputStr: string): string[] {
+        const lowerCaseInputStr = inputStr.toLowerCase();
+        const folders = this.app.vault.getAllFolders();
+
+        return folders
+            .map(folder => folder.path)
+            .filter(path => {
+                if (path === '/') return false; // Cannot ignore root
+                const isIgnored = this.plugin.settings.ignoredFolders.some(ignoredPath =>
+                    path === ignoredPath || path.startsWith(ignoredPath + '/')
+                );
+                return !isIgnored && path.toLowerCase().includes(lowerCaseInputStr);
+            })
+            .sort((a, b) => a.localeCompare(b));
+    }
+
+    renderSuggestion(suggestion: string, el: HTMLElement): void {
+        el.setText(suggestion);
+    }
+
+    async selectSuggestion(suggestion: string): Promise<void> {
+        if (suggestion && !this.plugin.settings.ignoredFolders.includes(suggestion)) {
+            this.plugin.settings.ignoredFolders.push(suggestion);
+            await this.plugin.saveSettings();
+
+            this.inputEl.value = ''; // Clear the input
+            this.settingTab.display(); // Re-render the settings tab to update the list
+        }
+        this.close();
+    }
+}
+
 export class GridExplorerSettingTab extends PluginSettingTab {
     plugin: GridExplorerPlugin;
 
@@ -789,25 +872,17 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         // Quick Access Folder Setting
         new Setting(containerEl)
-        .setName(t('quick_access_folder_name'))
-        .setDesc(t('quick_access_folder_desc'))
-        .addDropdown(dropdown => {
-            const folders = this.app.vault.getAllFolders()
-                .filter(folder => folder.path !== '/')
-                .sort((a, b) => a.path.localeCompare(b.path));
-
-            dropdown.addOption('/', t('root'));
-
-            folders.forEach(folder => {
-                dropdown.addOption(folder.path, folder.path);
+            .setName(t('quick_access_folder_name'))
+            .setDesc(t('quick_access_folder_desc'))
+            .addText(text => {
+                new FolderSuggest(this.app, text.inputEl);
+                text.setPlaceholder(t('select_folders'))
+                    .setValue(this.plugin.settings.quickAccessCommandPath)
+                    .onChange(async (value) => {
+                        this.plugin.settings.quickAccessCommandPath = value;
+                        await this.plugin.saveSettings(false);
+                    });
             });
-
-            dropdown.setValue(this.plugin.settings.quickAccessCommandPath || '/'); // Default to root if empty
-            dropdown.onChange(async (value) => {
-                this.plugin.settings.quickAccessCommandPath = value;
-                await this.plugin.saveSettings();
-            });
-        });
 
 
         // Quick Access View Setting
@@ -827,7 +902,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.quickAccessModeType)
                 .onChange(async (value: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks') => {
                     this.plugin.settings.quickAccessModeType = value;
-                    await this.plugin.saveSettings();
+                    await this.plugin.saveSettings(false);
                 });
         });
 
@@ -843,7 +918,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.useQuickAccessAsNewTabMode)
                 .onChange(async (value: 'default' | 'folder' | 'mode') => {
                     this.plugin.settings.useQuickAccessAsNewTabMode = value;
-                    await this.plugin.saveSettings();
+                    await this.plugin.saveSettings(false);
                 });
         });
 
@@ -861,40 +936,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         // 新增資料夾選擇器
         new Setting(ignoredFoldersContainer)
             .setName(t('add_ignored_folder'))
-            .addDropdown(dropdown => {
-                // 獲取所有資料夾
-                const folders = this.app.vault.getAllFolders()
-                    .filter(folder => folder.path !== '/') // 排除根目錄
-                    .sort((a, b) => a.path.localeCompare(b.path));
-
-                // 新增空選項作為預設值
-                dropdown.addOption('', t('select_folders'));
-
-                // 新增所有資料夾作為選項
-                folders.forEach(folder => {
-                    // 只顯示尚未被忽略的資料夾
-                    const isIgnored = this.plugin.settings.ignoredFolders.some(ignoredPath =>
-                        folder.path === ignoredPath || folder.path.startsWith(ignoredPath + '/')
-                    );
-                    if (!isIgnored) {
-                        dropdown.addOption(folder.path, folder.path);
-                    }
-                });
-
-                dropdown.onChange(async (value) => {
-                    if (value) {
-                        // 新增到忽略列表
-                        this.plugin.settings.ignoredFolders.push(value);
-                        await this.plugin.saveSettings();
-
-                        // 重新渲染列表
-                        this.renderIgnoredFoldersList(ignoredFoldersList);
-
-                        // 重設下拉選單
-                        dropdown.setValue('');
-                        this.display();
-                    }
-                });
+            .addText(text => {
+                new IgnoredFolderSuggest(this.app, text.inputEl, this.plugin, this);
+                text.setPlaceholder(t('select_folders_to_ignore'));
             });
 
         // 顯示目前已忽略的資料夾列表

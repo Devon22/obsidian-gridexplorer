@@ -337,6 +337,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         return Array.from(bookmarkedFiles) as TFile[];
     } else if (sourceMode === 'tasks') {
         const filesWithTasks = new Set<TFile>();
+        const dv = this.app.plugins.plugins.dataview?.api;
         const tasksPlugin = app.plugins.plugins['obsidian-tasks-plugin'];
         if (tasksPlugin) {
             // 任務模式 - 使用 Tasks 插件 API
@@ -362,7 +363,33 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 console.error('Error getting tasks from Tasks plugin:', error);
                 return [];
             }
+        } else if (dv) {
+            // 任務模式 - 使用 Dataview API
+            try {
+                const tasks = dv.pages().file.tasks;
+                let filteredTasks;
+                
+                if (gridView.taskFilter === 'uncompleted') {
+                    filteredTasks = tasks.where((t: { completed: boolean }) => !t.completed);
+                } else if (gridView.taskFilter === 'completed') {
+                    filteredTasks = tasks.where((t: { completed: boolean }) => t.completed);
+                } else { // 'all'
+                    filteredTasks = tasks;
+                }
+                
+                for (const task of filteredTasks.array()) {
+                    const file = app.vault.getAbstractFileByPath(task.path);
+                    if (file instanceof TFile) {
+                        filesWithTasks.add(file);
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting tasks from Dataview:', error);
+                return [];
+            }
+            
         } else {
+            // 使用原生方法
             const markdownFiles = app.vault.getMarkdownFiles();
             for (const file of markdownFiles) {
                 try {

@@ -185,6 +185,7 @@ export const TRANSLATIONS: Translations = {
 
         // 選擇資料夾對話框
         'select_folders': '選擇資料夾',
+        'select_folders_to_ignore': '選擇要忽略的資料夾',
         'open_grid_view': '開啟網格視圖',
         'open_in_grid_view': '在網格視圖中開啟',
         'open_note_in_grid_view': '在網格視圖中開啟當前筆記',
@@ -432,6 +433,7 @@ export const TRANSLATIONS: Translations = {
 
         // Select Folder Dialog
         'select_folders': 'Select folder',
+        'select_folders_to_ignore': 'Select folders to ignore',
         'open_grid_view': 'Open grid view',
         'open_in_grid_view': 'Open in grid view',
         'open_note_in_grid_view': 'Open note in grid view',
@@ -679,6 +681,7 @@ export const TRANSLATIONS: Translations = {
 
         // 选择文件夹对话框
         'select_folders': '选择文件夹',
+        'select_folders_to_ignore': '选择要忽略的文件夹',
         'open_grid_view': '打开网格视图',
         'open_in_grid_view': '在网格视图中打开',
         'open_note_in_grid_view': '在网格视图中打开当前笔记',
@@ -926,6 +929,7 @@ export const TRANSLATIONS: Translations = {
 
         // フォルダ選択ダイアログ
         'select_folders': 'フォルダを選択',
+        'select_folders_to_ignore': '無視するフォルダを選択',
         'open_grid_view': 'グリッドビューを開く',
         'open_in_grid_view': 'グリッドビューで開く',
         'open_note_in_grid_view': 'グリッドビューで現在のノートを開く',
@@ -1174,6 +1178,7 @@ export const TRANSLATIONS: Translations = {
 
         // Select Folder Dialog
         'select_folders': 'Выбрать папку',
+        'select_folders_to_ignore': 'Выбрать папки для игнорирования',
         'open_grid_view': 'Открыть сеточный вид',
         'open_in_grid_view': 'Открыть в сеточном виде',
         'open_note_in_grid_view': 'Открыть заметку в сеточном виде',
@@ -1421,6 +1426,7 @@ export const TRANSLATIONS: Translations = {
 
         // Select Folder Dialog
         'select_folders': 'Вибрати папку',
+        'select_folders_to_ignore': 'Вибрати папки для ігнорування',
         'open_grid_view': 'Відкрити сітковий вигляд',
         'open_in_grid_view': 'Відкрити в сітковому вигляді',
         'open_note_in_grid_view': 'Відкрити нотатку в сітковому вигляді',
