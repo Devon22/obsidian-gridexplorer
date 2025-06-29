@@ -160,32 +160,28 @@ export default class GridExplorerPlugin extends Plugin {
                                     this.openNoteInFolder(file);
                                 });
                         });
-                        if (this.settings.showBacklinksMode) {
-                            ogSubmenu.addItem((item) => {
-                                item
-                                    .setTitle(t('open_backlinks_in_grid_view'))
-                                    .setIcon('links-coming-in')
-                                    .onClick(() => {
-                                        this.app.workspace.getLeaf().openFile(file);
-                                        setTimeout(() => {
-                                            this.activateView('backlinks');
-                                        }, 100);
-                                    });
-                            });
-                        }
-                        if (this.settings.showOutgoinglinksMode) {
-                            ogSubmenu.addItem((item) => {
-                                item
-                                    .setTitle(t('open_outgoinglinks_in_grid_view'))
-                                    .setIcon('links-going-out')
-                                    .onClick(() => {
-                                        this.app.workspace.getLeaf().openFile(file);
-                                        setTimeout(() => {
-                                            this.activateView('outgoinglinks');
-                                        }, 100);
-                                    });
-                            });
-                        }
+                        ogSubmenu.addItem((item) => {
+                            item
+                                .setTitle(t('open_backlinks_in_grid_view'))
+                                .setIcon('links-coming-in')
+                                .onClick(() => {
+                                    this.app.workspace.getLeaf().openFile(file);
+                                    setTimeout(() => {
+                                        this.activateView('backlinks');
+                                    }, 100);
+                                });
+                        });
+                        ogSubmenu.addItem((item) => {
+                            item
+                                .setTitle(t('open_outgoinglinks_in_grid_view'))
+                                .setIcon('links-going-out')
+                                .onClick(() => {
+                                    this.app.workspace.getLeaf().openFile(file);
+                                    setTimeout(() => {
+                                        this.activateView('outgoinglinks');
+                                    }, 100);
+                                });
+                        });
                         if (this.settings.showRecentFilesMode && file instanceof TFile) {
                             ogSubmenu.addItem((item) => {
                                 item

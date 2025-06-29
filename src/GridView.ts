@@ -155,6 +155,13 @@ export class GridView extends ItemView {
             }
         }
 
+        if(mode.startsWith('custom-')) {
+            this.sortType = '';
+            this.folderSortType = '';
+        } else {
+            this.sortType = this.plugin.settings.defaultSortType;
+        }
+        
         if(mode !== '') this.sourceMode = mode; 
         if(path !== '') this.sourcePath = path;
         if(this.sourceMode === '') this.sourceMode = 'folder';
@@ -404,8 +411,7 @@ export class GridView extends ItemView {
         // 添加排序按鈕
         if (this.sourceMode !== 'bookmarks' && 
             this.sourceMode !== 'recent-files' && 
-            this.sourceMode !== 'random-note' &&
-            !this.sourceMode.startsWith('custom-')) {
+            this.sourceMode !== 'random-note') {
             const sortButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('sorting') }  });
             sortButton.addEventListener('click', (evt) => {
                 const menu = new Menu();
@@ -1293,18 +1299,10 @@ export class GridView extends ItemView {
                 // 當前位置檔案
                 allFiles = await getFiles(this, this.searchMediaFiles);
 
-                if (this.sourceMode === 'recent-files') {
-                    // 搜尋"最近檔案"的當前位置時，先作忽略檔案和只取前n筆
-                    allFiles = ignoredFiles(allFiles, this).slice(0, this.plugin.settings.recentFilesCount);
-                } else if (this.sourceMode === 'bookmarks') {
+                if (this.sourceMode === 'bookmarks') {
                     allFiles = allFiles.filter(file => 
                         isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
                     );
-                    // 使用 Map 來記錄原始順序
-                    allFiles.forEach((file, index) => {
-                        fileIndexMap.set(file, index);
-                    });
-                } else if (this.sourceMode.startsWith('custom-')) {
                     // 使用 Map 來記錄原始順序
                     allFiles.forEach((file, index) => {
                         fileIndexMap.set(file, index);
@@ -1313,6 +1311,14 @@ export class GridView extends ItemView {
                     allFiles = allFiles.filter(file =>
                         isDocumentFile(file) || (isMediaFile(file) && this.searchMediaFiles)
                     );
+                } else if (this.sourceMode === 'recent-files') {
+                    // 搜尋"最近檔案"的當前位置時，先作忽略檔案和只取前n筆
+                    allFiles = ignoredFiles(allFiles, this).slice(0, this.plugin.settings.recentFilesCount);
+                } else if (this.sourceMode.startsWith('custom-')) {
+                    // 使用 Map 來記錄原始順序
+                    allFiles.forEach((file, index) => {
+                        fileIndexMap.set(file, index);
+                    });
                 }
             }
 
@@ -1323,7 +1329,7 @@ export class GridView extends ItemView {
             const tagTerms = searchTerms.filter(term => term.startsWith('#')).map(term => term.substring(1));
             const normalTerms = searchTerms.filter(term => !term.startsWith('#'));
             
-            // 使用 Promise.all 來非同步地讀取所有檔案內容
+            // 使用 Promise.all 來非同步地讀取所有檔案內容，順序可能會跟之前不同
             await Promise.all(
                 allFiles.map(async file => {
                     const fileName = file.name.toLowerCase();
@@ -1413,19 +1419,19 @@ export class GridView extends ItemView {
             );
             
             // 排序檔案
-            if (this.sourceMode === 'recent-files') {
-                // 臨時的排序類型
-                const sortType = this.sortType;
-                this.sortType = 'mtime-desc';
-                files = sortFiles(files, this);
-                this.sortType = sortType;
-            } else if (this.sourceMode === 'bookmarks') {
+            if (this.sourceMode === 'bookmarks') {
                 // 保持原始順序
                 files.sort((a, b) => {
                     const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
                     const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
                     return indexA - indexB;
                 });
+            } else if (this.sourceMode === 'recent-files') {
+                // 臨時的排序類型
+                const sortType = this.sortType;
+                this.sortType = 'mtime-desc';
+                files = sortFiles(files, this);
+                this.sortType = sortType;
             } else if (this.sourceMode === 'random-note') {
                 // 臨時的排序類型
                 const sortType = this.sortType;
@@ -1810,8 +1816,7 @@ export class GridView extends ItemView {
             const shouldShowDateDividers = dateDividerMode !== 'none' && 
                 (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) &&
                 this.sourceMode !== 'random-note' &&
-                this.sourceMode !== 'bookmarks' &&
-                !this.sourceMode.startsWith('custom-');
+                this.sourceMode !== 'bookmarks';
 
             let lastDateString = '';
             let pinDividerAdded = false;
@@ -2599,7 +2604,7 @@ export class GridView extends ItemView {
         if (state.state) {
             this.sourceMode = state.state.sourceMode || '';
             this.sourcePath = state.state.sourcePath || null;
-            this.sortType = state.state.sortType || 'mtime-desc';
+            this.sortType = state.state.sortType || '';
             this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;

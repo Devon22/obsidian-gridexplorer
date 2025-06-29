@@ -18,6 +18,7 @@ This is a grid view plugin designed for Obsidian, aimed at providing a more intu
 - **All Files Mode**: Lists all files in the vault.
 - **Recent Files Mode**: Lists the n most recently modified files.
 - **Random Files Mode**: Randomly lists n files.
+- **Custom Mode**: Customize the displayed file content using Dataview query syntax.
 - **Custom Sorting**: Supports various sorting methods, including by name, modification time, random sorting, and per-folder custom sorting.
 - **Settings Options**: Allows customization of grid item width and default sorting method.
 - **Multilingual Support**: Currently supports English, Traditional Chinese, Simplified Chinese, and Japanese.
@@ -32,6 +33,39 @@ Find "GridExplorer" in the Community plugins through the Obsidian app.
 - Use the right-click menu to select "Open in Grid View" on a folder.
 - Use command to view the current note in the grid view (If there is no active note currently, open the root directory).
 - In the grid view, you can click on notes to open them or click on folders to enter them.
+
+## Supported File Formats
+
+### Image Formats
+- `jpg` / `jpeg`
+- `png`
+- `gif`
+- `webp`
+- `avif`
+- `bmp`
+- `svg`
+
+### Video Formats
+- `mp4`
+- `webm`
+- `mov`
+- `avi`
+- `mkv`
+- `ogv`
+
+### Audio Formats
+- `flac`
+- `m4a`
+- `mp3`
+- `ogg`
+- `wav`
+- `3gp`
+
+### Document Formats
+- `md` (Markdown)
+- `pdf`
+- `canvas`
+- `base`
 
 ## Folder Notes
 
@@ -66,17 +100,6 @@ Available colors:
 - pink
 
 CSS Class: `.ge-grid-item.ge-foldernote`
-
-## Settings
-
-In the plugin's settings page, you can:
-
-- Set folders to ignore.
-- Choose the default sorting method.
-- Adjust the width, height, and other appearance settings of grid items.
-- Set whether to display images and videos.
-- Configure various display mode toggles.
-- Set whether to reuse an existing grid view and the opening position of the grid view.
 
 ## Contribution
 

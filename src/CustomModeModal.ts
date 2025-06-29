@@ -27,22 +27,22 @@ export class CustomModeModal extends Modal {
         let enabled = this.mode ? (this.mode.enabled ?? true) : true;
 
         new Setting(contentEl)
+        .setName(t('custom_mode_display_name'))
+        .setDesc(t('custom_mode_display_name_desc'))
+        .addText(text => {
+            text.setValue(displayName)
+                .onChange(value => {
+                    displayName = value;
+                });
+        });
+
+        new Setting(contentEl)
             .setName(t('custom_mode_icon'))
             .setDesc(t('custom_mode_icon_desc'))
             .addText(text => {
                 text.setValue(icon)
                     .onChange(value => {
                         icon = value || '🧩';
-                    });
-            });
-
-        new Setting(contentEl)
-            .setName(t('custom_mode_display_name'))
-            .setDesc(t('custom_mode_display_name_desc'))
-            .addText(text => {
-                text.setValue(displayName)
-                    .onChange(value => {
-                        displayName = value;
                     });
             });
 

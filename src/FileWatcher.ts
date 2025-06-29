@@ -26,14 +26,14 @@ export class FileWatcher {
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
                     if(this.gridView.searchQuery !== '' && this.gridView.searchAllFiles) {
-                        this.scheduleRender();
+                        this.scheduleRender(2000);
                         return;
                     }
                     if(this.gridView.sourceMode === 'random-note') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
                         if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
-                            this.scheduleRender();
+                            this.scheduleRender(2000);
                         }
                     } else if (this.gridView.sourceMode === 'folder') {
                         if (this.gridView.sourcePath) {
@@ -149,7 +149,7 @@ export class FileWatcher {
     }
 
     // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪
-    private scheduleRender = (): void => {
+    private scheduleRender = (delay: number = 200): void => {
         if (this.renderTimer !== null) {
             clearTimeout(this.renderTimer);
         }
@@ -157,7 +157,7 @@ export class FileWatcher {
         this.renderTimer = window.setTimeout((): void => {
             this.gridView.render();
             this.renderTimer = null;
-        }, 200);
+        }, delay);
     }
 
     // 清理日期分隔線
