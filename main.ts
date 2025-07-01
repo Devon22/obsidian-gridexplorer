@@ -325,7 +325,55 @@ export default class GridExplorerPlugin extends Plugin {
             }
         }, true); // 用 capture，可在其他 listener 前先吃到
 
+        // 攔截Breadcrumb導航點擊事件
+        this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
+            // 如果未啟用攔截Breadcrumb導航點擊事件，則跳過
+            if (!this.settings.interceptBreadcrumbClicks) return;
+
+            const target = evt.target as HTMLElement;
+            const breadcrumbEl = target.closest('.view-header-breadcrumb');
+
+            // 確保點擊的是標題列中的Breadcrumb
+            if (!breadcrumbEl || !breadcrumbEl.parentElement?.classList.contains('view-header-title-parent')) {
+                return;
+            }
+
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            const pathParts: string[] = [];
+            const parentEl = breadcrumbEl.parentElement;
+
+            // 收集路徑片段
+            for (const child of Array.from(parentEl.children)) {
+                if (child.classList.contains('view-header-breadcrumb')) {
+                    const part = child.textContent;
+                    if (part) {
+                        pathParts.push(part);
+                    }
+                }
+                // 收集到當前點擊的元素為止
+                if (child === breadcrumbEl) {
+                    break;
+                }
+            }
+
+            const folderPath = pathParts.join('/');
+            const folder = this.app.vault.getAbstractFileByPath(folderPath);
+
+            if (folder instanceof TFolder) {
+                const view = await this.activateView('folder', folderPath);
+                if (view instanceof GridView) {
+                    view.searchQuery = ''; // 清空搜尋字串
+                    view.render(true); // resetScroll
+                }
+            }
+        }, true); // 使用 capture 階段以確保優先處理
+
+
+        // 設定 Canvas 拖曳處理
         this.setupCanvasDropHandlers();
+
 
         // Override new tab behavior (for useQuickAccessAsNewTabMode setting)
         const { workspace } = this.app;

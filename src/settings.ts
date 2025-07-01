@@ -48,6 +48,7 @@ export interface GallerySettings {
     showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: string; // 資料夾筆記設定
     interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
+    interceptBreadcrumbClicks: boolean; // 攔截Breadcrumb點擊事件
     customModes: CustomMode[]; // 自訂模式
     quickAccessCommandPath: string; // Path used by "Open quick access folder" command
     quickAccessModeType: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks'; // View types used by "Open quick access view" command
@@ -92,6 +93,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
     interceptAllTagClicks: false, // 預設不攔截所有tag點擊事件
+    interceptBreadcrumbClicks: false, // 預設不攔截Breadcrumb點擊事件
     customModes: [
         {
             internalName: 'custom-1750837329297',
@@ -697,6 +699,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.interceptAllTagClicks)
                     .onChange(async (value) => {
                         this.plugin.settings.interceptAllTagClicks = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 攔截Breadcrumb點擊事件
+        new Setting(containerEl)
+            .setName(t('intercept_breadcrumb_clicks'))
+            .setDesc(t('intercept_breadcrumb_clicks_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.interceptBreadcrumbClicks)
+                    .onChange(async (value) => {
+                        this.plugin.settings.interceptBreadcrumbClicks = value;
                         await this.plugin.saveSettings();
                     });
             });
