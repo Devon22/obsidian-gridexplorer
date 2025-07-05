@@ -63,14 +63,14 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     gridItemWidth: 300, // 網格項目寬度，預設 300
     gridItemHeight: 0, // 網格項目高度，預設 0
     imageAreaWidth: 100, // 圖片區域寬度，預設 100
-    imageAreaHeight: 100, // 圖片區域高度，預設 100
+    imageAreaHeight: 80, // 圖片區域高度，預設 80
     titleFontSize: 1.0, // 筆記標題的字型大小，預設 1.0
     summaryLength: 100, // 筆記摘要的字數，預設 100
     enableFileWatcher: true, // 預設啟用檔案監控
     showMediaFiles: true, // 預設顯示圖片和影片
     showVideoThumbnails: true, // 預設顯示影片縮圖
-    defaultOpenLocation: 'tab', // 預設開啟位置：新分頁
-    reuseExistingLeaf: false, // 預設不重用現有的網格視圖
+    defaultOpenLocation: 'left', // 預設開啟位置：左側邊欄
+    reuseExistingLeaf: true, // 預設重用現有的網格視圖
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
     showBacklinksMode: true, // 預設顯示反向連結模式
@@ -84,8 +84,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     customFolderIcon: '📁', // 自訂資料夾圖示
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
-    noteTitleField: 'title', // 筆記標題的欄位名稱
-    noteSummaryField: 'summary', // 筆記摘要的欄位名稱
+    noteTitleField: '', // 筆記標題的欄位名稱
+    noteSummaryField: '', // 筆記摘要的欄位名稱
     modifiedDateField: '', // 修改時間的欄位名稱
     createdDateField: '', // 建立時間的欄位名稱
     showNoteTags: false, // 預設不顯示筆記標籤

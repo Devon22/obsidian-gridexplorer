@@ -687,6 +687,22 @@ export class GridView extends ItemView {
 
             const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
 
+            // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
+            folderNameContainer.addEventListener('click', (event: MouseEvent) => {
+                // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
+                if (event.target === folderNameContainer) {
+                    event.preventDefault();
+                    // 取得網格容器
+                    const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+                    if (gridContainer) {
+                        gridContainer.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+
             // 建立可點擊的上層資料夾名稱
             const customFolderIcon = this.plugin.settings.customFolderIcon;
             const parentFolderLink = folderNameContainer.createEl('a', {
@@ -838,6 +854,23 @@ export class GridView extends ItemView {
         } else if (!(this.searchQuery !== '' && this.searchAllFiles)) {
             // 顯示目前模式名稱
             const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+
+            // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
+            folderNameContainer.addEventListener('click', (event: MouseEvent) => {
+                // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
+                if (event.target === folderNameContainer) {
+                    event.preventDefault();
+                    // 取得網格容器
+                    const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+                    if (gridContainer) {
+                        gridContainer.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+            
             let modeName = '';
             let modeIcon = '';
 
