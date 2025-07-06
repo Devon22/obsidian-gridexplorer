@@ -1,5 +1,5 @@
 import { App, Modal, TFile, setIcon } from 'obsidian';
-import { isImageFile, isVideoFile, isAudioFile } from './fileUtils';
+import { isImageFile, isVideoFile, isAudioFile } from '../fileUtils';
 
 export class MediaModal extends Modal {
     private file: TFile;

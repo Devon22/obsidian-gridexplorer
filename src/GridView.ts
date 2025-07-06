@@ -1,16 +1,17 @@
 import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath } from 'obsidian';
-import { showFolderSelectionModal } from './FolderSelectionModal';
-import { findFirstImageInNote } from './mediaUtils';
-import { MediaModal } from './MediaModal';
-import { showFolderNoteSettingsModal } from './FolderNoteSettingsModal';
-import { showNoteSettingsModal } from './NoteSettingsModal';
-import { showFolderRenameModal } from './FolderRenameModal';
-import { showSearchModal } from './SearchModal';
-import { FileWatcher } from './FileWatcher';
-import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
-import { FloatingAudioPlayer } from './FloatingAudioPlayer';
-import { t } from './translations';
 import GridExplorerPlugin from '../main';
+import { handleKeyDown as handleKeyDownHelper } from './handleKeyDown';
+import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
+import { FileWatcher } from './fileWatcher';
+import { findFirstImageInNote } from './mediaUtils';
+import { showFolderSelectionModal } from './modal/folderSelectionModal';
+import { MediaModal } from './modal/mediaModal';
+import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
+import { showNoteSettingsModal } from './modal/noteSettingsModal';
+import { showFolderRenameModal } from './modal/folderRenameModal';
+import { showSearchModal } from './modal/searchModal';
+import { FloatingAudioPlayer } from './floatingAudioPlayer';
+import { t } from './translations';
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -2306,200 +2307,7 @@ export class GridView extends ItemView {
 
     // 處理鍵盤導航
     handleKeyDown(event: KeyboardEvent) {
-        // 如果沒有項目，直接返回
-        if (this.gridItems.length === 0) return;
-
-        // 如果有Modal視窗，直接返回
-        if (document.querySelector('.modal-container')) return;
-        
-        let newIndex = this.selectedItemIndex;
-
-        // 如果還沒有選中項目且按下了方向鍵，選中第一個項目
-        if (this.selectedItemIndex === -1 && 
-            ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-            this.hasKeyboardFocus = true;
-            this.selectItem(0);
-            event.preventDefault();
-            return;
-        }
-
-        switch (event.key) {
-            case 'ArrowRight':
-                if (event.altKey) {
-                    // 如果有選中的項目，模擬點擊
-                    if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this.gridItems.length) {
-                        this.gridItems[this.selectedItemIndex].click();
-                    }
-                }  
-                newIndex = Math.min(this.gridItems.length - 1, this.selectedItemIndex + 1);
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'ArrowLeft':
-                if (event.altKey) {
-                    // 如果按下 Alt + 左鍵，且是資料夾模式且不是根目錄
-                    if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                        // 獲取上一層資料夾路徑
-                        const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                        this.setSource('folder', parentPath, true);
-                        this.clearSelection();
-                        event.preventDefault();
-                    }
-                    break;
-                }
-                newIndex = Math.max(0, this.selectedItemIndex - 1);
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'ArrowDown':
-                // 使用基於位置的導航而非固定行數
-                if (this.selectedItemIndex >= 0) {
-                    const currentItem = this.gridItems[this.selectedItemIndex];
-                    const currentRect = currentItem.getBoundingClientRect();
-                    const currentCenterX = currentRect.left + currentRect.width / 2;
-                    const currentBottom = currentRect.bottom;
-                    
-                    // 尋找下方最近的項目
-                    let closestItem = -1;
-                    let minDistance = Number.MAX_VALUE;
-                    let minVerticalDistance = Number.MAX_VALUE;
-                    
-                    for (let i = 0; i < this.gridItems.length; i++) {
-                        if (i === this.selectedItemIndex) continue;
-                        
-                        const itemRect = this.gridItems[i].getBoundingClientRect();
-                        const itemCenterX = itemRect.left + itemRect.width / 2;
-                        const itemTop = itemRect.top;
-                        
-                        // 只考慮下方的項目
-                        if (itemTop <= currentBottom) continue;
-                        
-                        // 計算水平和垂直距離
-                        const horizontalDistance = Math.abs(itemCenterX - currentCenterX);
-                        const verticalDistance = itemTop - currentBottom;
-                        
-                        // 優先考慮垂直距離最小的項目
-                        if (verticalDistance < minVerticalDistance || 
-                            (verticalDistance === minVerticalDistance && horizontalDistance < minDistance)) {
-                            minVerticalDistance = verticalDistance;
-                            minDistance = horizontalDistance;
-                            closestItem = i;
-                        }
-                    }
-                    
-                    if (closestItem !== -1) {
-                        newIndex = closestItem;
-                    } else {
-                        // 如果找不到下方項目，選擇最後一個項目
-                        newIndex = this.gridItems.length - 1;
-                    }
-                } else {
-                    newIndex = 0; // 如果沒有選中項目，選擇第一個
-                }
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'ArrowUp':
-                if (event.altKey) {
-                    // 如果按下 Alt + 上鍵，且是資料夾模式且不是根目錄
-                    if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                        // 獲取上一層資料夾路徑
-                        const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                        this.setSource('folder', parentPath, true);
-                        this.clearSelection();
-                        event.preventDefault();
-                    }
-                    break;
-                }
-                // 使用基於位置的導航而非固定行數
-                if (this.selectedItemIndex >= 0) {
-                    const currentItem = this.gridItems[this.selectedItemIndex];
-                    const currentRect = currentItem.getBoundingClientRect();
-                    const currentCenterX = currentRect.left + currentRect.width / 2;
-                    const currentTop = currentRect.top;
-                    
-                    // 尋找上方最近的項目
-                    let closestItem = -1;
-                    let minDistance = Number.MAX_VALUE;
-                    let minVerticalDistance = Number.MAX_VALUE;
-                    
-                    for (let i = 0; i < this.gridItems.length; i++) {
-                        if (i === this.selectedItemIndex) continue;
-                        
-                        const itemRect = this.gridItems[i].getBoundingClientRect();
-                        const itemCenterX = itemRect.left + itemRect.width / 2;
-                        const itemBottom = itemRect.bottom;
-                        
-                        // 只考慮上方的項目
-                        if (itemBottom >= currentTop) continue;
-                        
-                        // 計算水平和垂直距離
-                        const horizontalDistance = Math.abs(itemCenterX - currentCenterX);
-                        const verticalDistance = currentTop - itemBottom;
-                        
-                        // 優先考慮垂直距離最小的項目
-                        if (verticalDistance < minVerticalDistance || 
-                            (verticalDistance === minVerticalDistance && horizontalDistance < minDistance)) {
-                            minVerticalDistance = verticalDistance;
-                            minDistance = horizontalDistance;
-                            closestItem = i;
-                        }
-                    }
-                    
-                    if (closestItem !== -1) {
-                        newIndex = closestItem;
-                    } else {
-                        // 如果找不到上方項目，選擇第一個項目
-                        newIndex = 0;
-                    }
-                } else {
-                    newIndex = 0; // 如果沒有選中項目，選擇第一個
-                }
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'Home':
-                newIndex = 0;
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'End':
-                newIndex = this.gridItems.length - 1;
-                this.hasKeyboardFocus = true;
-                event.preventDefault();
-                break;
-            case 'Enter':
-                // 如果有選中的項目，模擬點擊
-                if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this.gridItems.length) {
-                    this.gridItems[this.selectedItemIndex].click();
-                }
-                this.clearSelection();
-                event.preventDefault();
-                break;
-            case 'Backspace':
-                // 如果是資料夾模式且不是根目錄，返回上一層資料夾
-                if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                    // 獲取上一層資料夾路徑
-                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    this.setSource('folder', parentPath, true);
-                    this.clearSelection();
-                    event.preventDefault();
-                }
-                break;
-            case 'Escape':
-                // 清除選中狀態
-                if (this.selectedItemIndex >= 0) {
-                    this.hasKeyboardFocus = false;
-                    this.clearSelection();
-                    event.preventDefault();
-                }
-                break;
-        }
-
-        // 如果索引有變化，選中新項目
-        if (newIndex !== this.selectedItemIndex) {
-            this.selectItem(newIndex);
-        }
+        return handleKeyDownHelper(this, event);
     }
 
     // 清除選中狀態

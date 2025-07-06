@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent } from 'obsidian';
-import { t } from './translations';
 import GridExplorerPlugin from '../main';
-import { CustomModeModal } from './CustomModeModal';
+import { CustomModeModal } from './modal/customModeModal';
+import { t } from './translations';
 
 export interface CustomMode {
     internalName: string;

@@ -1,7 +1,7 @@
 import { App, Modal, Setting, TFile } from 'obsidian';
-import { t } from './translations';
-import GridExplorerPlugin from '../main';
-import { GridView } from './GridView';
+import GridExplorerPlugin from '../../main';
+import { GridView } from '../GridView';
+import { t } from '../translations';
 
 export interface NoteSettings {
     title: string;

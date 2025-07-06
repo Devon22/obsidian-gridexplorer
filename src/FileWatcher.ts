@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from './GridView';
 import { isDocumentFile, isMediaFile } from './fileUtils';
+
 //檔案監聽器
 export class FileWatcher {
     private plugin: GridExplorerPlugin;

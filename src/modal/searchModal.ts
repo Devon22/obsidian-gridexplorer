@@ -1,7 +1,6 @@
-import { App, Modal, Setting } from 'obsidian';
-import { setIcon } from 'obsidian';
-import { t } from './translations';
-import { GridView } from './GridView';
+import { App, Modal, Setting, setIcon } from 'obsidian';
+import { GridView } from '../GridView';
+import { t } from '../translations';
 
 export class SearchModal extends Modal {
     gridView: GridView;

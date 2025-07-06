@@ -1,10 +1,10 @@
 import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './src/GridView';
-import { showFolderSelectionModal } from './src/FolderSelectionModal';
-import { showNoteSettingsModal } from './src/NoteSettingsModal';
+import { updateCustomDocumentExtensions } from './src/fileUtils';
+import { showFolderSelectionModal } from './src/modal/folderSelectionModal';
+import { showNoteSettingsModal } from './src/modal/noteSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
 import { t } from './src/translations';
-import { updateCustomDocumentExtensions } from './src/fileUtils';
 
 export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings;
