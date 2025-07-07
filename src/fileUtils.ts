@@ -336,6 +336,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         bookmarks.forEach(processBookmarkItem);
         return Array.from(bookmarkedFiles) as TFile[];
     } else if (sourceMode === 'tasks') {
+        // 任務模式
         const filesWithTasks = new Set<TFile>();
         const dv = this.app.plugins.plugins.dataview?.api;
         const tasksPlugin = app.plugins.plugins['obsidian-tasks-plugin'];
@@ -460,6 +461,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         }).sort(() => Math.random() - 0.5);
         return randomFiles; // 隨機模式不需要額外排序
     } else if (sourceMode.startsWith('custom-')) {
+        // 自訂模式
         const dvApi = app.plugins.plugins.dataview?.api;
         if (!dvApi) {
             new Notice('Dataview plugin is not enabled.');
@@ -472,6 +474,15 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             return [];
         }
 
+        // 依據 GridView 目前選擇的選項決定要使用哪段 Dataview 程式碼
+        let dvCode: string | undefined = mode?.dataviewCode;
+        if (mode && mode.options && mode.options.length > 0) {
+            const idx = (gridView as any).customOptionIndex ?? -1;
+            if (idx >= 0 && idx < mode.options.length) {
+                dvCode = mode.options[idx].dataviewCode;
+            }
+        }
+        
         try {
             const activeFile = app.workspace.getActiveFile();
             if (activeFile) {
@@ -479,7 +490,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 dvApi.current = () => dvApi.page(activeFile.path);
             }
 
-            const func = new Function('app', 'dv', mode.dataviewCode);
+            const func = new Function('app', 'dv', dvCode!);
             const dvPagesResult = func(app, dvApi);
             const dvPages = Array.isArray(dvPagesResult) ? dvPagesResult : Array.from(dvPagesResult || []);
 

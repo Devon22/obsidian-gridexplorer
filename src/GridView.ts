@@ -34,6 +34,7 @@ export class GridView extends ItemView {
     showIgnoredFolders: boolean = false; // 顯示忽略資料夾
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
+    customOptionIndex: number = -1; // 自訂模式選項索引
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -157,6 +158,7 @@ export class GridView extends ItemView {
         }
 
         if(mode.startsWith('custom-')) {
+            this.customOptionIndex = -1; // 切換自訂模式時重設選項索引
             this.sortType = '';
             this.folderSortType = '';
         } else {
@@ -599,38 +601,6 @@ export class GridView extends ItemView {
                 menu.addSeparator();
             }
 
-            // 任務模式選項
-            if (this.sourceMode === 'tasks' && this.searchQuery === '') {
-                menu.addItem((item) => {
-                    item.setTitle(t('uncompleted'))
-                        .setChecked(this.taskFilter === 'uncompleted')
-                        .setIcon('square')
-                        .onClick(() => {
-                            this.taskFilter = 'uncompleted';
-                            this.render();
-                        });
-                });
-                menu.addItem((item) => {
-                    item.setTitle(t('completed'))
-                        .setChecked(this.taskFilter === 'completed')
-                        .setIcon('square-check-big')
-                        .onClick(() => {
-                            this.taskFilter = 'completed';
-                            this.render();
-                        });
-                });
-                menu.addItem((item) => {
-                    item.setTitle(t('all'))
-                        .setChecked(this.taskFilter === 'all')
-                        .setIcon('square-asterisk')
-                        .onClick(() => {
-                            this.taskFilter = 'all';
-                            this.render();
-                        });
-                });
-                menu.addSeparator();
-            }
-
             // 最小化模式選項
             menu.addItem((item) => {
                 item
@@ -952,9 +922,85 @@ export class GridView extends ItemView {
             switch (this.sourceMode) {
                 case 'tasks':
                     folderNameContainer.createEl('span', { text: ' > ' });
-                    folderNameContainer.createEl('span', { text: t(`${this.taskFilter}`) });
+
+                    const taskFilterSpan = folderNameContainer.createEl('a', { text: t(`${this.taskFilter}`), cls: 'ge-task-filter' });
+                    taskFilterSpan.addEventListener('click', (evt) => {
+                        const menu = new Menu();
+                        menu.addItem((item) => {
+                            item.setTitle(t('uncompleted'))
+                                .setChecked(this.taskFilter === 'uncompleted')
+                                .setIcon('square')
+                                .onClick(() => {
+                                    this.taskFilter = 'uncompleted';
+                                    this.render();
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('completed'))
+                                .setChecked(this.taskFilter === 'completed')
+                                .setIcon('square-check-big')
+                                .onClick(() => {
+                                    this.taskFilter = 'completed';
+                                    this.render();
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('all'))
+                                .setChecked(this.taskFilter === 'all')
+                                .setIcon('square-asterisk')
+                                .onClick(() => {
+                                    this.taskFilter = 'all';
+                                    this.render();
+                                });
+                        });
+                        menu.addSeparator();
+                        menu.showAtMouseEvent(evt);
+                    });
                     break;
                 default:
+                    if (this.sourceMode.startsWith('custom-')) {
+                        // 取得當前自訂模式
+                        const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
+                        if (mode && mode.options && mode.options.length > 0) {
+                            folderNameContainer.createEl('span', { text: ' > ' });
+
+                            let subName: string | undefined;
+                            if (this.customOptionIndex === -1) {
+                                subName = (mode as any).name?.trim() || t('default');
+                            } else if (this.customOptionIndex >= 0 && this.customOptionIndex < mode.options.length) {
+                                const opt = mode.options![this.customOptionIndex];
+                                subName = opt.name?.trim() || `${t('option')} ${this.customOptionIndex + 1}`;
+                            }
+
+                            const subSpan = folderNameContainer.createEl('a', { text: subName ?? '-', cls: 'ge-sub-option' });
+                            subSpan.addEventListener('click', (evt) => {
+                                const menu = new Menu();
+                                // 預設選項
+                                const defaultName = (mode as any).name?.trim() || t('default');
+                                menu.addItem(item => {
+                                    item.setTitle(defaultName)
+                                        .setIcon('puzzle')
+                                        .setChecked(this.customOptionIndex === -1)
+                                        .onClick(() => {
+                                            this.customOptionIndex = -1;
+                                            this.render(true);
+                                        });
+                                });
+                                mode.options!.forEach((opt, idx) => {
+                                    menu.addItem(item => {
+                                        item.setTitle(opt.name?.trim() || t('option') + ' ' + (idx + 1))
+                                            .setIcon('puzzle')
+                                            .setChecked(idx === this.customOptionIndex)
+                                            .onClick(() => {
+                                                this.customOptionIndex = idx;
+                                                this.render(true);
+                                            });
+                                    });
+                                });
+                                menu.showAtMouseEvent(evt);
+                            });
+                        }
+                    }
                     break;
             }
         } else if (this.searchQuery !== '' && this.searchAllFiles) {

@@ -369,6 +369,18 @@
     transform: scale(1.05);
 }
 
+.ge-sub-option {
+    text-decoration: none;
+    padding: 5px;
+    margin-left: -5px;
+}
+
+.ge-sub-option:hover {
+    border-radius: 4px;
+    background-color: var(--background-modifier-hover);
+    text-decoration: none;
+}
+
 /* 搜尋對話框樣式 */
 .ge-search-container {
     margin-bottom: 8px;

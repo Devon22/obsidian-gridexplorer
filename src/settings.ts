@@ -3,11 +3,18 @@ import GridExplorerPlugin from '../main';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
 
+export interface CustomModeOption {
+    name: string;
+    dataviewCode: string;
+}
+
 export interface CustomMode {
     internalName: string;
     icon: string;
     displayName: string;
+    name: string;
     dataviewCode: string;
+    options?: CustomModeOption[];
     enabled?: boolean; // 是否顯示此自訂模式，預設為 true
 }
 
@@ -99,6 +106,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
             internalName: 'custom-1750837329297',
             icon: '🧩',
             displayName: 'My Books (Sample)',
+            name: 'Default',
             dataviewCode: 'return dv.pages("#Book");',
         }
     ], // 自訂模式
