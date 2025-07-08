@@ -8,6 +8,7 @@ export interface FolderNoteSettings {
     color: string;
     icon: string;
     isPinned: boolean;
+    cardLayout: '' | 'horizontal' | 'vertical';
 }
 
 export function showFolderNoteSettingsModal(app: App, plugin: GridExplorerPlugin, folder: TFolder, gridView: GridView) {
@@ -22,7 +23,8 @@ export class FolderNoteSettingsModal extends Modal {
         sort: '',
         color: '',
         icon: '📁',
-        isPinned: false
+        isPinned: false,
+        cardLayout: ''
     };
     existingFile: TFile | null = null;
     
@@ -58,7 +60,7 @@ export class FolderNoteSettingsModal extends Modal {
             .setDesc(t('folder_sort_type_desc'))
             .addDropdown(dropdown => {
                 dropdown
-                    .addOption('', t('default_sort'))
+                    .addOption('', t('default'))
                     .addOption('name-asc', t('sort_name_asc'))
                     .addOption('name-desc', t('sort_name_desc'))
                     .addOption('mtime-desc', t('sort_mtime_desc'))
@@ -105,6 +107,20 @@ export class FolderNoteSettingsModal extends Modal {
                     .onChange(value => {
                         this.settings.icon = value || customFolderIcon;
                     });
+            });
+
+        // 卡片樣式選項
+        new Setting(contentEl)
+            .setName(t('card_layout'))
+            .setDesc(t('card_layout_desc'))
+            .addDropdown(drop => {
+                drop.addOption('', t('default'));
+                drop.addOption('horizontal', t('horizontal_card'));
+                drop.addOption('vertical', t('vertical_card'));
+                drop.setValue(this.settings.cardLayout);
+                drop.onChange(async (value: 'horizontal' | 'vertical') => {
+                    this.settings.cardLayout = value as any;
+                });
             });
 
         // 置頂勾選框
@@ -158,6 +174,11 @@ export class FolderNoteSettingsModal extends Modal {
                     this.settings.icon = fileCache.frontmatter.icon || '📁';
                 }            
                 
+                // 讀取卡片樣式設定
+                if ('cardLayout' in fileCache.frontmatter) {
+                    this.settings.cardLayout = fileCache.frontmatter.cardLayout || 'default';
+                }
+                
                 // 讀取置頂設定
                 if (fileCache.frontmatter?.pinned && Array.isArray(fileCache.frontmatter.pinned)) {
                     this.settings.isPinned = fileCache.frontmatter.pinned.some((item: any) => {
@@ -194,21 +215,31 @@ export class FolderNoteSettingsModal extends Modal {
             
             // 使用 fileManager.processFrontMatter 更新 frontmatter
             await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+
                 if (this.settings.sort) {
                     frontmatter['sort'] = this.settings.sort;
                 } else {
                     delete frontmatter['sort'];
                 }
+
                 if (this.settings.color) {
                     frontmatter['color'] = this.settings.color;
                 } else {
                     delete frontmatter['color'];
                 }
+
                 if (this.settings.icon && this.settings.icon !== '📁') {
                     frontmatter['icon'] = this.settings.icon;
                 } else {
                     delete frontmatter['icon'];
                 }
+                
+                if (this.settings.cardLayout) {
+                    frontmatter['cardLayout'] = this.settings.cardLayout;
+                } else {
+                    delete frontmatter['cardLayout'];
+                }
+                
                 const folderName = `${this.folder.name}.md`;
                 if (this.settings.isPinned) {
                     // 如果原本就有 pinned 陣列，則添加或更新

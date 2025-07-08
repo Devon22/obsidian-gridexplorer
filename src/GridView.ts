@@ -35,13 +35,19 @@ export class GridView extends ItemView {
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
     customOptionIndex: number = -1; // 自訂模式選項索引
+    // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
+    baseCardLayout: 'horizontal' | 'vertical' = 'horizontal';
+    // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
+    cardLayout: 'horizontal' | 'vertical' = 'horizontal';
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.containerEl.addClass('ge-grid-view-container');
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
-        
+        this.baseCardLayout = this.plugin.settings.cardLayout;
+        this.cardLayout = this.baseCardLayout;
+
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
             this.fileWatcher = new FileWatcher(plugin, this);
@@ -146,15 +152,23 @@ export class GridView extends ItemView {
 
         this.folderSortType = '';
         this.pinnedList = [];
-        if(mode === 'folder') {
+        if (mode === 'folder') {
             // 檢查是否有與資料夾同名的 md 檔案
             const folderName = path.split('/').pop() || '';
             const mdFilePath = `${path}/${folderName}.md`;
             const mdFile = this.app.vault.getAbstractFileByPath(mdFilePath);
+            let tempLayout: 'horizontal' | 'vertical' = this.baseCardLayout;
             if (mdFile instanceof TFile) {
                 const metadata = this.app.metadataCache.getFileCache(mdFile)?.frontmatter;
                 this.folderSortType = metadata?.sort;
+                if (metadata?.cardLayout === 'horizontal' || metadata?.cardLayout === 'vertical') {
+                    tempLayout = metadata.cardLayout as 'horizontal' | 'vertical';
+                }
             }
+            this.cardLayout = tempLayout;
+        } else {
+            // 非資料夾來源時，回復基礎卡片排列
+            this.cardLayout = this.baseCardLayout;
         }
 
         if(mode.startsWith('custom-')) {
@@ -600,6 +614,19 @@ export class GridView extends ItemView {
                 });
                 menu.addSeparator();
             }
+
+            // 直向卡片切換
+            menu.addItem((item) => {
+                item.setTitle(t('vertical_card'))
+                    .setIcon('layout')
+                    .setChecked(this.baseCardLayout === 'vertical')
+                    .onClick(() => {
+                        this.baseCardLayout = this.baseCardLayout === 'vertical' ? 'horizontal' : 'vertical';
+                        this.cardLayout = this.baseCardLayout;
+                        this.render();
+                        this.app.workspace.requestSaveLayout();
+                    });
+            });
 
             // 最小化模式選項
             menu.addItem((item) => {
@@ -1068,16 +1095,29 @@ export class GridView extends ItemView {
         container.empty();
         container.addClass('ge-grid-container');
 
+        // 根據設定決定是否啟用卡片模式
+        if (this.cardLayout === 'vertical') {
+            container.addClass('ge-vertical-card');
+        } else {
+            container.removeClass('ge-vertical-card');
+        }
+
         // 設定網格項目寬度和高度等設定
-        container.style.setProperty('--grid-item-width', this.plugin.settings.gridItemWidth + 'px');
-        if (this.plugin.settings.gridItemHeight === 0 || this.minMode) {
+        const settings = this.plugin.settings;
+        const gridItemWidth = this.cardLayout === 'vertical' ? settings.verticalGridItemWidth : settings.gridItemWidth;
+        const gridItemHeight = settings.gridItemHeight;
+        const imageAreaWidth = settings.imageAreaWidth;
+        const imageAreaHeight = this.cardLayout === 'vertical' ? settings.verticalImageAreaHeight : settings.imageAreaHeight;
+
+        container.style.setProperty('--grid-item-width', gridItemWidth + 'px');
+        if (gridItemHeight === 0 || this.minMode) {
             container.style.setProperty('--grid-item-height', '100%');
         } else {
-            container.style.setProperty('--grid-item-height', this.plugin.settings.gridItemHeight + 'px');
+            container.style.setProperty('--grid-item-height', gridItemHeight + 'px');
         }
-        container.style.setProperty('--image-area-width', this.plugin.settings.imageAreaWidth + 'px');
-        container.style.setProperty('--image-area-height', this.plugin.settings.imageAreaHeight + 'px');
-        container.style.setProperty('--title-font-size', this.plugin.settings.titleFontSize + 'em');
+        container.style.setProperty('--image-area-width', imageAreaWidth + 'px');
+        container.style.setProperty('--image-area-height', imageAreaHeight + 'px');
+        container.style.setProperty('--title-font-size', settings.titleFontSize + 'em');
 
         // 添加點擊空白處取消選中的事件處理器
         container.addEventListener('click', (event) => {
@@ -1906,7 +1946,7 @@ export class GridView extends ItemView {
                 // 如果需要顯示置頂分隔器，且尚未加入，當前檔案為置頂清單之一時插入
                 if (!pinDividerAdded && this.pinnedList.includes(file.name)) {
                     const pinDivider = container.createDiv('ge-pin-divider');
-                    pinDivider.textContent = `📌 ${t('pinned')}`;
+                    pinDivider.textContent = t('pinned');
                     pinDividerAdded = true;
 
                     // 針對 iOS 設備進行特殊處理
@@ -2010,6 +2050,11 @@ export class GridView extends ItemView {
                 const titleContainer = contentArea.createDiv('ge-title-container');
                 const extension = file.extension.toLowerCase();
 
+                // 若為直向卡片模式且為圖片或影片檔，新增 ge-media-card 以便樣式控制
+                if (this.cardLayout === 'vertical' && (isImageFile(file) || isVideoFile(file))) {
+                    fileEl.addClass('ge-media-card');
+                }
+
                 // 添加檔案類型圖示
                 if (isImageFile(file)) {
                     const iconContainer = titleContainer.createDiv('ge-icon-container ge-img');
@@ -2041,6 +2086,10 @@ export class GridView extends ItemView {
                 const shouldShowExtension = this.minMode && file.extension.toLowerCase() !== 'md';
                 const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
                 const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
+                if (this.plugin.settings.multiLineTitle) {
+                    //多行標題
+                    titleEl.addClass('ge-multiline-title');
+                }
                 titleEl.setAttribute('title', displayText);
                 
                 // 創建圖片區域，但先不載入圖片
@@ -2482,6 +2531,8 @@ export class GridView extends ItemView {
                 randomNoteIncludeMedia: this.randomNoteIncludeMedia,
                 minMode: this.minMode,
                 showIgnoredFolders: this.showIgnoredFolders,
+                baseCardLayout: this.baseCardLayout,
+                cardLayout: this.cardLayout,
             }
         };
     }
@@ -2499,6 +2550,8 @@ export class GridView extends ItemView {
             this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
             this.minMode = state.state.minMode ?? false;
             this.showIgnoredFolders = state.state.showIgnoredFolders ?? false;
+            this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
+            this.cardLayout = state.state.cardLayout ?? this.baseCardLayout; // 同步 baseCardLayout 的卡片樣式，以便 render() 使用正確的 cardLayout
             this.render();
         }
     }

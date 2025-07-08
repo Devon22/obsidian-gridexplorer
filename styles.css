@@ -92,6 +92,8 @@
     width: 18px;
     height: 18px;
     color: var(--text-muted);
+    align-self: flex-start; /* 讓icon自身靠上 */
+    margin-top: 1px;
 }
 
 .ge-icon-container.ge-img {
@@ -127,6 +129,16 @@
     white-space: nowrap;
     display: block;
     width: 100%;
+}
+
+/* 多行標題支援 */
+.ge-multiline-title {
+    white-space: normal !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .ge-note-button {
@@ -192,6 +204,80 @@
     object-fit: cover;
     border-radius: 4px;
 }
+
+/* 卡片模式 ------------------------------------------------------------------ */
+/* 將 ge-grid-container 包在帶有 .ge-vertical-card 的容器中以啟用 */
+.ge-vertical-card .ge-grid-container {
+    /* 使用既有的欄寬變數，僅改 gap 與 padding 以符合卡片視覺 */
+    gap: 16px;
+    padding: 16px !important;
+}
+
+/* 單一卡片 */
+.ge-vertical-card .ge-grid-item {
+    /* 垂直排列 */
+    flex-direction: column;
+    align-items: stretch;
+    height: var(--grid-item-height); /* 與一般網格一致，保持同排等高 */
+    gap: 12px;
+}
+
+/* 摘要文字跟隨標題之後 */
+.ge-vertical-card .ge-content-area {
+    order: 1;
+    flex: 1 1 auto; /* 使摘要區撐開，標籤可貼底 */
+    flex-grow: 1; /* Add this line */
+}
+
+/* 圖片置中，滿版顯示 */
+.ge-vertical-card .ge-image-area {
+    order: 3;
+    width: 100%;
+    height: var(--image-area-height);
+}
+
+.ge-vertical-card .ge-image-area img,
+.ge-vertical-card .ge-image-area video {
+    border-radius: 6px;
+}
+
+/* 標籤列置底 */
+.ge-vertical-card .ge-tags-container {
+    order: 4;
+    margin-top: 6px;
+}
+
+/* 鼠標懸停效果：整張卡片微抬升 */
+.ge-vertical-card .ge-grid-item:hover {
+    transform: translateY(-2px);
+}
+
+/* 僅圖片/影片的直向卡片 ---------------------------------------------- */
+.ge-vertical-card .ge-media-card {
+    padding: 0; /* 移除內距，讓媒體填滿 */
+    border: none;
+    gap: 0;
+    height: var(--grid-item-height);
+}
+
+.ge-vertical-card .ge-media-card .ge-image-area {
+    order: 1;
+    width: 100%;
+    height: var(--image-area-height);
+    flex: 1 1 auto;
+}
+
+.ge-vertical-card .ge-media-card .ge-image-area img,
+.ge-vertical-card .ge-media-card .ge-image-area video {
+    border-radius: 6px;
+}
+
+.ge-vertical-card .ge-media-card .ge-content-area,
+.ge-vertical-card .ge-media-card .ge-tags-container {
+    display: none !important; /* 隱藏標題、摘要、標籤 */
+}
+
+/* --------------------------------------------------------------------------- */
 
 /* 標籤樣式 */
 .ge-tags-container {
@@ -260,9 +346,16 @@
     grid-column: 1 / -1;
     pointer-events: none;
     user-select: none;
-    margin-top: -1px;
+    margin-top: 4px;
     margin-bottom: -2px;
 }
+
+/* 置頂分隔器圖示 
+.ge-date-divider::before {
+    content: "📆";
+    margin-right: 6px;
+    margin-left: 2px;
+} */
 
 /* Pin分隔器樣式 */
 .ge-pin-divider {
@@ -275,6 +368,13 @@
     user-select: none;
     margin-top: -1px;
     margin-bottom: -2px;
+}
+
+/* 置頂分隔器圖示 */
+.ge-pin-divider::before {
+    content: "📌";
+    margin-right: 6px;
+    margin-left: 2px;
 }
 
 /* 頂部按鈕區域樣式 */
@@ -1077,4 +1177,3 @@
 .ge-setting-number-input {
     width: 60px;
 }
-
