@@ -147,8 +147,6 @@ export class MediaModal extends Modal {
         this.isZoomed = false;
         
         const mediaFile = this.mediaFiles[index];
-        
-        
 
         if (isImageFile(mediaFile)) {
             // 創建圖片元素

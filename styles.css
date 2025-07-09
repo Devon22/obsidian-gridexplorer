@@ -1,29 +1,14 @@
+/* 網格視圖容器 Grid View Container */
 .ge-grid-view-container {
     padding: 0px;
     height: 100%;
 }
 
-/* 選擇資料夾的樣式 */
-.ge-grid-view-folder-option {
-    cursor: pointer;
-    padding: 8px;
-    margin-bottom: 8px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-}
 
-.ge-grid-view-folder-option:hover {
-    background-color: var(--background-modifier-hover);
-}
 
-/* ascii tree prefix */
-.ge-folder-tree-prefix {
-    font-family: monospace;
-    white-space: pre;
-    color: var(--text-muted);
-}
+/* --------------------------------------------------------------------------- */
 
-/* Grid 樣式 */
+/* 網格容器 Grid Container */
 .ge-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-width, 300px), 1fr));
@@ -36,12 +21,13 @@
     overflow-y: auto;
 }
 
+/* 行動裝置隱藏滾動條 Mobile hidden Scrollbar */
 .is-mobile .ge-grid-container::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
 }
 
-/* Grid 項目樣式 */
+/* 網格項目 Grid Item */
 .ge-grid-item {
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -60,6 +46,7 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* 摘要區域 Content Area */
 .ge-content-area {
     flex: 1;
     min-width: 0;
@@ -68,15 +55,7 @@
     justify-content: flex-start;
 }
 
-.ge-break {
-    grid-column: 1 / -1;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--background-modifier-border);
-    border-bottom: 1px solid var(--background-primary);
-}
-
+/* 標題容器 Title Container */
 .ge-title-container {
     display: flex;
     align-items: center;
@@ -84,6 +63,7 @@
     width: 100%;
 }
 
+/* 標題圖示 Icon Container */
 .ge-icon-container {
     display: flex;
     align-items: center;
@@ -92,34 +72,39 @@
     width: 18px;
     height: 18px;
     color: var(--text-muted);
-    align-self: flex-start; /* 讓icon自身靠上 */
-    margin-top: 1px;
 }
 
+/* 圖片圖示 Image Icon */
 .ge-icon-container.ge-img {
     color: var(--color-blue);
 }
 
+/* 影片圖示 Video Icon */
 .ge-icon-container.ge-video {
     color: var(--color-red);
 }
 
+/* 音樂圖示 Audio Icon */
 .ge-icon-container.ge-audio {
     color: var(--color-purple);
 }
 
+/* PDF圖示 PDF Icon */
 .ge-icon-container.ge-pdf {
     color: var(--color-orange);
 }
 
+/* Canvas圖示 Canvas Icon */
 .ge-icon-container.ge-canvas {
     color: var(--color-green);
 }
 
+/* 基礎圖示 Base Icon */
 .ge-icon-container.ge-base {
     color: var(--color-cyan);
 }
 
+/* 標題 Title */
 .ge-title {
     margin: 0 0 0 3px;
     font-size: var(--title-font-size);
@@ -131,7 +116,7 @@
     width: 100%;
 }
 
-/* 多行標題支援 */
+/* 多行標題支援 Multiline Title */
 .ge-multiline-title {
     white-space: normal !important;
     display: -webkit-box;
@@ -141,29 +126,7 @@
     overflow: hidden;
 }
 
-.ge-note-button {
-    color: var(--text-muted);
-    cursor: pointer;
-    margin-left: 8px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-    background: none;
-    border: none;
-    padding: 0;
-    display: flex;
-    align-items: center;
-}
-
-.ge-note-button:hover {
-    opacity: 1;
-    color: var(--text-accent);
-}
-
-.ge-note-button svg {
-    width: 18px;
-    height: 18px;
-}
-
+/* 摘要p Content Area p */
 .ge-content-area p {
     margin: 5px 0 0 0;
     color: var(--text-faint);
@@ -185,6 +148,7 @@
     margin: 0;
 }
 
+/* 圖片區域 Image Area */
 .ge-image-area {
     width: var(--image-area-width);
     height: var(--image-area-height);
@@ -205,15 +169,14 @@
     border-radius: 4px;
 }
 
-/* 卡片模式 ------------------------------------------------------------------ */
-/* 將 ge-grid-container 包在帶有 .ge-vertical-card 的容器中以啟用 */
+/* 直向卡片容器 Vertical Card Container */
 .ge-vertical-card .ge-grid-container {
     /* 使用既有的欄寬變數，僅改 gap 與 padding 以符合卡片視覺 */
     gap: 16px;
     padding: 16px !important;
 }
 
-/* 單一卡片 */
+/* 直向卡片 Vertical Card Item */
 .ge-vertical-card .ge-grid-item {
     /* 垂直排列 */
     flex-direction: column;
@@ -222,14 +185,14 @@
     gap: 12px;
 }
 
-/* 摘要文字跟隨標題之後 */
+/* 摘要文字 Content Area */
 .ge-vertical-card .ge-content-area {
     order: 1;
     flex: 1 1 auto; /* 使摘要區撐開，標籤可貼底 */
     flex-grow: 1; /* Add this line */
 }
 
-/* 圖片置中，滿版顯示 */
+/* 圖片置中，滿版顯示 Image Area */
 .ge-vertical-card .ge-image-area {
     order: 3;
     width: 100%;
@@ -241,10 +204,28 @@
     border-radius: 6px;
 }
 
-/* 標籤列置底 */
+/* 標籤列置底 Tags Container */
 .ge-vertical-card .ge-tags-container {
     order: 4;
     margin-top: 6px;
+}
+
+/* 按設定切換直向卡片圖片位置 */
+.ge-vertical-card.ge-image-top .ge-image-area {
+    order: 1;
+}
+
+.ge-vertical-card.ge-image-top .ge-content-area {
+    order: 3;
+}
+
+/* 預設 bottom 可維持原有順序，以下為明確設置 */
+.ge-vertical-card.ge-image-bottom .ge-image-area {
+    order: 3;
+}
+
+.ge-vertical-card.ge-image-bottom .ge-content-area {
+    order: 1;
 }
 
 /* 鼠標懸停效果：整張卡片微抬升 */
@@ -252,7 +233,7 @@
     transform: translateY(-2px);
 }
 
-/* 僅圖片/影片的直向卡片 ---------------------------------------------- */
+/* 僅圖片/影片的直向卡片 Media Card */
 .ge-vertical-card .ge-media-card {
     padding: 0; /* 移除內距，讓媒體填滿 */
     border: none;
@@ -277,9 +258,7 @@
     display: none !important; /* 隱藏標題、摘要、標籤 */
 }
 
-/* --------------------------------------------------------------------------- */
-
-/* 標籤樣式 */
+/* 標籤容器 Tags Container */
 .ge-tags-container {
     display: flex;
     flex-wrap: wrap;
@@ -288,6 +267,7 @@
     margin-bottom: 2px;
 }
 
+/* 標籤樣式 Tag Style */
 .ge-tag {
     display: inline-flex;
     align-items: center;
@@ -303,7 +283,46 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* 資料夾項目的特殊樣式 */
+/* 影片縮圖樣式 */
+.ge-video-thumbnail {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-secondary);
+    border-radius: 4px;
+}
+
+.ge-video-thumbnail svg {
+    width: 40px;
+    height: 40px;
+    color: var(--text-accent);
+}
+
+/* 選中項目的樣式 Selected Item */
+.ge-selected-item {
+    outline: 1px solid var(--vault-profile-color-hover) !important;
+    outline-offset: -1px;
+    position: relative;
+    z-index: 1;
+}
+
+/* 拖曳相關樣式 Dragging */
+.ge-grid-item.ge-dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.ge-folder-item.ge-dragover {
+    border: 2px dashed var(--interactive-accent);
+    transform: scale(1.05);
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* 資料夾項目 Folder Item */
 .ge-grid-item.ge-folder-item {
     background-color: var(--background-primary-alt);
     border: 2px solid var(--background-modifier-border);
@@ -327,14 +346,83 @@
     color: var(--text-normal);
 }
 
-/* 調整資料夾項目的高度 */
 .ge-grid-item.ge-folder-item .ge-content-area {
-    min-height: 0px;
+    min-height: 0px; /* 設定最小高度 */
     justify-content: center;
 }
 
 .ge-grid-item.ge-folder-item .ge-title-container {
     align-items: center;
+}
+
+/* 資料夾顏色 Folder Color */
+.ge-grid-item.ge-folder-item.ge-folder-color-red    { 
+    background-color: rgba(var(--color-red-rgb), 0.2); 
+    border-color: rgba(var(--color-red-rgb), 0.5);
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-orange { 
+    background-color: rgba(var(--color-orange-rgb), 0.2); 
+    border-color: rgba(var(--color-orange-rgb), 0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-yellow { 
+    background-color: rgba(var(--color-yellow-rgb), 0.2); 
+    border-color: rgba(var(--color-yellow-rgb), 0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-green { 
+    background-color: rgba(var(--color-green-rgb),  0.2); 
+    border-color: rgba(var(--color-green-rgb),  0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-cyan { 
+    background-color: rgba(var(--color-cyan-rgb), 0.2); 
+    border-color: rgba(var(--color-cyan-rgb), 0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-blue { 
+    background-color: rgba(var(--color-blue-rgb), 0.2); 
+    border-color: rgba(var(--color-blue-rgb), 0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-purple { 
+    background-color: rgba(var(--color-purple-rgb), 0.2); 
+    border-color: rgba(var(--color-purple-rgb), 0.5); 
+}
+.ge-grid-item.ge-folder-item.ge-folder-color-pink { 
+    background-color: rgba(var(--color-pink-rgb), 0.2); 
+    border-color: rgba(var(--color-pink-rgb), 0.5); 
+}
+
+/* 資料夾上的資料夾筆記按鈕 Folder Note Button */
+.ge-foldernote-button {
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.ge-foldernote-button:hover {
+    opacity: 1;
+    color: var(--text-accent);
+}
+
+.ge-foldernote-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* 分隔線 Break */
+.ge-break {
+    grid-column: 1 / -1;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-primary);
 }
 
 /* 日期分隔器樣式 */
@@ -377,7 +465,29 @@
     margin-left: 2px;
 }
 
-/* 頂部按鈕區域樣式 */
+/* 搜尋載入中 Loading Indicator */
+.ge-loading-indicator {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+    font-size: 1.2em;
+    color: var(--text-muted);
+}
+
+/* 沒有找到文件 No Files Found */
+.ge-no-files {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2em;
+    color: var(--text-muted);
+    font-size: 1.2em;
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* 頂部按鈕區域樣式 Header Buttons */
 .ge-header-buttons {
     display: flex;
     gap: 8px;
@@ -415,7 +525,6 @@
     transform: translateY(0);
 }
 
-/* 特定按鈕樣式 */
 .ge-header-buttons .sort-button,
 .ge-header-buttons .reselect-button,
 .ge-header-buttons .refresh-button,
@@ -424,6 +533,9 @@
     align-items: center;
 }
 
+/* --------------------------------------------------------------------------- */
+
+/* 資料夾名稱區域樣式 Folder Name Content */
 .ge-foldername-content {
     justify-content: center;
     padding: 10px 8px 9px 8px;
@@ -453,6 +565,7 @@
     margin-right: 6px;
 }
 
+/* 上層資料夾連結樣式 Parent Folder Link */
 .ge-parent-folder-link {
     text-decoration: none;
     padding: 5px;
@@ -481,7 +594,9 @@
     text-decoration: none;
 }
 
-/* 搜尋對話框樣式 */
+/* --------------------------------------------------------------------------- */
+
+/* 搜尋對話框樣式 Search Container */
 .ge-search-container {
     margin-bottom: 8px;
     position: relative;
@@ -527,7 +642,7 @@
     height: 16px;
 }
 
-/* 標籤顯示區域 */
+/* 標籤顯示區域 Search Tag Display Area */
 .ge-search-tag-display-area {
     display: flex;
     flex-wrap: wrap;
@@ -583,7 +698,7 @@
     height: 22px;
 }
 
-/* 標籤自動完成下拉選單 */
+/* 標籤自動完成下拉選單 Search Tag Suggestions */
 .ge-search-tag-suggestions {
     position: relative;
     margin-top: 4px;
@@ -629,14 +744,14 @@
     color: var(--text-muted);
 }
 
-/* 搜尋選項容器 */
+/* 搜尋選項容器 Search Options Container */
 .ge-search-options-container {
     display: flex;
     gap: 16px;
     margin: 4px;
 }
 
-/* 搜尋範圍設定樣式 */
+/* 搜尋範圍設定樣式 Search Scope Container */
 .ge-search-scope-container {
     display: flex;
     align-items: center;
@@ -654,7 +769,7 @@
     color: var(--text-normal);
 }
 
-/* 搜尋媒體檔案設定樣式 */
+/* 搜尋媒體檔案設定樣式 Search Media Files Container */
 .ge-search-media-files-container {
     display: flex;
     align-items: center;
@@ -678,6 +793,7 @@
     justify-content: flex-end;
 }
 
+/* 搜尋視窗內的按鈕容器 Search Modal Button Container */
 .ge-button-container button {
     padding: 6px 12px;
     border-radius: 4px;
@@ -712,7 +828,26 @@
     transform: translateY(0);
 }
 
-/* 搜尋按鈕容器 */
+/* 搜尋視窗內的清除按鈕 Search Modal Clear Button */
+.ge-search-clear-button {
+    color: var(--text-muted);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    right: 5px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+}
+
+.ge-search-clear-button:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+/* 頂部欄搜尋按鈕容器 Header Search Button Container */
 .ge-search-button-container {
     display: flex;
     align-items: center;
@@ -722,13 +857,13 @@
     padding: 0;
 }
 
-/* 搜尋按鈕啟用狀態 */
+/* 搜尋按鈕啟用狀態 Header Search Button Active */
 .ge-search-button-container button.active {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
 }
 
-/* 搜尋文字容器 */
+/* 搜尋文字容器 Header Search Text Container */
 .ge-search-text-container {
     position: relative;
     display: flex;
@@ -748,7 +883,7 @@
     border-color: var(--interactive-accent);
 }
 
-/* 搜尋文字 */
+/* 搜尋文字 Header Search Text */
 .ge-search-text {
     font-size: 14px;
     color: var(--text-normal);
@@ -760,7 +895,7 @@
     margin-left: 8px;
 }
 
-/* 取消按鈕 */
+/* 取消按鈕 Header Search Clear Button */
 .ge-clear-button {
     width: 22px;
     height: 22px;
@@ -771,8 +906,8 @@
     cursor: pointer;
     color: var(--text-muted);
     font-size: 14px;
-    margin-right:4px; /* 添加右边距 */
-    flex-shrink: 0; /* 防止被压缩*/
+    margin-right:4px;
+    flex-shrink: 0;
 }
 
 .ge-clear-button:hover {
@@ -785,48 +920,15 @@
     height: 18px;
 }
 
-.ge-search-clear-button {
-    color: var(--text-muted);
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    position: absolute;
-    right: 5px;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    padding: 3px;
-}
+/* --------------------------------------------------------------------------- */
 
-.ge-search-clear-button:hover {
-    color: var(--text-normal);
-    background-color: var(--background-modifier-hover);
-}
-
-.ge-loading-indicator {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100px;
-    font-size: 1.2em;
-    color: var(--text-muted);
-}
-
-.ge-no-files {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 2em;
-    color: var(--text-muted);
-    font-size: 1.2em;
-}
-
-/* 資料夾搜尋輸入框樣式 */
+/* 資料夾選擇器的搜尋輸入框容器 */
 .ge-folder-search-container {
     margin-bottom: 16px;
     padding: 0 4px;
 }
 
+/* 資料夾選擇器的搜尋輸入框 */
 .ge-folder-search-input {
     width: 100%;
     padding: 8px 12px;
@@ -843,10 +945,31 @@
     outline: none;
 }
 
+/* 資料夾選擇器的項目容器 */
 .ge-folder-options-container {
     max-height: 70vh;
     overflow-y: auto;
     padding-right: 4px;
+}
+
+/* 資料夾選擇器的項目樣式 */
+.ge-grid-view-folder-option {
+    cursor: pointer;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.ge-grid-view-folder-option:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* ascii tree prefix */
+.ge-folder-tree-prefix {
+    font-family: monospace;
+    white-space: pre;
+    color: var(--text-muted);
 }
 
 /* 鍵盤導航選中項的樣式 */
@@ -856,90 +979,43 @@
     padding-left: 5px !important;
 }
 
-/* 忽略資料夾設定 */
-.ge-ignored-folders-container {
-    margin-bottom: 16px;
+/* --------------------------------------------------------------------------- */
+
+/* Media Modal */
+.ge-media-modal {
+    padding: 0 !important;
+    background-color: rgba(0, 0, 0, 0.9) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
 }
 
-.ge-ignored-folders-list {
-    list-style: none;
-    padding: 0;
+.ge-media-modal .modal-header {
+    margin: 0 !important;
 }
 
-.ge-ignored-folder-item {
+.ge-media-modal .modal-close-button {
+    display: none !important;
+}
+
+.ge-media-modal-content {
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
     display: flex;
+    justify-content: center;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px;
-    margin-bottom: 4px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-primary);
-}
-
-.ge-ignored-folder-path {
-    flex-grow: 1;
-    margin-right: 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.ge-ignored-folder-remove {
-    background-color: var(--interactive-normal);
-    color: var(--text-normal);
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.ge-ignored-folder-remove:hover {
-    background-color: var(--interactive-hover);
-}
-
-/* 忽略資料夾樣式 */
-.ignored-folder-patterns-container {
-    margin-bottom: 16px;
-}
-
-.ge-ignored-folder-patterns-list {
-    list-style: none;
-    padding: 0;
-}
-
-/* 影片縮圖樣式 */
-.ge-video-thumbnail {
+    position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--background-secondary);
-    border-radius: 4px;
 }
 
-.ge-video-thumbnail svg {
-    width: 40px;
-    height: 40px;
-    color: var(--text-accent);
-}
-
-/* 媒體檔案全螢幕顯示樣式 */
-.ge-media-fullscreen-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.9);
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
+/* Media View */
 .ge-media-view {
     position: relative;
     width: 100%;
@@ -1028,72 +1104,9 @@
     right: 0;
 }
 
-/* MediaModal 樣式 */
-.ge-media-modal {
-    padding: 0 !important;
-    background-color: rgba(0, 0, 0, 0.9) !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-}
+/* --------------------------------------------------------------------------- */
 
-.ge-media-modal .modal-header {
-    margin: 0 !important;
-}
-
-.ge-media-modal .modal-close-button {
-    display: none !important;
-}
-
-.ge-media-modal-content {
-    background-color: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-/* 媒體 Modal 樣式 */
-.ge-media-modal {
-    padding: 0 !important;
-    background-color: rgba(0, 0, 0, 0.9) !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-}
-
-/* 選中項目的樣式 */
-.ge-selected-item {
-    outline: 1px solid var(--vault-profile-color-hover) !important;
-    outline-offset: -1px;
-    position: relative;
-    z-index: 1;
-}
-
-/* 拖曳相關樣式 */
-.ge-grid-item.ge-dragging {
-    opacity: 0.5;
-    transform: scale(0.95);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.ge-folder-item.ge-dragover {
-    border: 2px dashed var(--interactive-accent);
-    transform: scale(1.05);
-}
-
-/* 音樂播放器 */
+/* 音樂播放器 Floating Audio Player */
 .ge-floating-audio-player {
     position: fixed;
     width: 300px;
@@ -1167,7 +1180,9 @@
     user-select: none;
 }
 
-/* 設定描述區域樣式 */
+/* --------------------------------------------------------------------------- */
+
+/* 設定描述區域樣式 Setting Description */
 .ge-setting-desc {
     display: flex;
     align-items: center;
@@ -1176,4 +1191,62 @@
 
 .ge-setting-number-input {
     width: 60px;
+}
+
+/* 忽略資料夾設定 */
+.ge-ignored-folders-container {
+    margin-bottom: 16px;
+}
+
+/* 忽略資料夾列表 */
+.ge-ignored-folders-list {
+    list-style: none;
+    padding: 0;
+}
+
+/* 忽略資料夾項目 */
+.ge-ignored-folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    margin-bottom: 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+}
+
+/* 忽略資料夾路徑 */
+.ge-ignored-folder-path {
+    flex-grow: 1;
+    margin-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 忽略資料夾刪除按鈕 */
+.ge-ignored-folder-remove {
+    background-color: var(--interactive-normal);
+    color: var(--text-normal);
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.ge-ignored-folder-remove:hover {
+    background-color: var(--interactive-hover);
+}
+
+/* 忽略資料夾模式的容器 */
+.ignored-folder-patterns-container {
+    margin-bottom: 16px;
+}
+
+/* 忽略資料夾模式列表 */
+.ge-ignored-folder-patterns-list {
+    list-style: none;
+    padding: 0;
 }

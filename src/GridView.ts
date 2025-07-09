@@ -189,10 +189,7 @@ export class GridView extends ItemView {
 
         if(mode.startsWith('custom-')) {
             this.customOptionIndex = -1; // 切換自訂模式時重設選項索引
-            this.sortType = '';
-            this.folderSortType = '';
-        } else {
-            this.sortType = this.plugin.settings.defaultSortType;
+            this.folderSortType = 'none';
         }
         
         if(mode !== '') this.sourceMode = mode; 
@@ -1121,7 +1118,7 @@ export class GridView extends ItemView {
         // 設定網格項目寬度和高度等設定
         const settings = this.plugin.settings;
         const gridItemWidth = this.cardLayout === 'vertical' ? settings.verticalGridItemWidth : settings.gridItemWidth;
-        const gridItemHeight = settings.gridItemHeight;
+        const gridItemHeight = this.cardLayout === 'vertical' ? settings.verticalGridItemHeight : settings.gridItemHeight;
         const imageAreaWidth = settings.imageAreaWidth;
         const imageAreaHeight = this.cardLayout === 'vertical' ? settings.verticalImageAreaHeight : settings.imageAreaHeight;
 
@@ -1134,6 +1131,17 @@ export class GridView extends ItemView {
         container.style.setProperty('--image-area-width', imageAreaWidth + 'px');
         container.style.setProperty('--image-area-height', imageAreaHeight + 'px');
         container.style.setProperty('--title-font-size', settings.titleFontSize + 'em');
+
+        // 依圖片位置設定切換樣式類別
+        if (this.cardLayout === 'vertical') {
+            if (settings.verticalCardImagePosition === 'top') {
+                container.addClass('ge-image-top');
+                container.removeClass('ge-image-bottom');
+            } else {
+                container.addClass('ge-image-bottom');
+                container.removeClass('ge-image-top');
+            }
+        }
 
         // 添加點擊空白處取消選中的事件處理器
         container.addEventListener('click', (event) => {
@@ -1227,7 +1235,7 @@ export class GridView extends ItemView {
                     if (noteFile instanceof TFile) {
                         // 使用 span 代替 button，只顯示圖示
                         const noteIcon = titleContainer.createEl('span', {
-                            cls: 'ge-note-button'
+                            cls: 'ge-foldernote-button'
                         });
                         setIcon(noteIcon, 'panel-left-open');
                         
@@ -1241,11 +1249,8 @@ export class GridView extends ItemView {
                         const metadata = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
                         const colorValue = metadata?.color;
                         if (colorValue) {
-                            // 設置背景色、框線色和文字顏色
-                            folderEl.setAttribute('style', `
-                                background-color: rgba(var(--color-${colorValue}-rgb), 0.2);
-                                border-color: rgba(var(--color-${colorValue}-rgb), 0.5);
-                            `);
+                            // 依顏色名稱加入對應的樣式類別
+                            folderEl.addClass(`ge-folder-color-${colorValue}`);
                         }
                         const iconValue = metadata?.icon;
                         if (iconValue) {
@@ -1962,26 +1967,47 @@ export class GridView extends ItemView {
             const currentToken = ++this.renderToken;
             // 設定批次渲染狀態
             const state: DividerState = { lastDateString: lastDateString, pinDividerAdded: pinDividerAdded, blankDividerAdded: blankDividerAdded };
-            const batchSize = 50;
             const paramsBase: FileRenderParams = { container, observer, files, dateDividerMode, sortType, shouldShowDateDividers, state };
             const selfRef = this;
-            const processBatch = (start: number) => {
-                // 若 token 不符，代表使用者已切換資料夾或重新渲染，直接停止
-                if (currentToken !== this.renderToken) return;
-                const end = Math.min(start + batchSize, files.length);
-                for (let i = start; i < end; i++) {
-                    selfRef.processFile(files[i], paramsBase);
-                }
-                if (end < files.length) {
-                    const cb = () => processBatch(end);
-                    if (typeof (window as any).requestIdleCallback === 'function') {
-                        (window as any).requestIdleCallback(cb);
-                    } else {
-                        setTimeout(cb, 0);
+
+            if (Platform.isIosApp) {
+                // iOS 專用：以 time-slice 方式分批，避免阻塞點擊事件
+                const TIME_BUDGET_MS = 6; // 每幀最多執行 6ms
+                const processChunk = (start: number) => {
+                    if (currentToken !== this.renderToken) return;
+                    const startTime = performance.now();
+                    let i = start;
+                    for (; i < files.length; i++) {
+                        selfRef.processFile(files[i], paramsBase);
+                        if (performance.now() - startTime > TIME_BUDGET_MS) {
+                            break; // 超過時間預算，讓出主執行緒
+                        }
                     }
-                } 
-            };
-            processBatch(0);
+                    if (i < files.length) {
+                        requestAnimationFrame(() => processChunk(i)); // 下一幀繼續
+                    }
+                };
+                processChunk(0);
+            } else {
+                // 其他平台維持原本固定 batchSize 的邏輯
+                const batchSize = 50;
+                const processBatch = (start: number) => {
+                    if (currentToken !== this.renderToken) return;
+                    const end = Math.min(start + batchSize, files.length);
+                    for (let i = start; i < end; i++) {
+                        selfRef.processFile(files[i], paramsBase);
+                    }
+                    if (end < files.length) {
+                        const cb = () => processBatch(end);
+                        if (typeof (window as any).requestIdleCallback === 'function') {
+                            (window as any).requestIdleCallback(cb);
+                        } else {
+                            setTimeout(cb, 0);
+                        }
+                    }
+                };
+                processBatch(0);
+            }
         }
 
         // 為資料夾項目添加拖曳目標功能

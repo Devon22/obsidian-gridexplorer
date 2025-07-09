@@ -27,7 +27,9 @@ export interface GallerySettings {
     imageAreaWidth: number; // 圖片區域寬度
     imageAreaHeight: number; // 圖片區域高度
     verticalGridItemWidth: number; // 直向卡片 - 網格項目寬度
+    verticalGridItemHeight: number; // 直向卡片 - 網格項目高度
     verticalImageAreaHeight: number; // 直向卡片 - 圖片區域高度
+    verticalCardImagePosition: 'top' | 'bottom'; // 直向卡片圖片位置
     titleFontSize: number; // 筆記標題的字型大小
     multiLineTitle: boolean; // 標題允許兩行顯示
     summaryLength: number; // 筆記摘要的字數
@@ -62,7 +64,7 @@ export interface GallerySettings {
     interceptBreadcrumbClicks: boolean; // 攔截Breadcrumb點擊事件
     customModes: CustomMode[]; // 自訂模式
     quickAccessCommandPath: string; // Path used by "Open quick access folder" command
-    quickAccessModeType: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks'; // View types used by "Open quick access view" command
+    quickAccessModeType: string; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
 }
 
@@ -76,7 +78,9 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     imageAreaWidth: 100, // 圖片區域寬度，預設 100
     imageAreaHeight: 80, // 圖片區域高度，預設 80
     verticalGridItemWidth: 200, // 直向卡片 - 網格項目寬度
+    verticalGridItemHeight: 0, // 直向卡片 - 網格項目高度
     verticalImageAreaHeight: 180, // 直向卡片 - 圖片區域高度
+    verticalCardImagePosition: 'top', // 直向卡片圖片位置
     titleFontSize: 1.0, // 筆記標題的字型大小，預設 1.0
     multiLineTitle: false,
     summaryLength: 100, // 筆記摘要的字數，預設 100
@@ -867,6 +871,21 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
+        // 直向卡片 - 網格項目高度
+        const vGridItemHeightSetting = new Setting(containerEl)
+            .setName(`${t('vertical_card')} ${t('grid_item_height')}`)
+            .setDesc(`${t('grid_item_height_desc')} (now: ${this.plugin.settings.verticalGridItemHeight}px)`) 
+            .addSlider(slider => {
+                slider.setLimits(0, 600, 10)
+                    .setValue(this.plugin.settings.verticalGridItemHeight)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        vGridItemHeightSetting.setDesc(`${t('grid_item_height_desc')} (now: ${value}px)`);
+                        this.plugin.settings.verticalGridItemHeight = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
         // 直向卡片 - 圖片區域高度
         const vImageAreaHeightSetting = new Setting(containerEl)
             .setName(`${t('vertical_card')} ${t('image_area_height')}`)
@@ -880,6 +899,20 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         this.plugin.settings.verticalImageAreaHeight = value;
                         await this.plugin.saveSettings();
                     });
+            });
+
+        // 直向卡片圖片位置
+        new Setting(containerEl)
+            .setName(`${t('vertical_card')} ${t('image_position')}`)
+            .setDesc(t('image_position_desc'))
+            .addDropdown(dropdown => {
+                dropdown.addOption('top', t('top'));
+                dropdown.addOption('bottom', t('bottom'));
+                dropdown.setValue(this.plugin.settings.verticalCardImagePosition);
+                dropdown.onChange(async (value: 'top' | 'bottom') => {
+                    this.plugin.settings.verticalCardImagePosition = value;
+                    await this.plugin.saveSettings();
+                });
             });
 
         //筆記標題的字型大小
@@ -980,17 +1013,20 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         .setName(t('quick_access_mode_name'))
         .setDesc(t('quick_access_mode_desc'))
         .addDropdown(dropdown => {
+            for(let i = 0; i < this.plugin.settings.customModes.length; i++) {
+                dropdown.addOption(this.plugin.settings.customModes[i].internalName, `🧩 ${this.plugin.settings.customModes[i].displayName}`);
+            }
             dropdown
-                .addOption('bookmarks', t('bookmarks_mode'))
-                .addOption('search', t('search_results'))
-                .addOption('backlinks', t('backlinks_mode'))
-                .addOption('outgoinglinks', t('outgoinglinks_mode'))
-                .addOption('all-files', t('all_files_mode'))
-                .addOption('recent-files', t('recent_files_mode'))
-                .addOption('random-note', t('random_note_mode'))
-                .addOption('tasks', t('tasks_mode'))
+                .addOption('bookmarks', `📑 ${t('bookmarks_mode')}`)
+                .addOption('search', `🔍 ${t('search_results')}`)
+                .addOption('backlinks', `🔗 ${t('backlinks_mode')}`)
+                .addOption('outgoinglinks', `🔗 ${t('outgoinglinks_mode')}`)
+                .addOption('all-files', `📔 ${t('all_files_mode')}`)
+                .addOption('recent-files', `📅 ${t('recent_files_mode')}`)
+                .addOption('random-note', `🎲 ${t('random_note_mode')}`)
+                .addOption('tasks', `☑️ ${t('tasks_mode')}`)
                 .setValue(this.plugin.settings.quickAccessModeType)
-                .onChange(async (value: 'bookmarks' | 'search' | 'backlinks' | 'outgoinglinks' | 'all-files' | 'recent-files' | 'random-note' | 'tasks') => {
+                .onChange(async (value: string) => {
                     this.plugin.settings.quickAccessModeType = value;
                     await this.plugin.saveSettings(false);
                 });
