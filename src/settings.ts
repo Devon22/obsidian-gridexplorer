@@ -6,6 +6,7 @@ import { t } from './translations';
 export interface CustomModeOption {
     name: string;
     dataviewCode: string;
+    fields?: string;
 }
 
 export interface CustomMode {
@@ -16,6 +17,7 @@ export interface CustomMode {
     dataviewCode: string;
     options?: CustomModeOption[];
     enabled?: boolean; // 是否顯示此自訂模式，預設為 true
+    fields?: string;
 }
 
 export interface GallerySettings {

@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { handleKeyDown as handleKeyDownHelper } from './handleKeyDown';
 import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
@@ -196,6 +196,11 @@ export class GridView extends ItemView {
         if(path !== '') this.sourcePath = path;
         if(this.sourceMode === '') this.sourceMode = 'folder';
         if(this.sourcePath === '') this.sourcePath = '/';
+
+        // 非資料夾模式時，強制路徑為根目錄
+        if(this.sourceMode !== 'folder') {
+            this.sourcePath = '/';
+        }
 
         this.render(resetScroll);
         // 通知 Obsidian 保存視圖狀態
@@ -696,12 +701,12 @@ export class GridView extends ItemView {
                 parentFolderName = t('root');
             }
 
-            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
 
             // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
-            folderNameContainer.addEventListener('click', (event: MouseEvent) => {
+            modenameContainer.addEventListener('click', (event: MouseEvent) => {
                 // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-                if (event.target === folderNameContainer) {
+                if (event.target === modenameContainer) {
                     event.preventDefault();
                     // 取得網格容器
                     const gridContainer = this.containerEl.querySelector('.ge-grid-container');
@@ -716,7 +721,7 @@ export class GridView extends ItemView {
 
             // 建立可點擊的上層資料夾名稱
             const customFolderIcon = this.plugin.settings.customFolderIcon;
-            const parentFolderLink = folderNameContainer.createEl('a', {
+            const parentFolderLink = modenameContainer.createEl('a', {
                 text: `${customFolderIcon} ${parentFolderName}`.trim(),
                 cls: 'ge-parent-folder-link'
             });
@@ -801,10 +806,10 @@ export class GridView extends ItemView {
             });
 
             // 分隔符號
-            folderNameContainer.createEl('span', { text: ' > ' });
+            modenameContainer.createEl('span', { text: ' > ' });
 
             // 目前資料夾名稱
-            folderNameContainer.createEl('span', { text: currentFolderName });
+            modenameContainer.createEl('span', { text: currentFolderName });
 
             if (Platform.isDesktop) {
                 // 為上層按鈕添加拖曳目標功能
@@ -864,12 +869,12 @@ export class GridView extends ItemView {
             }
         } else if (!(this.searchQuery !== '' && this.searchAllFiles)) {
             // 顯示目前模式名稱
-            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
+            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
 
             // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
-            folderNameContainer.addEventListener('click', (event: MouseEvent) => {
+            modenameContainer.addEventListener('click', (event: MouseEvent) => {
                 // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-                if (event.target === folderNameContainer) {
+                if (event.target === modenameContainer) {
                     event.preventDefault();
                     // 取得網格容器
                     const gridContainer = this.containerEl.querySelector('.ge-grid-container');
@@ -953,17 +958,45 @@ export class GridView extends ItemView {
                     }
             }
 
-            // 顯示模式名稱
-            folderNameContainer.createEl('span', { 
-                text: `${modeIcon} ${modeName}`.trim(),
-                cls: 'ge-mode-title'
-            });
+            // 顯示模式名稱 (若為自訂模式則提供點擊選單以快速切換)
+            let modeTitleEl: HTMLElement;
+            if (this.sourceMode.startsWith('custom-')) {
+                // 使用可點擊的 <a> 元素
+                modeTitleEl = modenameContainer.createEl('a', {
+                    text: `${modeIcon} ${modeName}`.trim(),
+                    cls: 'ge-parent-folder-link'
+                });
+
+                // 點擊時顯示所有自訂模式選單
+                modeTitleEl.addEventListener('click', (evt) => {
+                    const menu = new Menu();
+                    this.plugin.settings.customModes
+                        .filter(m => m.enabled ?? true) // 僅顯示啟用的自訂模式
+                        .forEach((m) => {
+                            menu.addItem(item => {
+                                item.setTitle(`${m.icon || '🧩'} ${m.displayName}`)
+                                    .setChecked(m.internalName === this.sourceMode)
+                                    .onClick(() => {
+                                        // 切換至選取的自訂模式並重新渲染
+                                        this.setSource(m.internalName, '', true);
+                                    });
+                            });
+                        });
+                    menu.showAtMouseEvent(evt);
+                });
+            } else {
+                // 其他模式維持原本的 span
+                modeTitleEl = modenameContainer.createEl('span', {
+                    text: `${modeIcon} ${modeName}`.trim(),
+                    cls: 'ge-mode-title'
+                });
+            }
 
             switch (this.sourceMode) {
                 case 'tasks':
-                    folderNameContainer.createEl('span', { text: ' > ' });
+                    modenameContainer.createEl('span', { text: ' > ' });
 
-                    const taskFilterSpan = folderNameContainer.createEl('a', { text: t(`${this.taskFilter}`), cls: 'ge-task-filter' });
+                    const taskFilterSpan = modenameContainer.createEl('a', { text: t(`${this.taskFilter}`), cls: 'ge-task-filter' });
                     taskFilterSpan.addEventListener('click', (evt) => {
                         const menu = new Menu();
                         menu.addItem((item) => {
@@ -999,10 +1032,16 @@ export class GridView extends ItemView {
                     break;
                 default:
                     if (this.sourceMode.startsWith('custom-')) {
+                        // 把 modenameContainer 加上所有自訂模式選項的選單
+                        
                         // 取得當前自訂模式
                         const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
                         if (mode && mode.options && mode.options.length > 0) {
-                            folderNameContainer.createEl('span', { text: ' > ' });
+                            modenameContainer.createEl('span', { text: ' > ' });
+
+                            if (this.customOptionIndex >= mode.options.length || this.customOptionIndex < -1) {
+                                this.customOptionIndex = -1;
+                            }
 
                             let subName: string | undefined;
                             if (this.customOptionIndex === -1) {
@@ -1012,7 +1051,7 @@ export class GridView extends ItemView {
                                 subName = opt.name?.trim() || `${t('option')} ${this.customOptionIndex + 1}`;
                             }
 
-                            const subSpan = folderNameContainer.createEl('a', { text: subName ?? '-', cls: 'ge-sub-option' });
+                            const subSpan = modenameContainer.createEl('a', { text: subName ?? '-', cls: 'ge-sub-option' });
                             subSpan.addEventListener('click', (evt) => {
                                 const menu = new Menu();
                                 // 預設選項
@@ -1045,8 +1084,8 @@ export class GridView extends ItemView {
             }
         } else if (this.searchQuery !== '' && this.searchAllFiles) {
             // 顯示全域搜尋名稱
-            const folderNameContainer = this.containerEl.createDiv('ge-foldername-content');
-            folderNameContainer.createEl('span', { 
+            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
+            modenameContainer.createEl('span', { 
                 text: `🔍 ${t('global_search')}`,
                 cls: 'ge-mode-title'
             });
@@ -1226,7 +1265,7 @@ export class GridView extends ItemView {
                     const titleContainer = contentArea.createDiv('ge-title-container');
                     const customFolderIcon = this.plugin.settings.customFolderIcon;
                     titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
-                    titleContainer.setAttribute('title', folder.name);
+                    setTooltip(folderEl, folder.name,{ placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' });
                     
                     // 檢查同名筆記是否存在
                     const notePath = `${folder.path}/${folder.name}.md`;
@@ -1681,11 +1720,59 @@ export class GridView extends ItemView {
 
                             let pEl: HTMLElement | null = null;
                             if (!this.minMode) {
-                                const summaryField = this.plugin.settings.noteSummaryField || 'summary';
-                                const summaryValue = metadata?.[summaryField];
+                                let summaryField = this.plugin.settings.noteSummaryField || 'summary';
+                                let summaryValue = metadata?.[summaryField];
+                                if (this.sourceMode.startsWith('custom-')) {
+                                    // 自訂模式下，使用自訂的 fields 來顯示摘要
+                                    const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
+                                    if (mode) {
+                                        let fields = mode?.fields || '';
+                                        // 當有選到子選項 (index >= 0) 而且 options 陣列確實存在
+                                        if (this.customOptionIndex >= 0 &&
+                                            mode.options &&
+                                            this.customOptionIndex < mode.options.length) {
+                                            const option = mode.options[this.customOptionIndex];
+                                            fields = option.fields || '';
+                                        }
+                                        
+                                        // 如果 fields 不為空，則使用它來顯示摘要
+                                        if (fields) {
+                                            // 將 fields 以逗號分隔成陣列，並過濾掉空值
+                                            const fieldList = fields.split(',').map(f => f.trim()).filter(Boolean);
+                                            const fieldValues: string[] = [];
+                                            
+                                            // 收集所有欄位值
+                                            fieldList.forEach(field => {
+                                                if (metadata?.[field] !== undefined && metadata?.[field] !== '' && metadata?.[field] !== null) {
+                                                    // 如果是數字，則加入千位分隔符號
+                                                    if (typeof metadata[field] === 'number') {
+                                                        metadata[field] = metadata[field].toLocaleString();
+                                                    }
+                                                    // 如果是陣列，則轉換為字串
+                                                    if (Array.isArray(metadata[field])) {
+                                                        metadata[field] = metadata[field].join(', ');
+                                                    }
+                                                    fieldValues.push(`${field}: ${metadata[field]}`);
+                                                }
+                                            });
+                                            
+                                            // 如果有找到任何欄位值，則組合起來
+                                            if (fieldValues.length > 0) {
+                                                summaryValue = fieldValues.join('\n'); // 使用 | 分隔不同欄位
+                                            }
+                                        }
+                                    }  
+                                }
                                 if (summaryValue) {
-                                    pEl = contentArea.createEl('p', { text: summaryValue.trim() });
+                                    if (!this.sourceMode.startsWith('custom-')) {
+                                        // Frontmatter 有設定摘要值
+                                        pEl = contentArea.createEl('p', { text: summaryValue.trim() });
+                                    } else {
+                                        // custom mode 有設定顯示欄位值
+                                        pEl = contentArea.createEl('p', { text: summaryValue.trim() , cls: 'ge-content-area-p-field' });
+                                    }
                                 } else {
+                                    // Frontmatter 沒有設定摘要值，則使用內文
                                     let contentWithoutFrontmatter = '';
                                     if (summaryLength < 500) {
                                         contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart).slice(0, 500);
@@ -1737,7 +1824,8 @@ export class GridView extends ItemView {
                             //將預覽文字設定到標題的 title 屬性中
                             const titleEl = fileEl.querySelector('.ge-title');
                             if (titleEl && pEl) {
-                                titleEl.setAttribute('title', `${titleEl.textContent}\n${pEl.textContent}` || '');
+                                // titleEl.setAttribute('title', `${titleEl.textContent}\n${pEl.textContent}` || '');
+                                setTooltip(contentArea as HTMLElement, `${titleEl.textContent}`, { placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' })
                             }
 
                             if (frontMatterInfo.exists) {
@@ -1783,6 +1871,8 @@ export class GridView extends ItemView {
                             if (!this.minMode) {
                                 contentArea.createEl('p', { text: file.extension.toUpperCase() });
                             }
+
+                            setTooltip(fileEl as HTMLElement, `${file.name}`, { placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' })
                         }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
@@ -2208,6 +2298,11 @@ export class GridView extends ItemView {
             fileEl.addClass('ge-foldernote');
         }
 
+        //如果檔案是否處於置頂範圍，添加 ge-pinned 類別
+        if (this.pinnedList.includes(file.name)) {
+            fileEl.addClass('ge-pinned');
+        }
+        
         // 創建左側內容區，包含圖示和標題
         const contentArea = fileEl.createDiv('ge-content-area');
         
@@ -2216,7 +2311,9 @@ export class GridView extends ItemView {
         const extension = file.extension.toLowerCase();
 
         // 檢查是否為媒體檔案，如果是則添加 ge-media-card 類別
-        if (this.cardLayout === 'vertical' && (isImageFile(file) || isVideoFile(file))) {
+        if (this.cardLayout === 'vertical' && 
+            (isImageFile(file) || isVideoFile(file)) &&
+            !this.minMode) {
             fileEl.addClass('ge-media-card');
         }
 
@@ -2252,7 +2349,7 @@ export class GridView extends ItemView {
         const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
         const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
         if (this.plugin.settings.multiLineTitle) titleEl.addClass('ge-multiline-title');
-        titleEl.setAttribute('title', displayText);
+        //titleEl.setAttribute('title', displayText);
 
         // 創建圖片區域，但先不載入圖片
         if (!this.minMode) {
@@ -2347,6 +2444,7 @@ export class GridView extends ItemView {
 
                 // 獲取選中的檔案
                 const selectedFiles = this.getSelectedFiles();
+                let drag_filename = '';
                 
                 // 添加拖曳資料
                 if (selectedFiles.length > 1) {
@@ -2360,6 +2458,8 @@ export class GridView extends ItemView {
                     // 添加檔案路徑列表
                     event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
                         JSON.stringify(selectedFiles.map(f => f.path)));
+                    
+                    drag_filename = `${selectedFiles.length} ${t('files')}`;
                 } else {
                     // 如果只有單個檔案被選中，使用檔案路徑
                     const isMedia = isMediaFile(file);
@@ -2373,8 +2473,25 @@ export class GridView extends ItemView {
                     // 添加檔案路徑列表
                     event.dataTransfer?.setData('application/obsidian-grid-explorer-files', 
                         JSON.stringify([file.path]));
+
+                    drag_filename = file.basename;
                 }
                 
+                const dragImage = document.createElement('div');
+                dragImage.className = 'ge-custom-drag-preview';
+                dragImage.textContent = drag_filename;
+                
+                // 將元素暫時加入 DOM
+                document.body.appendChild(dragImage);
+                
+                // 設定拖曳圖示
+                event.dataTransfer!.setDragImage(dragImage, 20, 20);
+
+                // 延遲移除元素（讓拖曳圖示正常顯示）
+                setTimeout(() => {
+                    document.body.removeChild(dragImage);
+                }, 0);
+
                 // 設定拖曳效果
                 event.dataTransfer!.effectAllowed = 'all';
                 // 添加拖曳中的視覺效果

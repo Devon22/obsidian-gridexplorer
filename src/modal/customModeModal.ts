@@ -30,24 +30,24 @@ export class CustomModeModal extends Modal {
         // 向下相容：使用第一個選項作為主要 dataviewCode
         let dataviewCode = this.mode ? this.mode.dataviewCode : '';
         let enabled = this.mode ? (this.mode.enabled ?? true) : true;
+        let fields = this.mode ? this.mode.fields : '';
 
         new Setting(contentEl)
-        .setName(t('custom_mode_display_name'))
-        .setDesc(t('custom_mode_display_name_desc'))
-        .addText(text => {
-            text.setValue(displayName)
-                .onChange(value => {
-                    displayName = value;
-                });
-        });
-
-        new Setting(contentEl)
-            .setName(t('custom_mode_icon'))
-            .setDesc(t('custom_mode_icon_desc'))
+            .setName(t('custom_mode_display_name'))
+            .setDesc(t('custom_mode_display_name_desc'))
             .addText(text => {
                 text.setValue(icon)
                     .onChange(value => {
                         icon = value || '🧩';
+                    });
+                // 設置固定寬度，適合單個圖示
+                text.inputEl.style.width = '3em';
+                text.inputEl.style.minWidth = '3em';
+            })
+            .addText(text => {
+                text.setValue(displayName)
+                    .onChange(value => {
+                        displayName = value;
                     });
             });
 
@@ -61,9 +61,11 @@ export class CustomModeModal extends Modal {
         dvSetting.settingEl.style.gap = '0.5rem';
 
         dvSetting.addText(text => {
-            text.setValue(name).onChange(v => name = v);
+            text.setValue(name)
+                .setPlaceholder(t('default'))
+                .onChange(v => name = v);
         });
-
+        
         dvSetting.addTextArea(text => {
             text.setValue(dataviewCode)
                 .onChange(value => {
@@ -73,6 +75,14 @@ export class CustomModeModal extends Modal {
             // 給TextArea有足夠的垂直空間和完整的寬度
             text.inputEl.setAttr('rows', 6);
             text.inputEl.style.width = '100%';
+        });
+
+        dvSetting.addText(text => {
+            text.setValue(fields || '')
+                .setPlaceholder(t('custom_mode_fields_placeholder'))
+                .onChange(value => {
+                    fields = value;
+                });
         });
 
         // 讓 Text 與 TextArea 在 control 區域各佔一行
@@ -115,6 +125,13 @@ export class CustomModeModal extends Modal {
                             });
                         text.inputEl.setAttr('rows', 6);
                         text.inputEl.style.width = '100%';
+                    })
+                    .addText(text => {
+                        text.setPlaceholder(t('custom_mode_fields_placeholder'))
+                            .setValue(opt.fields || '')
+                            .onChange(val => {
+                                opt.fields = val;
+                            });
                     });
 
                 // 移除按鈕（至少保留一個）
@@ -160,7 +177,8 @@ export class CustomModeModal extends Modal {
                             name,
                             dataviewCode,
                             options: options,
-                            enabled
+                            enabled,
+                            fields
                         });
                         this.close();
                     });
