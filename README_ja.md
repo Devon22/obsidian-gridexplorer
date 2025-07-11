@@ -4,8 +4,8 @@
 
 これは Obsidian 用のグリッドビュープラグインで、ノートやフォルダをより直感的に閲覧・管理するための方法を提供することを目的としています。
 
-![demo1](assets/demo1.png)
-![demo2](assets/demo2.png)
+![screenshot1](assets/screenshot1.png)
+![screenshot2](assets/screenshot2.png)
 
 ## 機能
 
