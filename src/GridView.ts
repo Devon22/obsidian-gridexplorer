@@ -1,7 +1,7 @@
 import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { handleKeyDown as handleKeyDownHelper } from './handleKeyDown';
-import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
+import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, isFolderIgnored } from './fileUtils';
 import { FileWatcher } from './fileWatcher';
 import { findFirstImageInNote } from './mediaUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
@@ -687,205 +687,248 @@ export class GridView extends ItemView {
             });
         }
         
-        // 顯示目前資料夾及上層資料夾名稱
+        let modenameContainer = this.containerEl.createDiv('ge-modename-content');
+
+        // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
+        modenameContainer.addEventListener('click', (event: MouseEvent) => {
+            // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
+            if (event.target === modenameContainer) {
+                event.preventDefault();
+                // 取得網格容器
+                const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+                if (gridContainer) {
+                    gridContainer.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+
+        // 顯示目前資料夾及完整路徑
         if (this.sourceMode === 'folder' && 
             (this.searchQuery === '' || (this.searchQuery && !this.searchAllFiles)) && 
             this.sourcePath !== '/') {
-            const pathParts = this.sourcePath.split('/');
-            const parentPath = pathParts.slice(0, -1).join('/') || '/';
-            let parentFolderName = pathParts.slice(-2, -1)[0] || '/';
-            const currentFolderName = pathParts.pop() || t('root');
+            const pathParts = this.sourcePath.split('/').filter(part => part.trim() !== '');
 
-            // 若為根目錄，以 'root' 顯示
-            if (parentPath === '/' || parentFolderName === '/' || parentFolderName === '') {
-                parentFolderName = t('root');
+            // 建立路徑項目的資料結構
+            interface PathItem {
+                name: string;
+                path: string;
+                isLast: boolean;
             }
-
-            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
-
-            // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
-            modenameContainer.addEventListener('click', (event: MouseEvent) => {
-                // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-                if (event.target === modenameContainer) {
-                    event.preventDefault();
-                    // 取得網格容器
-                    const gridContainer = this.containerEl.querySelector('.ge-grid-container');
-                    if (gridContainer) {
-                        gridContainer.scrollTo({
-                            top: 0,
-                            behavior: 'smooth'
-                        });
-                    }
-                }
+            
+            const paths: PathItem[] = [];
+            let pathAccumulator = '';
+            
+            // 添加根目錄
+            paths.push({
+                name: t('root'),
+                path: '/',
+                isLast: pathParts.length === 0
             });
-
-            // 建立可點擊的上層資料夾名稱
-            const customFolderIcon = this.plugin.settings.customFolderIcon;
-            const parentFolderLink = modenameContainer.createEl('a', {
-                text: `${customFolderIcon} ${parentFolderName}`.trim(),
-                cls: 'ge-parent-folder-link'
-            });
-
-            parentFolderLink.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.setSource('folder', parentPath, true);
-                this.clearSelection();
-            });
-
-            parentFolderLink.addEventListener('contextmenu', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                
-                const menu = new Menu();
-                const pathParts = parentPath.split('/').filter(part => part.trim() !== '');
-                
-                // 定義路徑項目的類型
-                interface PathItem {
-                    name: string;
-                    path: string;
-                }
-                
-                const paths: PathItem[] = [];
-                let pathAccumulator = '';
-                
-                // 先建立所有路徑
-                pathParts.forEach(part => {
-                    pathAccumulator = pathAccumulator ? `${pathAccumulator}/${part}` : part;
-                    paths.push({
-                        name: part,
-                        path: pathAccumulator
-                    });
+            
+            // 建立所有路徑
+            pathParts.forEach((part, index) => {
+                pathAccumulator = pathAccumulator ? `${pathAccumulator}/${part}` : part;
+                paths.push({
+                    name: part,
+                    path: pathAccumulator,
+                    isLast: index === pathParts.length - 1
                 });
+            });
+
+            // 創建一個容器來測量寬度
+            const pathContainer = modenameContainer.createDiv({cls: 'ge-path-container'});
+            const customFolderIcon = this.plugin.settings.customFolderIcon;
+
+            // 計算可用寬度
+            const pathElements: HTMLElement[] = [];
+
+            // 建立所有路徑元素
+            paths.forEach((path, index) => {
+                const isLast = index === paths.length - 1;
+                let pathEl;
                 
-                // 添加當前目錄（最上層）
-                if (paths.length > 0) {
-                    const current = paths[paths.length - 1];
-                    menu.addItem((item) => {
-                        item.setTitle(current.name)
-                            .setIcon('folder-open')
-                            .onClick(() => {
-                                this.setSource('folder', current.path, true);
-                                this.clearSelection();
-                            });
-                        return item;
+                if (isLast) {
+                    // 當前資料夾使用 span 元素
+                    pathEl = modenameContainer.createEl('span', {
+                        text: path.name,
+                        cls: 'ge-current-folder'
+                    });
+                } else {
+                    // 上層資料夾使用 a 元素（可點擊）
+                    pathEl = modenameContainer.createEl('a', {
+                        text: path.name === t('root') ? 
+                            `${customFolderIcon} ${path.name}`.trim() : 
+                            path.name,
+                        cls: 'ge-parent-folder-link'
                     });
                 }
                 
-                // 添加父目錄（從深到淺）
-                for (let i = paths.length - 2; i >= 0; i--) {
-                    const path = paths[i];
-                    menu.addItem((item) => {
-                        item.setTitle(path.name)
-                            .setIcon('folder')
-                            .onClick(() => {
-                                this.setSource('folder', path.path, true);
-                                this.clearSelection();
-                            });
-                        return item;
-                    });
-                }
+                setTooltip(pathEl, path.name);
+                pathElements.push(pathEl);
+            });
+
+            // 添加路徑元素
+            for (let i = 0; i < pathElements.length; i++) {
+                const el = pathElements[i];
+                pathContainer.appendChild(el);
                 
-                // 如果不是根目錄，添加分隔線和根目錄選項
-                if (paths.length > 0) {
-                    menu.addSeparator();
-                }
-                
-                // 添加根目錄選項（最下層）
-                menu.addItem((item) => {
-                    item.setTitle(t('root'))
-                        .setIcon('folder')
-                        .onClick(() => {
-                            this.setSource('folder', '/', true);
+                // 為路徑元素添加點擊事件
+                if (el.className === 'ge-parent-folder-link') {
+                    const pathIndex = i; // 直接使用索引，因為不再有分隔符
+                    if (pathIndex < paths.length) {
+                        const path = paths[pathIndex];
+                        el.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            this.setSource('folder', path.path, true);
                             this.clearSelection();
                         });
-                    return item;
-                });
-                
-                menu.showAtMouseEvent(event);
-            });
-
-            // 分隔符號
-            modenameContainer.createEl('span', { text: ' > ' });
-
-            // 目前資料夾名稱
-            modenameContainer.createEl('span', { text: currentFolderName });
-
-            if (Platform.isDesktop) {
-                // 為上層按鈕添加拖曳目標功能
-                parentFolderLink.addEventListener('dragover', (event) => {
-                    event.preventDefault();
-                    event.dataTransfer!.dropEffect = 'move';
-                    parentFolderLink.addClass('ge-dragover');
-                });
-
-                parentFolderLink.addEventListener('dragleave', () => {
-                    parentFolderLink.removeClass('ge-dragover');
-                });
-
-                parentFolderLink.addEventListener('drop', async (event) => {
-                    event.preventDefault();
-                    parentFolderLink.removeClass('ge-dragover');
-
-                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    if (!parentPath) return;
-
-                    const folder = this.app.vault.getAbstractFileByPath(parentPath);
-                    if (!(folder instanceof TFolder)) return;
-
-                    const filesData = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                    if (filesData) {
-                        try {
-                            const filePaths = JSON.parse(filesData);
-                            for (const filePath of filePaths) {
-                                const file = this.app.vault.getAbstractFileByPath(filePath);
-                                if (file instanceof TFile) {
-                                    const newPath = normalizePath(`${parentPath}/${file.name}`);
-                                    await this.app.fileManager.renameFile(file, newPath);
+                        
+                        // 為路徑元素添加右鍵選單，顯示路徑層級和同層級目錄
+                        el.addEventListener('contextmenu', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            
+                            const menu = new Menu();
+                            
+                            // 1. 添加當前點擊的目錄
+                            menu.addItem((item) => {
+                                item.setTitle(path.name)
+                                    .setIcon('folder')
+                                    .onClick(() => {
+                                        this.setSource('folder', path.path, true);
+                                        this.clearSelection();
+                                    });
+                            });
+                            
+                            // 2. 獲取並添加當前目錄下的所有子目錄
+                            const currentFolder = this.app.vault.getAbstractFileByPath(path.path);
+                            if (currentFolder && currentFolder instanceof TFolder) {
+                                const subFolders = currentFolder.children
+                                    .filter(child => {
+                                        // 如果不是資料夾，則不顯示
+                                        if (!(child instanceof TFolder)) return false;
+                                        
+                                        // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
+                                        return !isFolderIgnored(
+                                            child, 
+                                            this.plugin.settings.ignoredFolders, 
+                                            this.plugin.settings.ignoredFolderPatterns, 
+                                            this.showIgnoredFolders
+                                        );
+                                    })
+                                    .sort((a, b) => a.name.localeCompare(b.name));
+                                
+                                if (subFolders.length > 0) {
+                                    menu.addSeparator();
+                                    menu.addItem((item) => 
+                                        item.setTitle(t('sub_folders'))
+                                            .setIcon('folder-symlink')
+                                            .setDisabled(true)
+                                    );
+                                    
+                                    subFolders.forEach(folder => {
+                                        menu.addItem((item) => {
+                                            item.setTitle(folder.name)
+                                                .setIcon('folder')
+                                                .onClick(() => {
+                                                    this.setSource('folder', folder.path, true);
+                                                    this.clearSelection();
+                                                });
+                                        });
+                                    });
                                 }
                             }
-                        } catch (error) {
-                            console.error('An error occurred while moving multiple files to parent folder:', error);
+                            
+                            // 3. 添加上層路徑
+                            if (pathIndex > 0) {
+                                menu.addSeparator();
+                                menu.addItem((item) => 
+                                    item.setTitle(t('parent_folders'))
+                                        .setIcon('arrow-up')
+                                        .setDisabled(true)
+                                );
+                                
+                                for (let i = pathIndex - 1; i >= 0; i--) {
+                                    const p = paths[i];
+                                    menu.addItem((item) => {
+                                        item.setTitle(p.name)
+                                            .setIcon(p.path === '/' ? 'folder-root' : 'folder')
+                                            .onClick(() => {
+                                                this.setSource('folder', p.path, true);
+                                                this.clearSelection();
+                                            });
+                                    });
+                                }
+                            }
+                            
+                            menu.showAtMouseEvent(event);
+                        });
+                        
+                        // 為最後一個路徑以外的路徑添加拖曳功能
+                        if (!path.isLast && Platform.isDesktop) {
+                            // 為路徑元素添加拖曳目標功能
+                            el.addEventListener('dragover', (event) => {
+                                event.preventDefault();
+                                event.dataTransfer!.dropEffect = 'move';
+                                el.addClass('ge-dragover');
+                            });
+
+                            el.addEventListener('dragleave', () => {
+                                el.removeClass('ge-dragover');
+                            });
+
+                            el.addEventListener('drop', async (event) => {
+                                event.preventDefault();
+                                el.removeClass('ge-dragover');
+
+                                if (!path.path) return;
+
+                                const folder = this.app.vault.getAbstractFileByPath(path.path);
+                                if (!(folder instanceof TFolder)) return;
+
+                                const filesData = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
+                                if (filesData) {
+                                    try {
+                                        const filePaths = JSON.parse(filesData);
+                                        for (const filePath of filePaths) {
+                                            const file = this.app.vault.getAbstractFileByPath(filePath);
+                                            if (file instanceof TFile) {
+                                                const newPath = normalizePath(`${path.path}/${file.name}`);
+                                                await this.app.fileManager.renameFile(file, newPath);
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('An error occurred while moving multiple files to folder:', error);
+                                    }
+                                    return;
+                                }
+
+                                const filePath = event.dataTransfer?.getData('text/plain');
+                                if (!filePath) return;
+
+                                const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
+                                const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
+
+                                if (file instanceof TFile) {
+                                    try {
+                                        const newPath = normalizePath(`${path.path}/${file.name}`);
+                                        await this.app.fileManager.renameFile(file, newPath);
+                                        this.render();
+                                    } catch (error) {
+                                        console.error('An error occurred while moving the file to folder:', error);
+                                    }
+                                }
+                            });
                         }
-                        return;
                     }
-
-                    const filePath = event.dataTransfer?.getData('text/plain');
-                    if (!filePath) return;
-
-                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                    const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
-
-                    if (file instanceof TFile) {
-                        try {
-                            const newPath = normalizePath(`${parentPath}/${file.name}`);
-                            await this.app.fileManager.renameFile(file, newPath);
-                            this.render();
-                        } catch (error) {
-                            console.error('An error occurred while moving the file to parent folder:', error);
-                        }
-                    }
-                });
+                }
             }
         } else if (!(this.searchQuery !== '' && this.searchAllFiles)) {
             // 顯示目前模式名稱
-            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
-
-            // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
-            modenameContainer.addEventListener('click', (event: MouseEvent) => {
-                // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-                if (event.target === modenameContainer) {
-                    event.preventDefault();
-                    // 取得網格容器
-                    const gridContainer = this.containerEl.querySelector('.ge-grid-container');
-                    if (gridContainer) {
-                        gridContainer.scrollTo({
-                            top: 0,
-                            behavior: 'smooth'
-                        });
-                    }
-                }
-            });
             
             let modeName = '';
             let modeIcon = '';
@@ -964,7 +1007,7 @@ export class GridView extends ItemView {
                 // 使用可點擊的 <a> 元素
                 modeTitleEl = modenameContainer.createEl('a', {
                     text: `${modeIcon} ${modeName}`.trim(),
-                    cls: 'ge-parent-folder-link'
+                    cls: 'ge-mode-title'
                 });
 
                 // 點擊時顯示所有自訂模式選單
@@ -994,9 +1037,7 @@ export class GridView extends ItemView {
 
             switch (this.sourceMode) {
                 case 'tasks':
-                    modenameContainer.createEl('span', { text: ' > ' });
-
-                    const taskFilterSpan = modenameContainer.createEl('a', { text: t(`${this.taskFilter}`), cls: 'ge-task-filter' });
+                    const taskFilterSpan = modenameContainer.createEl('a', { text: t(`${this.taskFilter}`), cls: 'ge-sub-option' });
                     taskFilterSpan.addEventListener('click', (evt) => {
                         const menu = new Menu();
                         menu.addItem((item) => {
@@ -1037,8 +1078,6 @@ export class GridView extends ItemView {
                         // 取得當前自訂模式
                         const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
                         if (mode && mode.options && mode.options.length > 0) {
-                            modenameContainer.createEl('span', { text: ' > ' });
-
                             if (this.customOptionIndex >= mode.options.length || this.customOptionIndex < -1) {
                                 this.customOptionIndex = -1;
                             }
@@ -1084,7 +1123,6 @@ export class GridView extends ItemView {
             }
         } else if (this.searchQuery !== '' && this.searchAllFiles) {
             // 顯示全域搜尋名稱
-            const modenameContainer = this.containerEl.createDiv('ge-modename-content');
             modenameContainer.createEl('span', { 
                 text: `🔍 ${t('global_search')}`,
                 cls: 'ge-mode-title'
@@ -1118,8 +1156,6 @@ export class GridView extends ItemView {
                         // 如果沒有置頂清單，則建立一個僅包含資料夾筆記的清單
                         this.pinnedList = [`${folderName}.md`];
                     }
-                } else {
-                    this.pinnedList = [];
                 }
             }
         };
@@ -1214,44 +1250,115 @@ export class GridView extends ItemView {
         if (this.sourceMode === 'folder' && this.searchQuery === '') {
             const currentFolder = this.app.vault.getAbstractFileByPath(this.sourcePath || '/');
             if (currentFolder instanceof TFolder) {
+
+                // 為網格容器添加拖曳目標功能（當前資料夾）
+                if(Platform.isDesktop) {
+                    container.addEventListener('dragover', (event) => {
+                        // 如果拖曳目標是資料夾項目，則不處理
+                        if ((event.target as HTMLElement).closest('.ge-folder-item')) {
+                            return;
+                        }
+                        // 防止預設行為以允許放置
+                        event.preventDefault();
+                        // 設定拖曳效果為移動
+                        (event as any).dataTransfer!.dropEffect = 'move';
+                        // 顯示可放置的視覺提示
+                        container.addClass('ge-dragover');
+                    }, true); // 使用捕獲階段
+                    
+                    container.addEventListener('dragleave', (event) => {
+                        // 如果移入的是子元素，則不處理
+                        if (container.contains(event.relatedTarget as Node)) {
+                            return;
+                        }
+                        // 移除視覺提示
+                        container.removeClass('ge-dragover');
+                    });
+                    
+                    container.addEventListener('drop', async (event) => {
+                        // 如果拖曳目標是資料夾項目，則不處理
+                        if ((event.target as HTMLElement).closest('.ge-folder-item')) {
+                            return;
+                        }
+                        
+                        // 防止預設行為
+                        event.preventDefault();
+                        // 移除視覺提示
+                        container.removeClass('ge-dragover');
+                        
+                        // 獲取拖曳的檔案路徑列表
+                        const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
+                        if (filesDataString) {
+                            try {
+                                // 解析檔案路徑列表
+                                const filePaths = JSON.parse(filesDataString);
+                                
+                                // 獲取當前資料夾路徑
+                                const folderPath = currentFolder.path;
+                                if (!folderPath) return;
+                                
+                                // 移動檔案
+                                for (const path of filePaths) {
+                                    const file = this.app.vault.getAbstractFileByPath(path);
+                                    if (file instanceof TFile) {
+                                        try {
+                                            // 計算新的檔案路徑
+                                            const newPath = normalizePath(`${folderPath}/${file.name}`);
+                                            // 如果來源路徑和目標路徑相同，則跳過
+                                            if (path === newPath) {
+                                                continue;
+                                            }
+                                            // 移動檔案
+                                            await this.app.fileManager.renameFile(file, newPath);
+                                        } catch (error) {
+                                            console.error(`An error occurred while moving the file ${file.path}:`, error);
+                                        }
+                                    }
+                                }
+                                return;
+                            } catch (error) {
+                                console.error('Error parsing dragged files data:', error);
+                            }
+                        }
+
+                        // 如果沒有檔案路徑列表，則使用檔案路徑
+                        const filePath = (event as any).dataTransfer?.getData('text/plain');
+                        if (!filePath) return;
+                        
+                        const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
+                        
+                        // 獲取檔案和資料夾物件
+                        const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
+                        
+                        if (file instanceof TFile) {
+                            try {
+                                // 計算新的檔案路徑
+                                const newPath = normalizePath(`${currentFolder.path}/${file.name}`);
+                                // 如果來源路徑和目標路徑相同，則不執行移動
+                                if (file.path !== newPath) {
+                                    // 移動檔案
+                                    await this.app.fileManager.renameFile(file, newPath);
+                                }
+                            } catch (error) {
+                                console.error('An error occurred while moving the file:', error);
+                            }
+                        }
+                    });
+                }
+
+                // 顯示子資料夾
                 const subfolders = currentFolder.children
                     .filter(child => {
                         // 如果不是資料夾，則不顯示
                         if (!(child instanceof TFolder)) return false;
                         
-                        // 如果開啟顯示忽略資料夾模式，則顯示所有資料夾
-                        if (this.showIgnoredFolders) return true;
-
-                        // 檢查資料夾是否在忽略清單中
-                        const isInIgnoredFolders = this.plugin.settings.ignoredFolders.some(folder => 
-                            child.path === folder || child.path.startsWith(folder + '/')
+                        // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
+                        return !isFolderIgnored(
+                            child, 
+                            this.plugin.settings.ignoredFolders, 
+                            this.plugin.settings.ignoredFolderPatterns, 
+                            this.showIgnoredFolders
                         );
-                        
-                        if (isInIgnoredFolders) return false;
-                        
-                        // 檢查資料夾是否符合忽略的模式
-                        if (this.plugin.settings.ignoredFolderPatterns && this.plugin.settings.ignoredFolderPatterns.length > 0) {
-                            const matchesIgnoredPattern = this.plugin.settings.ignoredFolderPatterns.some(pattern => {
-                                try {
-                                    // 嘗試將模式作為正則表達式處理
-                                    // 如果模式包含特殊字符，使用正則表達式處理
-                                    if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
-                                        const regex = new RegExp(pattern); 
-                                        return regex.test(child.path);
-                                    } else {
-                                        // 檢查資料夾名稱是否包含模式字串（不區分大小寫）
-                                        return child.name.toLowerCase().includes(pattern.toLowerCase());
-                                    }
-                                } catch (error) {
-                                    // 如果正則表達式無效，直接檢查資料夾名稱
-                                    return child.name.toLowerCase().includes(pattern.toLowerCase());
-                                }
-                            });
-                            
-                            if (matchesIgnoredPattern) return false;
-                        }
-
-                        return true;
                     })
                     .sort((a, b) => a.name.localeCompare(b.name));
                 for (const folder of subfolders) {
@@ -1458,6 +1565,96 @@ export class GridView extends ItemView {
             }
         }
 
+        // 為資料夾項目添加拖曳目標功能
+        if(Platform.isDesktop) {
+            const folderItems = this.containerEl.querySelectorAll('.ge-folder-item');
+            folderItems.forEach(folderItem => {
+                folderItem.addEventListener('dragover', (event) => {
+                    // 防止預設行為以允許放置
+                    event.preventDefault();
+                    // 設定拖曳效果為移動
+                    (event as any).dataTransfer!.dropEffect = 'move';
+                    // 顯示可放置的視覺提示
+                    folderItem.addClass('ge-dragover');
+                });
+                
+                folderItem.addEventListener('dragleave', () => {
+                    // 移除視覺提示
+                    folderItem.removeClass('ge-dragover');
+                });
+                
+                folderItem.addEventListener('drop', async (event) => {
+                    // 防止預設行為
+                    event.preventDefault();
+                    // 移除視覺提示
+                    folderItem.removeClass('ge-dragover');
+                    
+                    // 獲取拖曳的檔案路徑列表
+                    const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
+                    if (filesDataString) {
+                        try {
+                            // 解析檔案路徑列表
+                            const filePaths = JSON.parse(filesDataString);
+                            
+                            // 獲取目標資料夾路徑
+                            const folderPath = (folderItem as any).dataset.folderPath;
+                            if (!folderPath) return;
+                            
+                            // 獲取資料夾物件
+                            const folder = this.app.vault.getAbstractFileByPath(folderPath);
+                            if (!(folder instanceof TFolder)) return;
+                            
+                            // 移動檔案
+                            for (const path of filePaths) {
+                                const file = this.app.vault.getAbstractFileByPath(path);
+                                if (file instanceof TFile) {
+                                    try {
+                                        // 計算新的檔案路徑
+                                        const newPath = normalizePath(`${folderPath}/${file.name}`);
+                                        // 移動檔案
+                                        await this.app.fileManager.renameFile(file, newPath);
+                                    } catch (error) {
+                                        console.error(`An error occurred while moving the file ${file.path}:`, error);
+                                    }
+                                }
+                            }
+
+                            return;
+
+                        } catch (error) {
+                            console.error('Error parsing dragged files data:', error);
+                        }
+                    }
+
+                    // 如果沒有檔案路徑列表，則使用檔案路徑
+                    const filePath = (event as any).dataTransfer?.getData('text/plain');
+                    if (!filePath) return;
+                    
+                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
+                    
+                    // 獲取目標資料夾路徑
+                    const folderPath = (folderItem as any).dataset.folderPath;
+                    if (!folderPath) return;
+                    
+                    // 獲取檔案和資料夾物件
+                    const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
+                    const folder = this.app.vault.getAbstractFileByPath(folderPath);
+                    
+                    if (file instanceof TFile && folder instanceof TFolder) {
+                        try {
+                            // 計算新的檔案路徑
+                            const newPath = normalizePath(`${folderPath}/${file.name}`);
+                            // 移動檔案
+                            await this.app.fileManager.renameFile(file, newPath);
+
+                        } catch (error) {
+                            console.error('An error occurred while moving the file:', error);
+                        }
+                    }
+                });
+            });
+        }
+        
         let loadingDiv: HTMLElement | null = null;
         if (this.searchQuery || this.sourceMode === 'tasks') {
             // 顯示搜尋中的提示
@@ -1823,8 +2020,7 @@ export class GridView extends ItemView {
 
                             //將預覽文字設定到標題的 title 屬性中
                             const titleEl = fileEl.querySelector('.ge-title');
-                            if (titleEl && pEl) {
-                                // titleEl.setAttribute('title', `${titleEl.textContent}\n${pEl.textContent}` || '');
+                            if (titleEl) {
                                 setTooltip(contentArea as HTMLElement, `${titleEl.textContent}`, { placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' })
                             }
 
@@ -2100,95 +2296,7 @@ export class GridView extends ItemView {
             }
         }
 
-        // 為資料夾項目添加拖曳目標功能
-        if(Platform.isDesktop) {
-            const folderItems = this.containerEl.querySelectorAll('.ge-folder-item');
-            folderItems.forEach(folderItem => {
-                folderItem.addEventListener('dragover', (event) => {
-                    // 防止預設行為以允許放置
-                    event.preventDefault();
-                    // 設定拖曳效果為移動
-                    (event as any).dataTransfer!.dropEffect = 'move';
-                    // 顯示可放置的視覺提示
-                    folderItem.addClass('ge-dragover');
-                });
-                
-                folderItem.addEventListener('dragleave', () => {
-                    // 移除視覺提示
-                    folderItem.removeClass('ge-dragover');
-                });
-                
-                folderItem.addEventListener('drop', async (event) => {
-                    // 防止預設行為
-                    event.preventDefault();
-                    // 移除視覺提示
-                    folderItem.removeClass('ge-dragover');
-                    
-                    // 獲取拖曳的檔案路徑列表
-                    const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                    if (filesDataString) {
-                        try {
-                            // 解析檔案路徑列表
-                            const filePaths = JSON.parse(filesDataString);
-                            
-                            // 獲取目標資料夾路徑
-                            const folderPath = (folderItem as any).dataset.folderPath;
-                            if (!folderPath) return;
-                            
-                            // 獲取資料夾物件
-                            const folder = this.app.vault.getAbstractFileByPath(folderPath);
-                            if (!(folder instanceof TFolder)) return;
-                            
-                            // 移動檔案
-                            for (const path of filePaths) {
-                                const file = this.app.vault.getAbstractFileByPath(path);
-                                if (file instanceof TFile) {
-                                    try {
-                                        // 計算新的檔案路徑
-                                        const newPath = normalizePath(`${folderPath}/${file.name}`);
-                                        // 移動檔案
-                                        await this.app.fileManager.renameFile(file, newPath);
-                                    } catch (error) {
-                                        console.error(`An error occurred while moving the file ${file.path}:`, error);
-                                    }
-                                }
-                            }
-
-                            return;
-
-                        } catch (error) {
-                            console.error('Error parsing dragged files data:', error);
-                        }
-                    }
-
-                    // 如果沒有檔案路徑列表，則使用檔案路徑
-                    const filePath = (event as any).dataTransfer?.getData('text/plain');
-                    if (!filePath) return;
-                    
-                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                    
-                    // 獲取目標資料夾路徑
-                    const folderPath = (folderItem as any).dataset.folderPath;
-                    if (!folderPath) return;
-                    
-                    // 獲取檔案和資料夾物件
-                    const file = this.app.vault.getAbstractFileByPath(cleanedFilePath);
-                    const folder = this.app.vault.getAbstractFileByPath(folderPath);
-                    
-                    if (file instanceof TFile && folder instanceof TFolder) {
-                        try {
-                            // 計算新的檔案路徑
-                            const newPath = normalizePath(`${folderPath}/${file.name}`);
-                            // 移動檔案
-                            await this.app.fileManager.renameFile(file, newPath);
-
-                        } catch (error) {
-                            console.error('An error occurred while moving the file:', error);
-                        }
-                    }
-                });
-            });
-        }
+        
 
         if (this.plugin.statusBarItem) {
             this.plugin.statusBarItem.setText(`${files.length} ${t('files')}`);

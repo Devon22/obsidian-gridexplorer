@@ -150,47 +150,80 @@ export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
     }
 }
 
-//忽略檔案
+// 檢查資料夾是否應該被忽略
+export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignoredFolderPatterns: string[], showIgnoredFolders: boolean): boolean {
+    // 如果開啟顯示忽略資料夾模式，則不忽略任何資料夾
+    if (showIgnoredFolders) return false;
+
+    // 檢查資料夾是否在忽略清單中
+    const isInIgnoredFolders = ignoredFolders.some(ignored => 
+        folder.path === ignored || folder.path.startsWith(ignored + '/')
+    );
+    
+    if (isInIgnoredFolders) return true;
+    
+    // 檢查資料夾是否符合忽略的模式
+    if (ignoredFolderPatterns && ignoredFolderPatterns.length > 0) {
+        const matchesIgnoredPattern = ignoredFolderPatterns.some(pattern => {
+            try {
+                // 嘗試將模式作為正則表達式處理
+                // 如果模式包含特殊字符，使用正則表達式處理
+                if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
+                    const regex = new RegExp(pattern); 
+                    return regex.test(folder.path);
+                } else {
+                    // 檢查資料夾名稱是否包含模式字串（不區分大小寫）
+                    return folder.name.toLowerCase().includes(pattern.toLowerCase());
+                }
+            } catch (error) {
+                // 如果正則表達式無效，直接檢查資料夾名稱
+                return folder.name.toLowerCase().includes(pattern.toLowerCase());
+            }
+        });
+        
+        if (matchesIgnoredPattern) return true;
+    }
+
+    return false;
+}
+
+// 檢查檔案是否應該被忽略
 export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
     const settings = gridView.plugin.settings;
+    
+    // 如果開啟顯示忽略資料夾模式，則顯示所有檔案
+    if (gridView.showIgnoredFolders) {
+        return files;
+    }
+    
+    // 建立一個快取來存儲已經檢查過的資料夾路徑
+    const folderCache: {[path: string]: boolean} = {};
+    
     return files.filter(file => {
-
-        // 如果開啟顯示忽略資料夾模式，則顯示所有檔案
-        if (gridView.showIgnoredFolders) return true;
+        // 獲取檔案所在的資料夾路徑
+        const folderPath = file.parent?.path || '/';
         
-        // 檢查是否在忽略的資料夾中
-        const isInIgnoredFolder = settings.ignoredFolders.some(folder => 
-            file.path.startsWith(`${folder}/`)
-        );
-        
-        if (isInIgnoredFolder) {
-            return false;
+        // 如果快取中沒有這個資料夾的檢查結果，則進行檢查
+        if (folderCache[folderPath] === undefined) {
+            // 獲取資料夾對象
+            const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
+            
+            if (folder instanceof TFolder) {
+                // 使用 isFolderIgnored 檢查資料夾是否應該被忽略
+                folderCache[folderPath] = isFolderIgnored(
+                    folder,
+                    settings.ignoredFolders,
+                    settings.ignoredFolderPatterns,
+                    false // 這裡傳入 false 因為已經在前面檢查過 showIgnoredFolders
+                );
+            } else {
+                // 如果無法獲取資料夾對象，則不忽略該檔案
+                folderCache[folderPath] = false;
+            }
         }
         
-        // 檢查資料夾是否符合忽略的模式
-        if (settings.ignoredFolderPatterns && settings.ignoredFolderPatterns.length > 0) {
-            const matchesIgnoredPattern = settings.ignoredFolderPatterns.some(pattern => {
-                try {
-                    // 嘗試將模式作為正則表達式處理
-                    // 如果模式包含特殊字符，使用正則表達式處理
-                    if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
-                        const regex = new RegExp(pattern); 
-                        // 檢查檔案路徑是否符合正則表達式
-                        return regex.test(file.path);
-                    } else {
-                        // 如果模式不包含特殊字符，直接檢查檔案路徑
-                        return file.path.toLowerCase().includes(pattern.toLowerCase())
-                    }
-                } catch (error) {
-                    // 如果正則表達式無效，直接檢查檔案路徑
-                    return file.path.toLowerCase().includes(pattern.toLowerCase())
-                }
-            });
-            // 如果符合任何忽略模式，則忽略此檔案
-            return !matchesIgnoredPattern;
-        }
-        
-        return true;
+        // 如果資料夾被忽略，則過濾掉該檔案
+        return !folderCache[folderPath];
     });
 }
 
