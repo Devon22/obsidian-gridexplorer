@@ -2723,6 +2723,7 @@ export class GridView extends ItemView {
                 .onClick(() => {
                     this.hideHeaderElements = !this.hideHeaderElements;
                     this.render(true);
+                    this.app.workspace.requestSaveLayout();
                 });   
         });
         menu.addItem((item) => {
