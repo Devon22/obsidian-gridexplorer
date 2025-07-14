@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import GridExplorerPlugin from '../../main';
+import GridExplorerPlugin from '../main';
 import { CustomMode } from '../settings';
 import { t } from '../translations';
 

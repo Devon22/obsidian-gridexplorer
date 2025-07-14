@@ -1,5 +1,5 @@
 import { App, Modal, Platform } from 'obsidian';
-import GridExplorerPlugin from '../../main';
+import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
 

@@ -1,10 +1,10 @@
 import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
-import { GridView } from './src/GridView';
-import { updateCustomDocumentExtensions } from './src/fileUtils';
-import { showFolderSelectionModal } from './src/modal/folderSelectionModal';
-import { showNoteSettingsModal } from './src/modal/noteSettingsModal';
-import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './src/settings';
-import { t } from './src/translations';
+import { GridView } from './GridView';
+import { updateCustomDocumentExtensions } from './fileUtils';
+import { showFolderSelectionModal } from './modal/folderSelectionModal';
+import { showNoteSettingsModal } from './modal/noteSettingsModal';
+import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './settings';
+import { t } from './translations';
 
 export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings;
@@ -128,9 +128,6 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 註冊狀態列項目
         this.statusBarItem = this.addStatusBarItem();
-        // this.statusBarItem.onClickEvent(() => {
-        //     this.activateView();
-        // });
 
         // 註冊資料夾的右鍵選單
         this.registerEvent(
@@ -392,9 +389,61 @@ export default class GridExplorerPlugin extends Plugin {
                 }),
             );
 
+            // console.log('GridExplorer: Starting cache warming process.');
+            // this.startWarmingCache();
         });
     }
 
+    // startWarmingCache() {
+    //     // 1. 取得所有 Markdown 檔案的列表
+    //     const filesToWarm = this.app.vault.getMarkdownFiles();
+    //     if (!filesToWarm || filesToWarm.length === 0) {
+    //         console.log('GridExplorer: No markdown files to warm.');
+    //         return;
+    //     }
+
+    //     // 建立一個檔案佇列 (Queue)
+    //     let fileQueue = [...filesToWarm];
+    //     console.log(`GridExplorer: Warming up cache for ${fileQueue.length} files.`);
+
+    //     // 2. 定義處理單個檔案的函式
+    //     // 我們會使用 app.vault.cachedRead 來讀取檔案內容，
+    //     // 這個動作會觸發 Obsidian 的快取機制。
+    //     const processFile = (file: TFile) => {
+    //         try {
+    //             // 核心操作：讀取檔案。我們不需要對回傳的 content 做任何事。
+    //             this.app.vault.cachedRead(file);
+    //             // console.log(`Warmed: ${file.path}`); // 可選：用於除錯
+    //         } catch (e) {
+    //             console.error(`GridExplorer: Failed to warm cache for ${file.path}:`, e);
+    //         }
+    //     };
+
+    //     // 3. 使用 requestIdleCallback 來排程任務
+    //     const scheduleNextBatch = (deadline: IdleDeadline) => {
+    //         // deadline.timeRemaining() 會告訴我們還有多少閒置時間 (毫秒)
+    //         // 只要還有閒置時間，並且佇列中還有檔案，我們就繼續處理。
+    //         while (deadline.timeRemaining() > 0 && fileQueue.length > 0) {
+    //             // 從佇列的前端取出一個檔案來處理
+    //             const file = fileQueue.shift();
+    //             if (file) {
+    //                 processFile(file);
+    //             }
+    //         }
+
+    //         // 如果佇列中還有檔案沒處理完，就排程下一次的 requestIdleCallback
+    //         if (fileQueue.length > 0) {
+    //             requestIdleCallback(scheduleNextBatch);
+    //         } else {
+    //             console.log('GridExplorer: Cache warming complete.');
+    //         }
+    //     };
+
+    //     // 4. 啟動第一個閒置回呼
+    //     requestIdleCallback(scheduleNextBatch);
+    // }
+
+    // 設定 Canvas 拖曳處理
     private setupCanvasDropHandlers() {
         const setup = () => {
             this.app.workspace.getLeavesOfType('canvas').forEach(leaf => {
@@ -434,7 +483,7 @@ export default class GridExplorerPlugin extends Plugin {
                             filePath = paths[0];
                         }
                     } catch (e) {
-                        console.error("Grid Explorer: Failed to parse drop data from Grid Explorer.", e);
+                        console.error("GridExplorer: Failed to parse drop data from GridExplorer.", e);
                     }
 
                     // 如果無法取得檔案路徑，則中止操作
@@ -444,7 +493,7 @@ export default class GridExplorerPlugin extends Plugin {
 
                     const tfile = this.app.vault.getAbstractFileByPath(filePath);
                     if (!(tfile instanceof TFile)) {
-                        console.warn('Grid Explorer: Dropped item is not a TFile or could not be found.', filePath);
+                        console.warn('GridExplorer: Dropped item is not a TFile or could not be found.', filePath);
                         return;
                     }
 
@@ -475,6 +524,7 @@ export default class GridExplorerPlugin extends Plugin {
         setup(); // 首次執行設定
     }
 
+    // 打開最近文件
     async openNoteInRecentFiles(file: TFile) {
         const view = await this.activateView('recent-files') as GridView;
         // 如果是文件，等待視圖渲染完成後捲動到該文件位置
@@ -502,6 +552,7 @@ export default class GridExplorerPlugin extends Plugin {
         }
     }
 
+    // 打開筆記到資料夾模式
     async openNoteInFolder(file: TFile | TFolder = this.app.vault.getRoot()) {
         // 如果是文件，使用其父資料夾路徑
         const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
@@ -532,6 +583,7 @@ export default class GridExplorerPlugin extends Plugin {
         }
     }
 
+    // 激活視圖
     async activateView(mode = 'folder', path = '') {
         const { workspace } = this.app;
 

@@ -266,7 +266,7 @@
 
 .ge-vertical-card .ge-media-card .ge-image-area img,
 .ge-vertical-card .ge-media-card .ge-image-area video {
-    border-radius: 6px;
+    border-radius: 4px !important;
 }
 
 .ge-vertical-card .ge-media-card .ge-content-area,
@@ -372,38 +372,72 @@
     align-items: center;
 }
 
-/* 資料夾顏色 Folder Color */
-.ge-grid-item.ge-folder-item.ge-folder-color-red    { 
+/* 資料夾和筆記顏色 Folder & Note Colors */
+.ge-grid-item.ge-folder-item.ge-folder-color-red,
+.ge-grid-item.ge-note-color-red { 
     background-color: rgba(var(--color-red-rgb), 0.2); 
     border-color: rgba(var(--color-red-rgb), 0.5);
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-orange { 
+.ge-grid-item.ge-folder-item.ge-folder-color-orange,
+.ge-grid-item.ge-note-color-orange { 
     background-color: rgba(var(--color-orange-rgb), 0.2); 
     border-color: rgba(var(--color-orange-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-yellow { 
+.ge-grid-item.ge-folder-item.ge-folder-color-yellow,
+.ge-grid-item.ge-note-color-yellow { 
     background-color: rgba(var(--color-yellow-rgb), 0.2); 
     border-color: rgba(var(--color-yellow-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-green { 
-    background-color: rgba(var(--color-green-rgb),  0.2); 
-    border-color: rgba(var(--color-green-rgb),  0.5); 
+.ge-grid-item.ge-folder-item.ge-folder-color-green,
+.ge-grid-item.ge-note-color-green { 
+    background-color: rgba(var(--color-green-rgb), 0.2); 
+    border-color: rgba(var(--color-green-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-cyan { 
+.ge-grid-item.ge-folder-item.ge-folder-color-cyan,
+.ge-grid-item.ge-note-color-cyan { 
     background-color: rgba(var(--color-cyan-rgb), 0.2); 
     border-color: rgba(var(--color-cyan-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-blue { 
+.ge-grid-item.ge-folder-item.ge-folder-color-blue,
+.ge-grid-item.ge-note-color-blue { 
     background-color: rgba(var(--color-blue-rgb), 0.2); 
     border-color: rgba(var(--color-blue-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-purple { 
+.ge-grid-item.ge-folder-item.ge-folder-color-purple,
+.ge-grid-item.ge-note-color-purple { 
     background-color: rgba(var(--color-purple-rgb), 0.2); 
     border-color: rgba(var(--color-purple-rgb), 0.5); 
 }
-.ge-grid-item.ge-folder-item.ge-folder-color-pink { 
+.ge-grid-item.ge-folder-item.ge-folder-color-pink,
+.ge-grid-item.ge-note-color-pink { 
     background-color: rgba(var(--color-pink-rgb), 0.2); 
     border-color: rgba(var(--color-pink-rgb), 0.5); 
+}
+
+/* 筆記文字顏色 Note Text Color */
+.ge-note-color-red-text { 
+    color: rgba(var(--color-red-rgb), 0.7) !important;
+}
+.ge-note-color-orange-text { 
+    color: rgba(var(--color-orange-rgb), 0.7) !important;
+}
+.ge-note-color-yellow-text { 
+    color: rgba(var(--color-yellow-rgb), 0.7) !important;
+}
+.ge-note-color-green-text { 
+    color: rgba(var(--color-green-rgb), 0.7) !important;
+}
+.ge-note-color-cyan-text { 
+    color: rgba(var(--color-cyan-rgb), 0.7) !important;
+}
+.ge-note-color-blue-text { 
+    color: rgba(var(--color-blue-rgb), 0.7) !important;
+}
+.ge-note-color-purple-text { 
+    color: rgba(var(--color-purple-rgb), 0.7) !important;
+}
+.ge-note-color-pink-text { 
+    color: rgba(var(--color-pink-rgb), 0.7) !important;
 }
 
 /* 資料夾上的資料夾筆記按鈕 Folder Note Button */
@@ -508,7 +542,7 @@
 .ge-header-buttons {
     display: flex;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 16px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
     flex-shrink: 0;
@@ -569,7 +603,6 @@
     padding: 4px 8px;
     white-space: nowrap;
     overflow: hidden;
-    max-width: 200px;
     color: var(--text-normal);
     font-size: var(--font-ui-small);
     display: inline-flex;
@@ -649,12 +682,11 @@ a.ge-mode-title:hover {
 /* 當前資料夾樣式 */
 .ge-current-folder {
     font-size: var(--font-ui-small);
-    font-weight: bold;
     padding: 4px 8px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-    background-color: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-hover);
     color: var(--text-normal);
     border-radius: 4px;
     display: inline-flex;

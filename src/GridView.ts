@@ -1,6 +1,6 @@
 import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip } from 'obsidian';
-import GridExplorerPlugin from '../main';
-import { handleKeyDown as handleKeyDownHelper } from './handleKeyDown';
+import GridExplorerPlugin from './main';
+import { handleKeyDown } from './handleKeyDown';
 import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, isFolderIgnored } from './fileUtils';
 import { FileWatcher } from './fileWatcher';
 import { findFirstImageInNote } from './mediaUtils';
@@ -48,6 +48,7 @@ export class GridView extends ItemView {
     showIgnoredFolders: boolean = false; // 顯示忽略資料夾
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
+    hideHeaderElements: boolean = false; // 是否隱藏標題列元素（模式名稱和按鈕）
     customOptionIndex: number = -1; // 自訂模式選項索引
     // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal';
@@ -74,7 +75,7 @@ export class GridView extends ItemView {
         this.registerDomEvent(document, 'keydown', (event: KeyboardEvent) => {
             // 只有當 GridView 是活動視圖時才處理鍵盤事件
             if (this.app.workspace.getActiveViewOfType(GridView) === this) {
-                this.handleKeyDown(event);
+                return handleKeyDown(this, event);
             }
         });
     }
@@ -141,6 +142,11 @@ export class GridView extends ItemView {
         }
     }
 
+    // 判斷當前Leaf是否被釘選
+    isPinned(): boolean {
+        return (this.leaf as any)?.pinned ?? false;
+    }
+
     // 將來源加入歷史記錄（LRU 去重）
     // 1. 若已有相同紀錄先移除，確保唯一
     // 2. 插入到陣列開頭，代表最新使用
@@ -164,6 +170,11 @@ export class GridView extends ItemView {
         // 記錄之前的狀態到歷史記錄中（如果有）
         if (this.sourceMode && recordHistory) {
             this.pushHistory(this.sourceMode, this.sourcePath);
+        }
+
+        // 全域搜尋時切換路徑則清空搜尋
+        if (this.searchQuery !== '' && this.searchAllFiles) {
+            this.searchQuery = '';
         }
 
         this.folderSortType = '';
@@ -240,7 +251,7 @@ export class GridView extends ItemView {
                 }
             }
         });
-        
+
         // 添加新增筆記按鈕
         const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
         setIcon(newNoteButton, 'square-pen');
@@ -1183,12 +1194,29 @@ export class GridView extends ItemView {
         container.empty();
         container.addClass('ge-grid-container');
 
+        // 隱藏頂部元素
+        const displayValue = this.hideHeaderElements ? 'none' : 'flex';
+        const headerButtons = this.containerEl.querySelector('.ge-header-buttons') as HTMLElement;
+        const modenameContainer = this.containerEl.querySelector('.ge-modename-content') as HTMLElement;
+        
+        if (headerButtons) headerButtons.style.display = displayValue;
+        if (modenameContainer) modenameContainer.style.display = displayValue;
+
         // 根據設定決定是否啟用卡片模式
         if (this.cardLayout === 'vertical') {
             container.addClass('ge-vertical-card');
         } else {
             container.removeClass('ge-vertical-card');
         }
+
+        // 添加點擊空白處取消選中的事件處理器
+        container.addEventListener('click', (event) => {
+            // 只有當點擊的是容器本身，而不是其子元素時才清除選中
+            if (event.target === container) {
+                this.clearSelection();
+                this.hasKeyboardFocus = false;
+            }
+        });
 
         // 設定網格項目寬度和高度等設定
         const settings = this.plugin.settings;
@@ -1218,14 +1246,31 @@ export class GridView extends ItemView {
             }
         }
 
-        // 添加點擊空白處取消選中的事件處理器
-        container.addEventListener('click', (event) => {
-            // 只有當點擊的是容器本身，而不是其子元素時才清除選中
-            if (event.target === container) {
-                this.clearSelection();
-                this.hasKeyboardFocus = false;
-            }
+        // 定義所有可能的模式（不包括 custom-）
+        const modeClasses = [
+            'bookmarks',
+            'search',
+            'backlinks',
+            'outgoinglinks',
+            'all-files',
+            'recent-files',
+            'random-note',
+            'tasks',
+            'folder'
+        ];
+
+        // 先移除所有模式相關的 class
+        this.containerEl.removeClass('ge-mode-custom');  // 特別處理 custom 類別
+        modeClasses.forEach(mode => {
+            this.containerEl.removeClass(`ge-mode-${mode}`);
         });
+
+        // 添加當前模式的 class
+        if (this.sourceMode.startsWith('custom-')) {
+            this.containerEl.addClass('ge-mode-custom');
+        } else if (modeClasses.includes(this.sourceMode)) {
+            this.containerEl.addClass(`ge-mode-${this.sourceMode}`);
+        }
         
         // 重置網格項目數組
         this.gridItems = [];
@@ -1410,9 +1455,15 @@ export class GridView extends ItemView {
                     }
                     
                     // 點擊時進入子資料夾
-                    folderEl.addEventListener('click', () => {
-                        this.setSource('folder', folder.path, true);
-                        this.clearSelection();
+                    folderEl.addEventListener('click', (event) => {
+                        if (event.ctrlKey || event.metaKey) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            this.openFolderInNewView(folder.path);
+                        } else {
+                            this.setSource('folder', folder.path, true);
+                            this.clearSelection();
+                        }
                     });
 
                     // 添加右鍵選單
@@ -1423,35 +1474,10 @@ export class GridView extends ItemView {
                         //在新網格視圖開啟
                         menu.addItem((item) => {
                             item
-                                .setTitle( t('open_in_new_grid_view'))
+                                .setTitle(t('open_in_new_grid_view'))
                                 .setIcon('grid')
                                 .onClick(() => {
-                                    const { workspace } = this.app;
-                                    let leaf = null;
-                                    workspace.getLeavesOfType('grid-view');
-                                    switch (this.plugin.settings.defaultOpenLocation) {
-                                        case 'left':
-                                            leaf = workspace.getLeftLeaf(false);
-                                            break;
-                                        case 'right':
-                                            leaf = workspace.getRightLeaf(false);
-                                            break;
-                                        case 'tab':
-                                        default:
-                                            leaf = workspace.getLeaf('tab');
-                                            break;
-                                    }
-                                    if (!leaf) {
-                                        // 如果無法獲取指定位置的 leaf，則回退到新分頁
-                                        leaf = workspace.getLeaf('tab');
-                                    }
-                                    leaf.setViewState({ type: 'grid-view', active: true });
-                                    // 設定資料來源
-                                    if (leaf.view instanceof GridView) {
-                                        leaf.view.setSource('folder', folder.path);
-                                    }
-                                    // 確保視圖是活躍的
-                                    workspace.revealLeaf(leaf);
+                                    this.openFolderInNewView(folder.path);
                                 });
                         });
                         menu.addSeparator();
@@ -2021,20 +2047,18 @@ export class GridView extends ItemView {
                             //將預覽文字設定到標題的 title 屬性中
                             const titleEl = fileEl.querySelector('.ge-title');
                             if (titleEl) {
-                                setTooltip(contentArea as HTMLElement, `${titleEl.textContent}`, { placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' })
+                                setTooltip(contentArea as HTMLElement, `${titleEl.textContent}`)
                             }
 
                             if (frontMatterInfo.exists) {
                                 const colorValue = metadata?.color;
                                 if (colorValue) {
-                                    // 設置背景色、框線色和文字顏色
-                                    fileEl.setAttribute('style', `
-                                        background-color: rgba(var(--color-${colorValue}-rgb), 0.2);
-                                        border-color: rgba(var(--color-${colorValue}-rgb), 0.5);
-                                    `);
+                                    // 使用 CSS 類別來設置顏色
+                                    fileEl.addClass(`ge-note-color-${colorValue}`);
+                                    
                                     // 設置預覽內容文字顏色
                                     if (pEl) {
-                                        pEl.style.color = `rgba(var(--color-${colorValue}-rgb), 0.7)`;
+                                        pEl.addClass(`ge-note-color-${colorValue}-text`);
                                     }
                                 }
                                 const titleField = this.plugin.settings.noteTitleField || 'title';
@@ -2068,7 +2092,7 @@ export class GridView extends ItemView {
                                 contentArea.createEl('p', { text: file.extension.toUpperCase() });
                             }
 
-                            setTooltip(fileEl as HTMLElement, `${file.name}`, { placement: this.cardLayout === 'vertical' ? 'bottom' : 'right' })
+                            setTooltip(fileEl as HTMLElement, `${file.name}`)
                         }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
@@ -2457,7 +2481,6 @@ export class GridView extends ItemView {
         const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
         const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
         if (this.plugin.settings.multiLineTitle) titleEl.addClass('ge-multiline-title');
-        //titleEl.setAttribute('title', displayText);
 
         // 創建圖片區域，但先不載入圖片
         if (!this.minMode) {
@@ -2691,9 +2714,63 @@ export class GridView extends ItemView {
         });
     }
 
-    // 處理鍵盤導航
-    handleKeyDown(event: KeyboardEvent) {
-        return handleKeyDownHelper(this, event);
+    onPaneMenu(menu: Menu, source: string) {
+        menu.addItem(item => {
+            item
+                .setTitle(t('hide_header_elements'))
+                .setIcon("archive-restore")
+                .setChecked(this.hideHeaderElements)
+                .onClick(() => {
+                    this.hideHeaderElements = !this.hideHeaderElements;
+                    this.render(true);
+                });   
+        });
+        menu.addItem((item) => {
+            item
+                .setTitle(t('reselect'))
+                .setIcon("grid")
+                .onClick(() => {
+                    showFolderSelectionModal(this.app, this.plugin, this);
+                });
+        });
+        menu.addItem((item) => {
+            item
+                .setTitle(t('refresh'))
+                .setIcon("refresh-cw")
+                .onClick(() => {
+                    this.render(true);
+                });
+        });
+    }
+
+    // 在新視窗中開啟資料夾
+    private openFolderInNewView(folderPath: string) {
+        const { workspace } = this.app;
+        let leaf = null;
+        workspace.getLeavesOfType('grid-view');
+        switch (this.plugin.settings.defaultOpenLocation) {
+            case 'left':
+                leaf = workspace.getLeftLeaf(false);
+                break;
+            case 'right':
+                leaf = workspace.getRightLeaf(false);
+                break;
+            case 'tab':
+            default:
+                leaf = workspace.getLeaf('tab');
+                break;
+        }
+        if (!leaf) {
+            // 如果無法獲取指定位置的 leaf，則回退到新分頁
+            leaf = workspace.getLeaf('tab');
+        }
+        leaf.setViewState({ type: 'grid-view', active: true });
+        // 設定資料來源
+        if (leaf.view instanceof GridView) {
+            leaf.view.setSource('folder', folderPath);
+        }
+        // 確保視圖是活躍的
+        workspace.revealLeaf(leaf);
     }
 
     // 清除選中狀態
@@ -2824,6 +2901,7 @@ export class GridView extends ItemView {
                 showIgnoredFolders: this.showIgnoredFolders,
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
+                hideHeaderElements: this.hideHeaderElements,
             }
         };
     }
@@ -2843,6 +2921,7 @@ export class GridView extends ItemView {
             this.showIgnoredFolders = state.state.showIgnoredFolders ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout; // 同步 baseCardLayout 的卡片樣式，以便 render() 使用正確的 cardLayout
+            this.hideHeaderElements = state.state.hideHeaderElements ?? false;
             this.render();
         }
     }

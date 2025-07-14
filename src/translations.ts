@@ -176,6 +176,9 @@ export const TRANSLATIONS: Translations = {
         'default': '預設',
         'hidden': '隱藏',
         
+        // 隱藏頂部元素
+        'hide_header_elements': '隱藏頂部元素',
+
         // 顯示"返回上層資料夾"選項設定
         'show_parent_folder_item': '顯示「返回上層資料夾」',
         'show_parent_folder_item_desc': '在網格的第一項顯示「返回上層資料夾」選項',
@@ -436,6 +439,9 @@ export const TRANSLATIONS: Translations = {
         'all': 'All',
         'default': 'Default',
         'hidden': 'Hidden',
+        
+        // Hide header elements setting
+        'hide_header_elements': 'Hide header elements',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Show "Parent Folder" item',
@@ -698,6 +704,9 @@ export const TRANSLATIONS: Translations = {
         'default': '默认',
         'hidden': '隐藏',
         
+        // 隐藏頂部元素
+        'hide_header_elements': '隱藏頂部元素',
+        
         // 显示"返回上级文件夹"选项设置
         'show_parent_folder_item': '显示「返回上级文件夹」',
         'show_parent_folder_item_desc': '在网格的第一项显示「返回上级文件夹」选项',
@@ -958,6 +967,9 @@ export const TRANSLATIONS: Translations = {
         'all': 'すべて',
         'default': 'デフォルト',
         'hidden': '隠す',
+        
+        // 隠す頂部元素
+        'hide_header_elements': '頂部元素を隠す',
         
         // "親フォルダ"オプション設定を表示
         'show_parent_folder_item': '「親フォルダ」項目を表示',
@@ -1221,6 +1233,9 @@ export const TRANSLATIONS: Translations = {
         'default': 'По умолчанию',
         'hidden': 'Скрытые',
         
+        // Hide header elements setting
+        'hide_header_elements': 'Скрыть элементы заголовка',
+        
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показывать элемент "Родительская папка"',
         'show_parent_folder_item_desc': 'Показывать элемент "Родительская папка" первым в сетке',
@@ -1481,6 +1496,9 @@ export const TRANSLATIONS: Translations = {
         'all': 'Всі',
         'default': 'По умолчанию',
         'hidden': 'Сховати',
+        
+        // Hide header elements setting
+        'hide_header_elements': 'Скрыть элементы заголовка',
         
         // Show "Parent Folder" option setting
         'show_parent_folder_item': 'Показувати елемент "Батьківська папка"',

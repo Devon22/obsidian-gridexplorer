@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import GridExplorerPlugin from '../main';
+import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isDocumentFile, isMediaFile } from './fileUtils';
 
@@ -22,6 +22,19 @@ export class FileWatcher {
             return;
         }
     
+        //編輯檔案
+        this.plugin.registerEvent(
+            this.app.vault.on('modify', (file) => {
+                if (file instanceof TFile) {
+                    if (this.gridView.sourceMode === 'recent-files') {
+                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
+                            this.scheduleRender(3000);
+                        }
+                    }
+                }
+            })
+        );
+
         //新增檔案
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
@@ -151,6 +164,10 @@ export class FileWatcher {
 
     // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪
     private scheduleRender = (delay: number = 200): void => {
+        // 若分頁被釘選，暫停重新渲染
+        if (this.gridView.isPinned()) {
+            return;
+        }
         if (this.renderTimer !== null) {
             clearTimeout(this.renderTimer);
         }
