@@ -99,7 +99,23 @@ color: red
 - purple
 - pink
 
-CSS Class： `.ge-grid-item.ge-foldernote`
+## CSS Class
+
+| モード/機能 | CSS Class |
+|------------|-----------|
+| カスタムモード | `ge-mode-custom` |
+| フォルダモード | `ge-mode-folder` |
+| ブックマーク | `ge-mode-bookmarks` |
+| 検索 | `ge-mode-search` |
+| バックリンク | `ge-mode-backlinks` |
+| アウトゴーイングリンク | `ge-mode-outgoinglinks` |
+| 全ファイル | `ge-mode-all-files` |
+| 最近のファイル | `ge-mode-recent-files` |
+| ランダムファイル | `ge-mode-random-note` |
+| タスク | `ge-mode-tasks` |
+| フォルダノート | `.ge-foldernote` |
+| ピン留めアイテム | `.ge-pinned` |
+
 
 ## 貢献
 

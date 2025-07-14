@@ -101,7 +101,22 @@ color: red
 - pink
 
 
-CSS Class： `.ge-grid-item.ge-foldernote`
+## CSS Class
+
+| 模式/功能 | CSS Class |
+|----------|-----------|
+| 自訂模式 | `ge-mode-custom` |
+| 資料夾模式 | `ge-mode-folder` |
+| 書籤 | `ge-mode-bookmarks` |
+| 搜尋 | `ge-mode-search` |
+| 反向連結 | `ge-mode-backlinks` |
+| 外部連結 | `ge-mode-outgoinglinks` |
+| 所有檔案 | `ge-mode-all-files` |
+| 最近檔案 | `ge-mode-recent-files` |
+| 隨機檔案 | `ge-mode-random-note` |
+| 任務 | `ge-mode-tasks` |
+| 資料夾筆記 | `.ge-foldernote` |
+| 置頂項目 | `.ge-pinned` |
 
 
 ## 貢獻
