@@ -103,16 +103,16 @@ Available colors:
 
 | Mode/Feature | CSS Class |
 |-------------|-----------|
-| Custom Mode | `ge-mode-custom` |
-| Folder Mode | `ge-mode-folder` |
-| Bookmarks | `ge-mode-bookmarks` |
-| Search | `ge-mode-search` |
-| Backlinks | `ge-mode-backlinks` |
-| Outgoing Links | `ge-mode-outgoinglinks` |
-| All Files | `ge-mode-all-files` |
-| Recent Files | `ge-mode-recent-files` |
-| Random Files | `ge-mode-random-note` |
-| Tasks | `ge-mode-tasks` |
+| Custom Mode | `.ge-mode-custom` |
+| Folder Mode | `.ge-mode-folder` |
+| Bookmarks | `.ge-mode-bookmarks` |
+| Search | `.ge-mode-search` |
+| Backlinks | `.ge-mode-backlinks` |
+| Outgoing Links | `.ge-mode-outgoinglinks` |
+| All Files | `.ge-mode-all-files` |
+| Recent Files | `.ge-mode-recent-files` |
+| Random Files | `.ge-mode-random-note` |
+| Tasks | `.ge-mode-tasks` |
 | Folder Notes | `.ge-foldernote` |
 | Pinned Items | `.ge-pinned` |
 
