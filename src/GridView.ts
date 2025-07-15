@@ -568,57 +568,6 @@ export class GridView extends ItemView {
             });
             menu.addSeparator();
 
-            //如果目前是資料夾模式且有資料夾筆記，則增加"打開資料夾筆記"選項
-            if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                const folder = this.app.vault.getAbstractFileByPath(this.sourcePath);
-                const folderName = this.sourcePath.split('/').pop() || '';
-                const notePath = `${this.sourcePath}/${folderName}.md`;
-                const noteFile = this.app.vault.getAbstractFileByPath(notePath);
-                if (noteFile instanceof TFile) {
-                    //打開資料夾筆記
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('open_folder_note'))
-                            .setIcon('panel-left-open') 
-                            .onClick(() => {
-                                this.app.workspace.getLeaf().openFile(noteFile);
-                            });
-                    });
-                    //編輯資料夾筆記設定
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('edit_folder_note_settings'))
-                            .setIcon('settings-2')
-                            .onClick(() => {
-                                if (folder instanceof TFolder) {
-                                    showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
-                                }
-                            });
-                    });
-                    //刪除資料夾筆記
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('delete_folder_note'))
-                            .setIcon('folder-x')
-                            .onClick(() => {
-                                this.app.fileManager.trashFile(noteFile as TFile);
-                            });
-                    });
-                } else {
-                    //建立Folder note
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('create_folder_note'))
-                            .setIcon('file-cog')
-                            .onClick(() => {
-                                if (folder instanceof TFolder) {
-                                    showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
-                                }
-                            });
-                    });
-                }
-                menu.addSeparator();
-            }
 
             // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
             if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
@@ -698,6 +647,7 @@ export class GridView extends ItemView {
             });
         }
         
+        // 創建目前模式名稱的容器
         let modenameContainer = this.containerEl.createDiv('ge-modename-content');
 
         // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
@@ -763,16 +713,14 @@ export class GridView extends ItemView {
                 
                 if (isLast) {
                     // 當前資料夾使用 span 元素
-                    pathEl = modenameContainer.createEl('span', {
-                        text: path.name,
+                    pathEl = modenameContainer.createEl('a', {
+                        text: `${customFolderIcon} ${path.name}`.trim(),
                         cls: 'ge-current-folder'
                     });
                 } else {
                     // 上層資料夾使用 a 元素（可點擊）
                     pathEl = modenameContainer.createEl('a', {
-                        text: path.name === t('root') ? 
-                            `${customFolderIcon} ${path.name}`.trim() : 
-                            path.name,
+                        text: path.name,
                         cls: 'ge-parent-folder-link'
                     });
                 }
@@ -936,6 +884,69 @@ export class GridView extends ItemView {
                             });
                         }
                     }
+                }
+
+                if (el.className === 'ge-current-folder') {
+                    // 將選單邏輯抽出，以同時支援 click 與 contextmenu
+                    const showFolderMenu = (event: MouseEvent) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const folder = this.app.vault.getAbstractFileByPath(this.sourcePath);
+                        const folderName = this.sourcePath.split('/').pop() || '';
+                        const notePath = `${this.sourcePath}/${folderName}.md`;
+                        const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+                        const menu = new Menu();
+
+                        if (noteFile instanceof TFile) {
+                            // 打開資料夾筆記選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_folder_note'))
+                                    .setIcon('panel-left-open')
+                                    .onClick(() => {
+                                        this.app.workspace.getLeaf().openFile(noteFile);
+                                    });
+                            });
+                            // 編輯資料夾筆記設定選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('edit_folder_note_settings'))
+                                    .setIcon('settings-2')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
+                                        }
+                                    });
+                            });
+                            // 刪除資料夾筆記選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('delete_folder_note'))
+                                    .setIcon('folder-x')
+                                    .onClick(() => {
+                                        this.app.fileManager.trashFile(noteFile as TFile);
+                                    });
+                            });
+                        } else {
+                            // 建立 Folder note
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('create_folder_note'))
+                                    .setIcon('file-cog')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderNoteSettingsModal(this.app, this.plugin, folder, this);
+                                        }
+                                    });
+                            });
+                        }
+                        menu.showAtMouseEvent(event);
+                    };
+
+                    // 左鍵與右鍵都呼叫相同的選單
+                    el.addEventListener('click', showFolderMenu);
+                    el.addEventListener('contextmenu', showFolderMenu);
                 }
             }
         } else if (!(this.searchQuery !== '' && this.searchAllFiles)) {

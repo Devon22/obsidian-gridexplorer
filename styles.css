@@ -589,7 +589,7 @@
 /* Mode名稱區域樣式 Mode Name Content */
 .ge-modename-content {
     justify-content: flex-start;
-    padding: 8px 12px 7px 12px;
+    padding: 7px 12px;
     background-color: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
     font-size: var(--font-ui-medium);
@@ -600,10 +600,11 @@
 
 .ge-mode-title {
     text-decoration: none;
-    padding: 4px 8px;
+    padding: 3px 8px;
     white-space: nowrap;
     overflow: hidden;
     color: var(--text-normal);
+    border: 1px solid var(--background-secondary) !important;
     font-size: var(--font-ui-small);
     display: inline-flex;
     align-items: center;
@@ -612,18 +613,19 @@
 }
 
 a.ge-mode-title {
+    border: 1px solid var(--background-modifier-border) !important;
     border-radius: 4px;
-    background-color: var(--background-modifier-hover);
     cursor: pointer;
 }
 
 a.ge-mode-title:hover {
     text-decoration: none;
+    background-color: var(--background-modifier-hover);
 }
 
 .ge-sub-option {
     text-decoration: none;
-    padding: 4px 8px;
+    padding: 3px 8px;
     white-space: nowrap;
     overflow: hidden;
     max-width: 200px;
@@ -633,7 +635,7 @@ a.ge-mode-title:hover {
     align-items: center;
     border: none;
     border-radius: 4px;
-    background-color: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-hover);
     cursor: pointer;
 }
 
@@ -655,23 +657,23 @@ a.ge-mode-title:hover {
 /* 上層資料夾連結樣式 Parent Folder Link */
 .ge-parent-folder-link {
     text-decoration: none;
-    padding: 4px 8px;
+    padding: 3px 8px;
     white-space: nowrap;
     overflow: hidden;
     max-width: 200px;
     border-radius: 4px;
-    background-color: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-hover);
     color: var(--text-normal);
     font-size: var(--font-ui-small);
     display: inline-flex;
     align-items: center;
-    border: none;
     cursor: pointer;
     margin-right: 6px;
 }
 
 .ge-parent-folder-link:hover {
     text-decoration: none;
+    background-color: var(--background-modifier-hover);
 }
 
 .ge-parent-folder-link.ge-dragover {
@@ -682,15 +684,24 @@ a.ge-mode-title:hover {
 /* 當前資料夾樣式 */
 .ge-current-folder {
     font-size: var(--font-ui-small);
-    padding: 4px 8px;
+    padding: 4px 9px 4px 0px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-    border: 1px solid var(--background-modifier-hover);
     color: var(--text-normal);
     border-radius: 4px;
     display: inline-flex;
     align-items: center;
+}
+
+a.ge-current-folder {
+    padding: 3px 8px !important;
+    border: 1px solid var(--background-modifier-hover);
+}
+
+a.ge-current-folder:hover {
+    text-decoration: none;
+    background-color: var(--background-modifier-hover);
 }
 
 /* --------------------------------------------------------------------------- */
