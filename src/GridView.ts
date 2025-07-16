@@ -159,13 +159,17 @@ export class GridView extends ItemView {
             this.recentSources.splice(existingIndex, 1);
         }
         this.recentSources.unshift(key);
-        const limit = 10;
+        const limit = 15;
         if (this.recentSources.length > limit) {
             this.recentSources.length = limit;
         }        
     }
 
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
+        // 如果新的狀態與當前狀態相同，則不進行任何操作
+        if (this.sourceMode === mode && this.sourcePath === path) {
+            return;
+        }
 
         // 記錄之前的狀態到歷史記錄中（如果有）
         if (this.sourceMode && recordHistory) {
@@ -249,6 +253,127 @@ export class GridView extends ItemView {
                         behavior: 'smooth'
                     });
                 }
+            }
+        });
+
+        // 添加回上一步按鈕
+        const backButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('back') } });
+        setIcon(backButton, 'arrow-left');
+        backButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // 如果有歷史記錄
+            if (this.recentSources.length > 0) {
+                // 取得最近一筆歷史記錄
+                const lastSource = JSON.parse(this.recentSources[0]);
+                this.recentSources.shift(); // 從歷史記錄中移除
+                
+                // 設定來源（不記錄到歷史）
+                this.setSource(
+                    lastSource.mode, 
+                    lastSource.path || '', 
+                    true,  // 重設捲動位置
+                    false  // 不記錄到歷史
+                );
+            }
+        });
+
+        // 添加右鍵選單支援
+        backButton.addEventListener('contextmenu', (event) => {
+            // 只有在有歷史記錄時才顯示右鍵選單
+            if (this.recentSources.length > 0) {
+                event.preventDefault();
+                
+                const menu = new Menu();
+                
+                // 添加歷史記錄
+                this.recentSources.forEach((sourceInfoStr, index) => {
+                    try {
+                        const sourceInfo = JSON.parse(sourceInfoStr);
+                        const { mode, path } = sourceInfo;
+                        
+                        // 根據模式顯示圖示和文字
+                        let displayText = '';
+                        let icon = '';
+                        
+                        switch (mode) {
+                            case 'folder':
+                                displayText = path || '/';
+                                icon = 'folder';
+                                break;
+                            case 'bookmarks':
+                                displayText = t('bookmarks_mode');
+                                icon = 'bookmark';
+                                break;
+                            case 'search':
+                                displayText = t('search_results');
+                                icon = 'search';
+                                break;
+                            case 'backlinks':
+                                displayText = t('backlinks_mode');
+                                icon = 'links-coming-in';
+                                break;
+                            case 'outgoinglinks':
+                                displayText = t('outgoinglinks_mode');
+                                icon = 'links-going-out';
+                                break;
+                            case 'all-files':
+                                displayText = t('all_files_mode');
+                                icon = 'book-text';
+                                break;
+                            case 'recent-files':
+                                displayText = t('recent_files_mode');
+                                icon = 'calendar-days';
+                                break;
+                            case 'random-note':
+                                displayText = t('random_note_mode');
+                                icon = 'dice';
+                                break;
+                            case 'tasks':
+                                displayText = t('tasks_mode');
+                                icon = 'square-check-big';
+                                break;
+                            default:
+                                if (mode.startsWith('custom-')) {
+                                    const customMode = this.plugin.settings.customModes.find(m => m.internalName === mode);
+                                    displayText = customMode ? customMode.displayName : t('custom_mode');
+                                    icon = 'puzzle';
+                                } else {
+                                    displayText = mode;
+                                    icon = 'grid';
+                                }
+                        }
+                        
+                        
+
+                        // 添加歷史記錄到選單
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(`${displayText}`)
+                                .setIcon(`${icon}`)
+                                .onClick(() => {
+                                    // 找出當前點擊的紀錄索引
+                                    const clickedIndex = this.recentSources.findIndex(source => {
+                                        const parsed = JSON.parse(source);
+                                        return parsed.mode === mode && parsed.path === path;
+                                    });
+                                    
+                                    // 如果找到點擊的紀錄，清除它之上的紀錄
+                                    if (clickedIndex !== -1) {
+                                        this.recentSources = this.recentSources.slice(clickedIndex + 1);
+                                    }
+
+                                    this.setSource(mode, path, true, false);
+                                });
+                        });
+                    } catch (error) {
+                        console.error('Failed to parse source info:', error);
+                    }
+                });
+                
+                // 顯示歷史選單
+                menu.showAtMouseEvent(event);
             }
         });
 
@@ -346,104 +471,6 @@ export class GridView extends ItemView {
         });
         setIcon(reselectButton, "grid");
 
-        // 添加右鍵選單支援
-        reselectButton.addEventListener('contextmenu', (event) => {
-            // 只有在有歷史記錄時才顯示右鍵選單
-            if (this.recentSources.length > 0) {
-                event.preventDefault();
-                
-                const menu = new Menu();
-                
-                // 添加歷史記錄
-                this.recentSources.forEach((sourceInfoStr, index) => {
-                    try {
-                        const sourceInfo = JSON.parse(sourceInfoStr);
-                        const { mode, path } = sourceInfo;
-                        
-                        // 根據模式顯示圖示和文字
-                        let displayText = '';
-                        let icon = '';
-                        
-                        switch (mode) {
-                            case 'folder':
-                                displayText = path || '/';
-                                icon = 'folder';
-                                break;
-                            case 'bookmarks':
-                                displayText = t('bookmarks_mode');
-                                icon = 'bookmark';
-                                break;
-                            case 'search':
-                                displayText = t('search_results');
-                                icon = 'search';
-                                break;
-                            case 'backlinks':
-                                displayText = t('backlinks_mode');
-                                icon = 'links-coming-in';
-                                break;
-                            case 'outgoinglinks':
-                                displayText = t('outgoinglinks_mode');
-                                icon = 'links-going-out';
-                                break;
-                            case 'all-files':
-                                displayText = t('all_files_mode');
-                                icon = 'book-text';
-                                break;
-                            case 'recent-files':
-                                displayText = t('recent_files_mode');
-                                icon = 'calendar-days';
-                                break;
-                            case 'random-note':
-                                displayText = t('random_note_mode');
-                                icon = 'dice';
-                                break;
-                            case 'tasks':
-                                displayText = t('tasks_mode');
-                                icon = 'square-check-big';
-                                break;
-                            default:
-                                if (mode.startsWith('custom-')) {
-                                    const customMode = this.plugin.settings.customModes.find(m => m.internalName === mode);
-                                    displayText = customMode ? customMode.displayName : t('custom_mode');
-                                    icon = 'puzzle';
-                                } else {
-                                    displayText = mode;
-                                    icon = 'grid';
-                                }
-                        }
-                        
-                        
-
-                        // 添加歷史記錄到選單
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(`${displayText}`)
-                                .setIcon(`${icon}`)
-                                .onClick(() => {
-                                    // 找出當前點擊的紀錄索引
-                                    const clickedIndex = this.recentSources.findIndex(source => {
-                                        const parsed = JSON.parse(source);
-                                        return parsed.mode === mode && parsed.path === path;
-                                    });
-                                    
-                                    // 如果找到點擊的紀錄，清除它之上的紀錄
-                                    if (clickedIndex !== -1) {
-                                        this.recentSources = this.recentSources.slice(clickedIndex + 1);
-                                    }
-
-                                    this.setSource(mode, path, true, false);
-                                });
-                        });
-                    } catch (error) {
-                        console.error('Failed to parse source info:', error);
-                    }
-                });
-                
-                // 顯示歷史選單
-                menu.showAtMouseEvent(event);
-            }
-        });
-
         // 添加重新整理按鈕
         const refreshButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('refresh') }  });
         refreshButton.addEventListener('click', () => {
@@ -454,42 +481,7 @@ export class GridView extends ItemView {
         });
         setIcon(refreshButton, 'refresh-ccw');
 
-        // 添加排序按鈕
-        if (this.sourceMode !== 'bookmarks' && 
-            this.sourceMode !== 'recent-files' && 
-            this.sourceMode !== 'random-note') {
-            const sortButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('sorting') }  });
-            sortButton.addEventListener('click', (evt) => {
-                const menu = new Menu();
-                const sortOptions = [
-                    { value: 'name-asc', label: t('sort_name_asc'), icon: 'a-arrow-up' },
-                    { value: 'name-desc', label: t('sort_name_desc'), icon: 'a-arrow-down' },
-                    { value: 'mtime-desc', label: t('sort_mtime_desc'), icon: 'clock' },
-                    { value: 'mtime-asc', label: t('sort_mtime_asc'), icon: 'clock' },
-                    { value: 'ctime-desc', label: t('sort_ctime_desc'), icon: 'calendar' },
-                    { value: 'ctime-asc', label: t('sort_ctime_asc'), icon: 'calendar' },
-                    { value: 'random', label: t('sort_random'), icon: 'dice' },
-                ];
-
-                sortOptions.forEach(option => {
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(option.label)
-                            .setIcon(option.icon)
-                            .setChecked((this.folderSortType || this.sortType) === option.value)
-                            .onClick(() => {
-                                this.sortType = option.value;
-                                this.folderSortType = '';
-                                this.render();
-                                // 通知 Obsidian 保存視圖狀態
-                                this.app.workspace.requestSaveLayout();
-                            });
-                    });
-                });
-                menu.showAtMouseEvent(evt);
-            });
-            setIcon(sortButton, 'arrow-up-narrow-wide');
-        }
+                // 排序按鈕已移動到模式名稱區域
 
         // 添加搜尋按鈕
         const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
@@ -647,8 +639,60 @@ export class GridView extends ItemView {
             });
         }
         
-        // 創建目前模式名稱的容器
-        let modenameContainer = this.containerEl.createDiv('ge-modename-content');
+        // 創建模式名稱和排序按鈕的容器
+        const modeHeaderContainer = this.containerEl.createDiv('ge-mode-header-container');
+        
+        // 左側：模式名稱
+        const modenameContainer = modeHeaderContainer.createDiv('ge-modename-content');
+        
+        // 右側：排序按鈕
+        const rightActions = modeHeaderContainer.createDiv('ge-right-actions');
+        
+        // 添加排序按鈕
+        if (this.sourceMode !== 'bookmarks' && 
+            this.sourceMode !== 'recent-files' && 
+            this.sourceMode !== 'random-note') {
+            const sortButton = rightActions.createEl('a', { 
+                cls: 'ge-sort-button',
+                attr: { 
+                    'aria-label': t('sorting'),
+                    'href': '#'
+                }
+            });
+            setIcon(sortButton, 'arrow-up-narrow-wide');
+
+            sortButton.addEventListener('click', (evt) => {
+                evt.preventDefault();
+                evt.stopPropagation();
+                const menu = new Menu();
+                const sortOptions = [
+                    { value: 'name-asc', label: t('sort_name_asc'), icon: 'a-arrow-up' },
+                    { value: 'name-desc', label: t('sort_name_desc'), icon: 'a-arrow-down' },
+                    { value: 'mtime-desc', label: t('sort_mtime_desc'), icon: 'clock' },
+                    { value: 'mtime-asc', label: t('sort_mtime_asc'), icon: 'clock' },
+                    { value: 'ctime-desc', label: t('sort_ctime_desc'), icon: 'calendar' },
+                    { value: 'ctime-asc', label: t('sort_ctime_asc'), icon: 'calendar' },
+                    { value: 'random', label: t('sort_random'), icon: 'dice' },
+                ];
+
+                sortOptions.forEach(option => {
+                    menu.addItem((item) => {
+                        item
+                            .setTitle(option.label)
+                            .setIcon(option.icon)
+                            .setChecked((this.folderSortType || this.sortType) === option.value)
+                            .onClick(() => {
+                                this.sortType = option.value;
+                                this.folderSortType = '';
+                                this.render();
+                                // 通知 Obsidian 保存視圖狀態
+                                this.app.workspace.requestSaveLayout();
+                            });
+                    });
+                });
+                menu.showAtMouseEvent(evt);
+            });
+        }
 
         // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
         modenameContainer.addEventListener('click', (event: MouseEvent) => {
@@ -1208,10 +1252,10 @@ export class GridView extends ItemView {
         // 隱藏頂部元素
         const displayValue = this.hideHeaderElements ? 'none' : 'flex';
         const headerButtons = this.containerEl.querySelector('.ge-header-buttons') as HTMLElement;
-        const modenameContainer = this.containerEl.querySelector('.ge-modename-content') as HTMLElement;
+        const modeHeaderContainer = this.containerEl.querySelector('.ge-mode-header-container') as HTMLElement;
         
         if (headerButtons) headerButtons.style.display = displayValue;
-        if (modenameContainer) modenameContainer.style.display = displayValue;
+        if (modeHeaderContainer) modeHeaderContainer.style.display = displayValue;
 
         // 根據設定決定是否啟用卡片模式
         if (this.cardLayout === 'vertical') {
@@ -2374,15 +2418,22 @@ export class GridView extends ItemView {
                 if (file.extension === 'md') {
                     const metadata = this.app.metadataCache.getFileCache(file);
                     if (metadata?.frontmatter) {
-                        const fieldName = isModifiedTime 
+                        const fieldSetting = isModifiedTime 
                             ? this.plugin.settings.modifiedDateField 
                             : this.plugin.settings.createdDateField;
-                        
-                        if (fieldName && metadata.frontmatter[fieldName]) {
+
+                        const fieldNames = fieldSetting
+                            ? fieldSetting.split(',').map(f => f.trim()).filter(Boolean)
+                            : [];
+
+                        for (const fieldName of fieldNames) {
                             const dateStr = metadata.frontmatter[fieldName];
-                            const date = new Date(dateStr);
-                            if (!isNaN(date.getTime())) {
-                                frontMatterDate = date;
+                            if (dateStr) {
+                                const date = new Date(dateStr);
+                                if (!isNaN(date.getTime())) {
+                                    frontMatterDate = date;
+                                    break; // 已找到有效日期
+                                }
                             }
                         }
                     }

@@ -110,12 +110,17 @@ export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
             file,
             mDate: (() => {
                 if (metadata?.frontmatter) {
-                    const fieldName = settings.modifiedDateField;
-                    const dateStr = metadata.frontmatter[fieldName];
-                    if (dateStr) {
-                        const date = new Date(dateStr);
-                        if (!isNaN(date.getTime())) {
-                            return date.getTime();
+                    // 支援多個欄位名稱（用逗號隔開）
+                    const fieldNames = settings.modifiedDateField
+                        ? settings.modifiedDateField.split(',').map(f => f.trim()).filter(Boolean)
+                        : [];
+                    for (const fieldName of fieldNames) {
+                        const dateStr = metadata.frontmatter[fieldName];
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                return date.getTime();
+                            }
                         }
                     }
                 }
@@ -123,12 +128,17 @@ export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
             })(),
             cDate: (() => {
                 if (metadata?.frontmatter) {
-                    const fieldName = settings.createdDateField;
-                    const dateStr = metadata.frontmatter[fieldName];
-                    if (dateStr) {
-                        const date = new Date(dateStr);
-                        if (!isNaN(date.getTime())) {
-                            return date.getTime();
+                    // 支援多個欄位名稱（用逗號隔開）
+                    const fieldNames = settings.createdDateField
+                        ? settings.createdDateField.split(',').map(f => f.trim()).filter(Boolean)
+                        : [];
+                    for (const fieldName of fieldNames) {
+                        const dateStr = metadata.frontmatter[fieldName];
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                return date.getTime();
+                            }
                         }
                     }
                 }
@@ -534,7 +544,8 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             const files = new Set<TFile>();
 
             for (const page of dvPages) {
-                if (page.file?.path) {
+                // Add null checks for page and page.file
+                if (page?.file?.path) {
                     const file = app.vault.getAbstractFileByPath(page.file.path);
                     if (file instanceof TFile) {
                         files.add(file);

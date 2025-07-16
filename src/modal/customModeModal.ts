@@ -98,16 +98,10 @@ export class CustomModeModal extends Modal {
         const renderOptions = () => {
             optionsContainer.empty();
             options.forEach((opt, idx) => {
-                const optSetting = new Setting(optionsContainer);
-                // 使標題與描述佔據一行，輸入區域佔據了下一行
-                optSetting.settingEl.style.flexDirection = 'column';
-                optSetting.settingEl.style.alignItems = 'stretch';
-                optSetting.settingEl.style.gap = '0.5rem';
-                // 讓 Text 與 TextArea 在 control 區域各佔一行
-                optSetting.controlEl.style.display = 'flex';
-                optSetting.controlEl.style.flexDirection = 'column';
-                optSetting.controlEl.style.alignItems = 'stretch';
-                optSetting.controlEl.style.gap = '0.5rem';
+                // 為每個選項創建容器
+                const optionContainer = optionsContainer.createDiv('ge-custommode-option-container');
+                
+                const optSetting = new Setting(optionContainer);
                 optSetting
                     .addText(text => {
                         text.setPlaceholder(t('option_name'))

@@ -355,6 +355,11 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* 直向卡片模式下的資料夾項目補正 */
+.ge-vertical-card .ge-folder-item .ge-content-area {
+    padding: 7px !important;
+}
+
 .ge-grid-item.ge-folder-item .ge-icon-container {
     color: var(--interactive-accent);
 }
@@ -586,16 +591,54 @@
 
 /* --------------------------------------------------------------------------- */
 
-/* Mode名稱區域樣式 Mode Name Content */
-.ge-modename-content {
-    justify-content: flex-start;
-    padding: 7px 12px;
+/* 模式名稱容器 */
+.ge-mode-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background-color: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 模式名稱區域 */
+.ge-modename-content {
+    flex: 1;
+    padding: 7px 12px;
     font-size: var(--font-ui-medium);
     display: flex;
     align-items: center;
     overflow: hidden;
+}
+
+/* 右側操作按鈕區域 */
+.ge-right-actions {
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+}
+
+/* 排序按鈕樣式 */
+.ge-sort-button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+}
+
+.ge-sort-button:hover {
+    opacity: 1;
+    background-color: var(--background-modifier-hover);
+}
+
+.ge-sort-button svg {
+    width: 16px;
+    height: 16px;
 }
 
 .ge-mode-title {
@@ -695,6 +738,7 @@ a.ge-mode-title:hover {
 }
 
 a.ge-current-folder {
+    text-decoration: none;
     padding: 3px 8px !important;
     border: 1px solid var(--background-modifier-hover);
 }
@@ -1381,3 +1425,25 @@ a.ge-current-folder:hover {
     text-overflow: ellipsis;
 }
 
+/* Custom Mode Options */
+.ge-custommode-option-container {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 0 12px;
+    margin-bottom: 12px;
+    background-color: var(--background-secondary);
+}
+
+.ge-custommode-option-container .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.ge-custommode-option-container .setting-item-control {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
