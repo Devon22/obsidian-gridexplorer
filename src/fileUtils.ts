@@ -513,7 +513,6 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
 
         const mode = settings.customModes.find(m => m.internalName === sourceMode);
         if (!mode) {
-            new Notice(`Custom mode ${sourceMode} not found.`);
             return [];
         }
 

@@ -823,6 +823,7 @@ a.ge-current-folder:hover {
     padding-right: 24px;
     height: 24px;
     border: none;
+    font-size: var(--font-ui-small);
 }
 
 .ge-search-tag-delete-button {
@@ -863,6 +864,7 @@ a.ge-current-folder:hover {
     overflow-y: auto;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     z-index: 1000;
+    font-size: var(--font-ui-small);
 }
 
 .ge-search-tag-suggestion-item {
@@ -884,7 +886,7 @@ a.ge-current-folder:hover {
     border-radius: 4px;
     background-color: var(--background-primary);
     color: var(--text-normal);
-    font-size: 14px;
+    font-size: var(--font-ui-medium);
     outline: none;
     transition: border-color 0.2s;
     padding-right: 25px;
@@ -901,8 +903,9 @@ a.ge-current-folder:hover {
 /* 搜尋選項容器 Search Options Container */
 .ge-search-options-container {
     display: flex;
-    gap: 16px;
-    margin: 4px;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0;
 }
 
 /* 搜尋範圍設定樣式 Search Scope Container */
@@ -910,7 +913,6 @@ a.ge-current-folder:hover {
     display: flex;
     align-items: center;
     cursor: pointer;
-    padding: 4px;
 }
 
 .ge-search-scope-checkbox {
@@ -921,6 +923,7 @@ a.ge-current-folder:hover {
     cursor: pointer;
     user-select: none;
     color: var(--text-normal);
+    font-size: var(--font-ui-small);
 }
 
 /* 搜尋媒體檔案設定樣式 Search Media Files Container */
@@ -928,7 +931,6 @@ a.ge-current-folder:hover {
     display: flex;
     align-items: center;
     cursor: pointer;
-    padding: 4px;
 }
 
 .ge-search-media-files-checkbox {
@@ -939,6 +941,7 @@ a.ge-current-folder:hover {
     cursor: pointer;
     user-select: none;
     color: var(--text-normal);
+    font-size: var(--font-ui-small);
 }
 
 .ge-button-container {
@@ -1446,4 +1449,160 @@ a.ge-current-folder:hover {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* Popup Modal Styles */
+.ge-popup-modal {
+    background: transparent !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+    border: none !important;
+}
+
+.ge-popup-modal-reset {
+    position: fixed;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    max-width: 300px;
+    width: auto;
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+.ge-popup-modal-reset .modal-close-button {
+    display: none;
+}
+
+.ge-popup-modal-reset .modal-header {
+    display: none;
+}
+
+.is-phone .ge-popup-modal-reset.modal {
+    max-width: fit-content;
+    max-height: fit-content;
+}
+
+.ge-popup-content {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    padding: 10px 8px;
+    position: relative;
+    max-height: 400px;
+    overflow-y: auto;
+    min-width: 250px;
+    max-width: 300px;
+}
+
+/* Popup modal 中的資料夾選項樣式 */
+.ge-popup-content .ge-grid-view-folder-option {
+    margin: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: var(--font-ui-medium);
+    line-height: 1.4;
+}
+
+.ge-popup-content .ge-grid-view-folder-option:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.ge-popup-content .ge-grid-view-folder-option.selected {
+    background-color: var(--background-modifier-active);
+}
+
+/* Popup modal 中的搜尋框樣式 */
+.ge-popup-content .ge-folder-search-container {
+    margin-bottom: 8px;
+}
+
+.ge-popup-content .ge-folder-search-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-medium);
+}
+
+.ge-popup-content .ge-folder-search-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.ge-popup-content .ge-folder-options-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* 搜尋 modal popup 樣式 */
+.ge-popup-content .ge-search-container {
+    margin-top: 0;
+}
+
+.ge-popup-content .ge-search-input-wrapper {
+    position: relative;
+}
+
+.ge-popup-content .ge-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-medium);
+}
+
+.ge-popup-content .ge-search-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.ge-popup-content .ge-search-clear-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    color: var(--text-muted);
+}
+
+.ge-popup-content .ge-search-clear-button:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.ge-popup-content .ge-search-tag-suggestions {
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.ge-popup-content .setting-item {
+    border: none;
+    padding: 8px 0;
+}
+
+.ge-popup-content .setting-item-name {
+    font-size: var(--font-ui-medium);
+    font-weight: 500;
 }

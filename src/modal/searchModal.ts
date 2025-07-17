@@ -5,16 +5,23 @@ import { t } from '../translations';
 export class SearchModal extends Modal {
     gridView: GridView;
     defaultQuery: string;
-    constructor(app: App, gridView: GridView, defaultQuery: string) {
+    buttonElement: HTMLElement | undefined;
+    constructor(app: App, gridView: GridView, defaultQuery: string, buttonElement?: HTMLElement) {
         super(app);
         this.gridView = gridView;
         this.defaultQuery = defaultQuery;
+        this.buttonElement = buttonElement;
     }
 
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        new Setting(contentEl).setName(t('search')).setHeading();
+        
+        // 如果有提供按鈕元素，則設置為 popup 樣式
+        if (this.buttonElement) {
+            this.modalEl.addClass('ge-popup-modal');
+            this.positionAsPopup();
+        }
 
         // 創建搜尋輸入框容器
         const searchContainer = contentEl.createDiv('ge-search-container');
@@ -326,9 +333,53 @@ export class SearchModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
     }
+
+    private positionAsPopup() {
+        if (!this.buttonElement) return;
+
+        const modalEl = this.modalEl;
+        const contentEl = this.contentEl;
+
+        // 設置 modal 的基本樣式
+        modalEl.addClass('ge-popup-modal-reset');
+
+        // 添加 popup 內容樣式類別
+        contentEl.addClass('ge-popup-content');
+
+        // 計算按鈕位置
+        const buttonRect = this.buttonElement.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // 設置初始位置（按鈕下方）
+        let top = buttonRect.bottom + 4;
+        let left = buttonRect.left + (buttonRect.width / 2) - 150; // 300px 寬度的一半
+
+        // 檢查右側邊界
+        if (left + 300 > viewportWidth) {
+            left = viewportWidth - 300 - 10;
+        }
+
+        // 檢查左側邊界
+        if (left < 10) {
+            left = 10;
+        }
+
+        // 檢查下方空間，如果不夠則顯示在上方
+        const estimatedHeight = 400; // 預估高度
+        if (top + estimatedHeight > viewportHeight && buttonRect.top - estimatedHeight > 0) {
+            top = buttonRect.top - estimatedHeight - 4;
+        }
+
+        // 應用位置
+        modalEl.style.position = 'fixed';
+        modalEl.style.top = `${top}px`;
+        modalEl.style.left = `${left}px`;
+        modalEl.style.transform = 'none';
+    }
 }
 
 // 顯示搜尋 modal
-export function showSearchModal(app:App, gridView: GridView, defaultQuery = '') {
-    new SearchModal(app, gridView, defaultQuery).open();
+export function showSearchModal(app:App, gridView: GridView, defaultQuery = '', buttonElement?: HTMLElement) {
+    new SearchModal(app, gridView, defaultQuery, buttonElement).open();
 }

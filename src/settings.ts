@@ -1126,20 +1126,75 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
         containerEl.appendChild(ignoredFolderPatternsContainer);
 
-        containerEl.createEl('h3', { text: t('reset_to_default'), attr: { style: 'margin-top: 40px;' } });
+        // 設定檔管理 (Reset / Export / Import)
+        containerEl.createEl('h3', { text: t('config_management'), attr: { style: 'margin-top: 40px;' } });
 
-        // 回復預設值按鈕
         new Setting(containerEl)
-            .setName(t('reset_to_default'))
-            .setDesc(t('reset_to_default_desc'))
+            .setName(t('config_management'))
+            .setDesc(t('config_management_desc'))
+            // Reset to default
             .addButton(button => button
-                .setButtonText(t('reset'))
+                .setButtonText(t('reset_to_default'))
                 .setWarning()
                 .onClick(async () => {
                     this.plugin.settings = { ...DEFAULT_SETTINGS };
                     await this.plugin.saveSettings();
                     this.display();
                     new Notice(t('settings_reset_notice'));
+                }))
+            // Export settings to JSON file
+            .addButton(button => button
+                .setButtonText(t('export'))
+                .setTooltip(t('export'))
+                .onClick(() => {
+                    const data = JSON.stringify(this.plugin.settings, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'grid-explorer-settings.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }))
+            // Import settings from JSON file
+            .addButton(button => button
+                .setButtonText(t('import'))
+                .setTooltip(t('import'))
+                .onClick(() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = async (e) => {
+                        const files = (e.target as HTMLInputElement).files;
+                        if (!files || files.length === 0) {
+                            return;
+                        }
+                        const file = files[0];
+                        const reader = new FileReader();
+                        reader.onload = async (evt) => {
+                            if (!evt.target || typeof evt.target.result !== 'string') {
+                                new Notice(t('import_failed'));
+                                return;
+                            }
+                            try {
+                                const content = evt.target.result;
+                                const importedSettings = JSON.parse(content);
+                                if (importedSettings && typeof importedSettings === 'object') {
+                                    this.plugin.settings = { ...DEFAULT_SETTINGS, ...importedSettings } as typeof DEFAULT_SETTINGS;
+                                    await this.plugin.saveSettings();
+                                    this.display();
+                                    new Notice(t('import_success'));
+                                } else {
+                                    new Notice(t('import_failed'));
+                                }
+                            } catch (error) {
+                                console.error('Grid Explorer: Error importing settings', error);
+                                new Notice(t('import_failed'));
+                            }
+                        };
+                        reader.readAsText(file);
+                    };
+                    input.click();
                 }));
 
     }

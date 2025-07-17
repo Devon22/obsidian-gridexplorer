@@ -128,16 +128,13 @@ export class CustomModeModal extends Modal {
                             });
                     });
 
-                // 移除按鈕（至少保留一個）
+                // 移除按鈕
                 if (options.length > 0) {
                     optSetting.addExtraButton(btn => {
                         btn.setIcon('trash')
                             .setTooltip(t('remove'))
                             .onClick(() => {
                                 options.splice(idx, 1);
-                                if (idx === 0 && options.length > 0) {
-                                    dataviewCode = options[0].dataviewCode;
-                                }
                                 renderOptions();
                             });
                     });

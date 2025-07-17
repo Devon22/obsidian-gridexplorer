@@ -4,8 +4,8 @@ import { GridView } from '../GridView';
 import { t } from '../translations';
 
 // 顯示資料夾選擇 modal
-export function showFolderSelectionModal(app: App, plugin: GridExplorerPlugin, activeView?: GridView) {
-    new FolderSelectionModal(app, plugin, activeView).open();
+export function showFolderSelectionModal(app: App, plugin: GridExplorerPlugin, activeView?: GridView, buttonElement?: HTMLElement) {
+    new FolderSelectionModal(app, plugin, activeView, buttonElement).open();
 }
 
 export class FolderSelectionModal extends Modal {
@@ -15,16 +15,24 @@ export class FolderSelectionModal extends Modal {
     folderOptions: HTMLElement[] = [];
     selectedIndex: number = -1; // 當前選中的選項索引
     searchInput: HTMLInputElement;
+    buttonElement: HTMLElement | undefined;
     
-    constructor(app: App, plugin: GridExplorerPlugin, activeView?: GridView) {
+    constructor(app: App, plugin: GridExplorerPlugin, activeView?: GridView, buttonElement?: HTMLElement) {
         super(app);
         this.plugin = plugin;
         this.activeView = activeView;
+        this.buttonElement = buttonElement;
     }
 
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
+
+        // 如果有按鈕元素，設置為 popup 樣式
+        if (this.buttonElement) {
+            this.modalEl.addClass('ge-popup-modal');
+            this.positionAsPopup();
+        }
 
         // 添加搜尋輸入框
         const searchContainer = contentEl.createEl('div', { 
@@ -240,9 +248,10 @@ export class FolderSelectionModal extends Modal {
         }
 
         // 建立根目錄選項
+        const customFolderIcon = this.plugin.settings.customFolderIcon;
         const rootFolderOption = this.folderOptionsContainer.createEl('div', {
             cls: 'ge-grid-view-folder-option',
-            text: `📁 /`
+            text: `${customFolderIcon} /`
         });
 
         rootFolderOption.addEventListener('click', () => {
@@ -287,7 +296,7 @@ export class FolderSelectionModal extends Modal {
 
             // 資料夾圖示與名稱
             const icon = document.createElement('span');
-            icon.textContent = '📁 ';
+            icon.textContent = `${customFolderIcon} `;
             folderOption.appendChild(icon);
 
             const nameSpan = document.createElement('span');
@@ -421,6 +430,48 @@ export class FolderSelectionModal extends Modal {
                 this.updateSelection(firstVisibleIndex);
             }
         }
+    }
+
+    // 將 modal 定位到按鈕下方，類似 Chrome popup 樣式
+    positionAsPopup() {
+        if (!this.buttonElement) return;
+
+        const buttonRect = this.buttonElement.getBoundingClientRect();
+        const modalEl = this.modalEl;
+        const contentEl = this.contentEl;
+
+        // 設置 modal 的基本樣式
+        modalEl.addClass('ge-popup-modal-reset');
+
+        // 添加 popup 內容樣式類別
+        contentEl.addClass('ge-popup-content');
+
+        // 計算位置
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // 預設位置：按鈕下方中心對齊
+        let left = buttonRect.left + (buttonRect.width / 2) - 150; // 150 是 modal 寬度的一半
+        let top = buttonRect.bottom + 8; // 8px 間距
+
+        // 檢查右側邊界
+        if (left + 300 > viewportWidth) {
+            left = viewportWidth - 300 - 16;
+        }
+
+        // 檢查左側邊界
+        if (left < 16) {
+            left = 16;
+        }
+
+        // 檢查下方空間，如果不夠則顯示在上方
+        if (top + 400 > viewportHeight && buttonRect.top - 400 > 0) {
+            top = buttonRect.top - 8;
+        }
+
+        // 應用位置
+        modalEl.style.left = `${left}px`;
+        modalEl.style.top = `${top}px`;
     }
 
     onClose() {

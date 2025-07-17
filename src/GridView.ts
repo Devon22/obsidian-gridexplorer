@@ -9,7 +9,9 @@ import { MediaModal } from './modal/mediaModal';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
+import { moveFolderSuggestModal } from './modal/moveFolderSuggestModal';
 import { showSearchModal } from './modal/searchModal';
+import { CustomModeModal } from './modal/customModeModal';
 import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { t } from './translations';
 
@@ -46,6 +48,8 @@ export class GridView extends ItemView {
     recentSources: string[] = []; // 歷史記錄
     minMode: boolean = false; // 最小模式
     showIgnoredFolders: boolean = false; // 顯示忽略資料夾
+    showDateDividers: boolean = false; // 顯示日期分隔器
+    showNoteTags: boolean = false; // 顯示筆記標籤
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
     hideHeaderElements: boolean = false; // 是否隱藏標題列元素（模式名稱和按鈕）
@@ -64,6 +68,8 @@ export class GridView extends ItemView {
         this.sortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
         this.baseCardLayout = this.plugin.settings.cardLayout;
         this.cardLayout = this.baseCardLayout;
+        this.showDateDividers = this.plugin.settings.dateDividerMode !== 'none';
+        this.showNoteTags = this.plugin.settings.showNoteTags;
 
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -467,7 +473,7 @@ export class GridView extends ItemView {
         // 添加重新選擇資料夾按鈕
         const reselectButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('reselect') }  });
         reselectButton.addEventListener('click', () => {
-            showFolderSelectionModal(this.app, this.plugin, this);
+            showFolderSelectionModal(this.app, this.plugin, this, reselectButton);
         });
         setIcon(reselectButton, "grid");
 
@@ -481,8 +487,6 @@ export class GridView extends ItemView {
         });
         setIcon(refreshButton, 'refresh-ccw');
 
-                // 排序按鈕已移動到模式名稱區域
-
         // 添加搜尋按鈕
         const searchButtonContainer = headerButtonsDiv.createDiv('ge-search-button-container');
         const searchButton = searchButtonContainer.createEl('button', {
@@ -491,7 +495,7 @@ export class GridView extends ItemView {
         });
         setIcon(searchButton, 'search');
         searchButton.addEventListener('click', () => {
-            showSearchModal(this.app, this, '');
+            showSearchModal(this.app, this, '', searchButton);
         });
 
         // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
@@ -504,7 +508,7 @@ export class GridView extends ItemView {
             // 讓搜尋文字可點選
             searchText.style.cursor = 'pointer';
             searchText.addEventListener('click', () => {
-                showSearchModal(this.app, this, this.searchQuery);
+                showSearchModal(this.app, this, this.searchQuery, searchText);
             });
 
             // 創建取消按鈕
@@ -521,123 +525,154 @@ export class GridView extends ItemView {
         }
 
         // 添加更多選項按鈕
+        
+        const menu = new Menu();
+        menu.addItem((item) => {
+            item
+                .setTitle(t('open_new_grid_view'))
+                .setIcon('grid')
+                .onClick(() => {
+                    const { workspace } = this.app;
+                    let leaf = null;
+                    workspace.getLeavesOfType('grid-view');
+                    switch (this.plugin.settings.defaultOpenLocation) {
+                        case 'left':
+                            leaf = workspace.getLeftLeaf(false);
+                            break;
+                        case 'right':
+                            leaf = workspace.getRightLeaf(false);
+                            break;
+                        case 'tab':
+                        default:
+                            leaf = workspace.getLeaf('tab');
+                            break;
+                    }
+                    if (!leaf) {
+                        // 如果無法獲取指定位置的 leaf，則回退到新分頁
+                        leaf = workspace.getLeaf('tab');
+                    }
+                    leaf.setViewState({ type: 'grid-view', active: true });
+                    // 設定資料來源
+                    if (leaf.view instanceof GridView) {
+                        leaf.view.setSource('folder', '/');
+                    }
+                    // 確保視圖是活躍的
+                    workspace.revealLeaf(leaf);
+                });
+        });
+        menu.addSeparator();
+
+        // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
+        if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
+            this.plugin.settings.showMediaFiles && this.searchQuery === '') {
+            menu.addItem((item) => {
+                item.setTitle(t('random_note_notes_only'))
+                    .setIcon('file-text')
+                    .setChecked(!this.randomNoteIncludeMedia)
+                    .onClick(() => {
+                        this.randomNoteIncludeMedia = false;
+                        this.render();
+                    });
+            });
+            menu.addItem((item) => {
+                item.setTitle(t('random_note_include_media_files'))
+                    .setIcon('file-image')
+                    .setChecked(this.randomNoteIncludeMedia)
+                    .onClick(() => {
+                        this.randomNoteIncludeMedia = true;
+                        this.render();
+                    });
+            });
+            menu.addSeparator();
+        }
+        // 直向卡片切換
+        menu.addItem((item) => {
+            item.setTitle(t('vertical_card'))
+                .setIcon('layout')
+                .setChecked(this.baseCardLayout === 'vertical')
+                .onClick(() => {
+                    this.baseCardLayout = this.baseCardLayout === 'vertical' ? 'horizontal' : 'vertical';
+                    this.cardLayout = this.baseCardLayout;
+                    this.render();
+                    this.app.workspace.requestSaveLayout();
+                });
+        });
+        // 最小化模式選項
+        menu.addItem((item) => {
+            item
+                .setTitle(t('min_mode'))
+                .setIcon('minimize-2')
+                .setChecked(this.minMode)
+                .onClick(() => {
+                    this.minMode = !this.minMode;
+                    this.app.workspace.requestSaveLayout();
+                    this.render();
+                });
+        });
+        // 顯示日期分隔器
+        if (this.plugin.settings.dateDividerMode !== 'none') {
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('show_date_dividers'))
+                    .setIcon('calendar')
+                    .setChecked(this.showDateDividers)
+                    .onClick(() => {
+                        this.showDateDividers = !this.showDateDividers;
+                        this.app.workspace.requestSaveLayout();
+                        this.render();
+                    });
+            });
+        }
+        // 顯示筆記標籤
+        menu.addItem((item) => {
+            item
+                .setTitle(t('show_note_tags'))
+                .setIcon('tag')
+                .setChecked(this.showNoteTags)
+                .onClick(() => {
+                    this.showNoteTags = !this.showNoteTags;
+                    this.app.workspace.requestSaveLayout();
+                    this.render();
+                });
+        });
+        // 顯示忽略資料夾選項
+        menu.addItem((item) => {
+            item
+                .setTitle(t('show_ignored_folders'))
+                .setIcon('folder-open-dot')
+                .setChecked(this.showIgnoredFolders)
+                .onClick(() => {
+                    this.showIgnoredFolders = !this.showIgnoredFolders;
+                    this.app.workspace.requestSaveLayout();
+                    this.render();
+                });
+        });
+        menu.addSeparator();
+        menu.addItem((item) => {
+            item
+                .setTitle(t('open_settings'))
+                .setIcon('settings')
+                .onClick(() => {
+                    // 打開插件設定頁面
+                    (this.app as any).setting.open();
+                    (this.app as any).setting.openTabById(this.plugin.manifest.id);
+                });
+        });
+        
         if (this.searchQuery === '') {
             const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
             setIcon(moreOptionsButton, 'ellipsis-vertical');
-            const menu = new Menu();
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('open_new_grid_view'))
-                    .setIcon('grid')
-                    .onClick(() => {
-                        const { workspace } = this.app;
-                        let leaf = null;
-                        workspace.getLeavesOfType('grid-view');
-                        switch (this.plugin.settings.defaultOpenLocation) {
-                            case 'left':
-                                leaf = workspace.getLeftLeaf(false);
-                                break;
-                            case 'right':
-                                leaf = workspace.getRightLeaf(false);
-                                break;
-                            case 'tab':
-                            default:
-                                leaf = workspace.getLeaf('tab');
-                                break;
-                        }
-                        if (!leaf) {
-                            // 如果無法獲取指定位置的 leaf，則回退到新分頁
-                            leaf = workspace.getLeaf('tab');
-                        }
-                        leaf.setViewState({ type: 'grid-view', active: true });
-                        // 設定資料來源
-                        if (leaf.view instanceof GridView) {
-                            leaf.view.setSource('folder', '/');
-                        }
-                        // 確保視圖是活躍的
-                        workspace.revealLeaf(leaf);
-                    });
-            });
-            menu.addSeparator();
-
-
-            // 建立隨機筆記、最近筆記、全部筆記是否包含圖片和影片的設定按鈕
-            if ((this.sourceMode === 'all-files' || this.sourceMode === 'recent-files' || this.sourceMode === 'random-note') && 
-                this.plugin.settings.showMediaFiles && this.searchQuery === '') {
-                menu.addItem((item) => {
-                    item.setTitle(t('random_note_notes_only'))
-                        .setIcon('file-text')
-                        .setChecked(!this.randomNoteIncludeMedia)
-                        .onClick(() => {
-                            this.randomNoteIncludeMedia = false;
-                            this.render();
-                        });
-                });
-                menu.addItem((item) => {
-                    item.setTitle(t('random_note_include_media_files'))
-                        .setIcon('file-image')
-                        .setChecked(this.randomNoteIncludeMedia)
-                        .onClick(() => {
-                            this.randomNoteIncludeMedia = true;
-                            this.render();
-                        });
-                });
-                menu.addSeparator();
-            }
-
-            // 直向卡片切換
-            menu.addItem((item) => {
-                item.setTitle(t('vertical_card'))
-                    .setIcon('layout')
-                    .setChecked(this.baseCardLayout === 'vertical')
-                    .onClick(() => {
-                        this.baseCardLayout = this.baseCardLayout === 'vertical' ? 'horizontal' : 'vertical';
-                        this.cardLayout = this.baseCardLayout;
-                        this.render();
-                        this.app.workspace.requestSaveLayout();
-                    });
-            });
-
-            // 最小化模式選項
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('min_mode'))
-                    .setIcon('minimize-2')
-                    .setChecked(this.minMode)
-                    .onClick(() => {
-                        this.minMode = !this.minMode;
-                        this.app.workspace.requestSaveLayout();
-                        this.render();
-                    });
-            });
-            // 顯示忽略資料夾選項
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('show_ignored_folders'))
-                    .setIcon('folder-open-dot')
-                    .setChecked(this.showIgnoredFolders)
-                    .onClick(() => {
-                        this.showIgnoredFolders = !this.showIgnoredFolders;
-                        this.app.workspace.requestSaveLayout();
-                        this.render();
-                    });
-            });
-            menu.addSeparator();
-            menu.addItem((item) => {
-                item
-                    .setTitle(t('open_settings'))
-                    .setIcon('settings')
-                    .onClick(() => {
-                        // 打開插件設定頁面
-                        (this.app as any).setting.open();
-                        (this.app as any).setting.openTabById(this.plugin.manifest.id);
-                    });
-            });
-
             moreOptionsButton.addEventListener('click', (event) => {
                 menu.showAtMouseEvent(event);
             });
-        }
+        } 
+
+        headerButtonsDiv.addEventListener('contextmenu', (event) => {
+            if (event.target === headerButtonsDiv) {
+                event.preventDefault();
+                menu.showAtMouseEvent(event);
+            }
+        });
         
         // 創建模式名稱和排序按鈕的容器
         const modeHeaderContainer = this.containerEl.createDiv('ge-mode-header-container');
@@ -1143,46 +1178,80 @@ export class GridView extends ItemView {
                         
                         // 取得當前自訂模式
                         const mode = this.plugin.settings.customModes.find(m => m.internalName === this.sourceMode);
-                        if (mode && mode.options && mode.options.length > 0) {
-                            if (this.customOptionIndex >= mode.options.length || this.customOptionIndex < -1) {
-                                this.customOptionIndex = -1;
-                            }
+                        if (mode) {
+                            const hasOptions = mode.options && mode.options.length > 0;
+                            
+                            if (hasOptions && mode.options) {
+                                if (this.customOptionIndex >= mode.options.length || this.customOptionIndex < -1) {
+                                    this.customOptionIndex = -1;
+                                }
 
-                            let subName: string | undefined;
-                            if (this.customOptionIndex === -1) {
-                                subName = (mode as any).name?.trim() || t('default');
-                            } else if (this.customOptionIndex >= 0 && this.customOptionIndex < mode.options.length) {
-                                const opt = mode.options![this.customOptionIndex];
-                                subName = opt.name?.trim() || `${t('option')} ${this.customOptionIndex + 1}`;
-                            }
+                                let subName: string | undefined;
+                                if (this.customOptionIndex === -1) {
+                                    subName = (mode as any).name?.trim() || t('default');
+                                } else if (this.customOptionIndex >= 0 && this.customOptionIndex < mode.options.length) {
+                                    const opt = mode.options[this.customOptionIndex];
+                                    subName = opt.name?.trim() || `${t('option')} ${this.customOptionIndex + 1}`;
+                                }
 
-                            const subSpan = modenameContainer.createEl('a', { text: subName ?? '-', cls: 'ge-sub-option' });
-                            subSpan.addEventListener('click', (evt) => {
-                                const menu = new Menu();
-                                // 預設選項
-                                const defaultName = (mode as any).name?.trim() || t('default');
-                                menu.addItem(item => {
-                                    item.setTitle(defaultName)
-                                        .setIcon('puzzle')
-                                        .setChecked(this.customOptionIndex === -1)
-                                        .onClick(() => {
-                                            this.customOptionIndex = -1;
-                                            this.render(true);
-                                        });
-                                });
-                                mode.options!.forEach((opt, idx) => {
+                                const subSpan = modenameContainer.createEl('a', { text: subName ?? '-', cls: 'ge-sub-option' });
+                                subSpan.addEventListener('click', (evt) => {
+                                    const menu = new Menu();
+                                    // 預設選項
+                                    const defaultName = (mode as any).name?.trim() || t('default');
                                     menu.addItem(item => {
-                                        item.setTitle(opt.name?.trim() || t('option') + ' ' + (idx + 1))
+                                        item.setTitle(defaultName)
                                             .setIcon('puzzle')
-                                            .setChecked(idx === this.customOptionIndex)
+                                            .setChecked(this.customOptionIndex === -1)
                                             .onClick(() => {
-                                                this.customOptionIndex = idx;
+                                                this.customOptionIndex = -1;
                                                 this.render(true);
                                             });
                                     });
+                                    mode.options!.forEach((opt, idx) => {
+                                        menu.addItem(item => {
+                                            item.setTitle(opt.name?.trim() || t('option') + ' ' + (idx + 1))
+                                                .setIcon('puzzle')
+                                                .setChecked(idx === this.customOptionIndex)
+                                                .onClick(() => {
+                                                    this.customOptionIndex = idx;
+                                                    this.render(true);
+                                                });
+                                        });
+                                    });
+
+                                    // 設定選項
+                                    menu.addSeparator();
+                                    menu.addItem(item => {
+                                        item.setTitle(t('edit'))
+                                            .setIcon('settings')
+                                            .onClick(() => {
+                                                const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                                                if (modeIndex === -1) return;
+                                                new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
+                                                    this.plugin.settings.customModes[modeIndex] = result;
+                                                    this.plugin.saveSettings();
+                                                    this.render(true);
+                                                }).open();
+                                            });
+                                    });
+
+                                    menu.showAtMouseEvent(evt);
                                 });
-                                menu.showAtMouseEvent(evt);
-                            });
+                            } else {
+                                // 只有預設選項時，只顯示齒輪圖示
+                                const gearIcon = modenameContainer.createEl('a', { cls: 'ge-sub-option' });
+                                setIcon(gearIcon, 'settings');
+                                gearIcon.addEventListener('click', () => {
+                                    const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                                    if (modeIndex === -1) return;
+                                    new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
+                                        this.plugin.settings.customModes[modeIndex] = result;
+                                        this.plugin.saveSettings();
+                                        this.render(true);
+                                    }).open();
+                                });
+                            }
                         }
                     }
                     break;
@@ -1608,6 +1677,17 @@ export class GridView extends ItemView {
                                     });
                             });
                         }
+                        // 搬移資料夾
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('move_folder'))
+                                .setIcon('folder-cog')
+                                .onClick(() => {
+                                    if (folder instanceof TFolder) {
+                                        new moveFolderSuggestModal(this.plugin, folder, this).open();
+                                    }
+                                });
+                        });
                         // 重新命名資料夾
                         menu.addItem((item) => {
                             item
@@ -1619,7 +1699,7 @@ export class GridView extends ItemView {
                                     }
                                 });
                         });
-                        //刪除資料夾
+                        // 刪除資料夾
                         menu.addItem((item) => {
                             (item as any).setWarning(true);
                             item
@@ -2147,11 +2227,11 @@ export class GridView extends ItemView {
                                 contentArea.createEl('p', { text: file.extension.toUpperCase() });
                             }
 
-                            setTooltip(fileEl as HTMLElement, `${file.name}`)
+                            setTooltip(fileEl as HTMLElement, `${file.name}`,{ delay:2000 })
                         }
                         
                         // 顯示標籤（僅限 Markdown 檔案）
-                        if (file.extension === 'md' && this.plugin.settings.showNoteTags && !this.minMode) {
+                        if (file.extension === 'md' && this.showNoteTags && !this.minMode) {
                             const fileCache = this.app.metadataCache.getFileCache(file);
                             const displaySetting = fileCache?.frontmatter?.display;
 
@@ -2322,7 +2402,8 @@ export class GridView extends ItemView {
             const shouldShowDateDividers = dateDividerMode !== 'none' && 
                 (sortType.startsWith('mtime-') || sortType.startsWith('ctime-')) &&
                 this.sourceMode !== 'random-note' &&
-                this.sourceMode !== 'bookmarks';
+                this.sourceMode !== 'bookmarks' &&
+                this.showDateDividers;
 
             let lastDateString = '';
             let pinDividerAdded = false;
@@ -2965,6 +3046,8 @@ export class GridView extends ItemView {
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
                 hideHeaderElements: this.hideHeaderElements,
+                showDateDividers: this.showDateDividers,
+                showNoteTags: this.showNoteTags,
             }
         };
     }
@@ -2985,6 +3068,8 @@ export class GridView extends ItemView {
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout; // 同步 baseCardLayout 的卡片樣式，以便 render() 使用正確的 cardLayout
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;
+            this.showDateDividers = state.state.showDateDividers ?? this.plugin.settings.dateDividerMode !== 'none';
+            this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
             this.render();
         }
     }
