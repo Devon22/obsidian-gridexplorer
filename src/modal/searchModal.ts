@@ -304,9 +304,8 @@ export class SearchModal extends Modal {
             this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
-            this.gridView.render(true);
-            // 通知 Obsidian 保存視圖狀態
             this.gridView.app.workspace.requestSaveLayout();
+            this.gridView.render(true);
             this.close();
         };
 

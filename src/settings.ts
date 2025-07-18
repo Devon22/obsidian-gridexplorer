@@ -341,7 +341,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'grid-explorer-custom-modes.json';
+                        a.download = 'gridexplorer-custom-modes.json';
                         a.click();
                         URL.revokeObjectURL(url);
                     });
@@ -1152,7 +1152,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'grid-explorer-settings.json';
+                    a.download = 'gridexplorer-settings.json';
                     a.click();
                     URL.revokeObjectURL(url);
                 }))

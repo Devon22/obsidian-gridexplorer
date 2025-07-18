@@ -223,9 +223,10 @@ export class GridView extends ItemView {
             this.sourcePath = '/';
         }
 
-        this.render(resetScroll);
         // 通知 Obsidian 保存視圖狀態
         this.app.workspace.requestSaveLayout();
+
+        this.render(resetScroll);
     }
 
     async render(resetScroll = false) {
@@ -268,6 +269,13 @@ export class GridView extends ItemView {
         backButton.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
+            
+            if (this.searchQuery !== '') {
+                this.searchQuery = '';
+                this.app.workspace.requestSaveLayout();
+                this.render();
+                return;
+            }
             
             // 如果有歷史記錄
             if (this.recentSources.length > 0) {
@@ -351,8 +359,6 @@ export class GridView extends ItemView {
                                 }
                         }
                         
-                        
-
                         // 添加歷史記錄到選單
                         menu.addItem((item) => {
                             item
@@ -518,14 +524,12 @@ export class GridView extends ItemView {
                 e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
                 this.searchQuery = '';
                 this.clearSelection();
-                this.render();
-                // 通知 Obsidian 保存視圖狀態
                 this.app.workspace.requestSaveLayout();
+                this.render();
             });
         }
 
         // 添加更多選項按鈕
-        
         const menu = new Menu();
         menu.addItem((item) => {
             item
@@ -593,8 +597,8 @@ export class GridView extends ItemView {
                 .onClick(() => {
                     this.baseCardLayout = this.baseCardLayout === 'vertical' ? 'horizontal' : 'vertical';
                     this.cardLayout = this.baseCardLayout;
-                    this.render();
                     this.app.workspace.requestSaveLayout();
+                    this.render();
                 });
         });
         // 最小化模式選項
@@ -719,9 +723,8 @@ export class GridView extends ItemView {
                             .onClick(() => {
                                 this.sortType = option.value;
                                 this.folderSortType = '';
-                                this.render();
-                                // 通知 Obsidian 保存視圖狀態
                                 this.app.workspace.requestSaveLayout();
+                                this.render();
                             });
                     });
                 });
@@ -2641,8 +2644,8 @@ export class GridView extends ItemView {
 
             // 處理多選邏輯
             if (event.ctrlKey || event.metaKey) {
-                if (this.selectedItemIndex !== -1) {
-                    // 如果已有選中狀態，則繼續選中
+                if (this.selectedItems.size > 1) {
+                    // 如果已有選中2個以上的狀態，則繼續選中
                     this.selectItem(index, true);
                     this.hasKeyboardFocus = true;
                 } else {
@@ -2687,7 +2690,7 @@ export class GridView extends ItemView {
             }
         });
 
-        // 處理滑鼠中鍵點擊
+        // 避免中鍵點擊會自動滾動頁面
         fileEl.addEventListener('mousedown', (event) => {
             if (event.button === 1) {
                 event.preventDefault();
@@ -2865,8 +2868,8 @@ export class GridView extends ItemView {
                 .setChecked(this.hideHeaderElements)
                 .onClick(() => {
                     this.hideHeaderElements = !this.hideHeaderElements;
-                    this.render(true);
                     this.app.workspace.requestSaveLayout();
+                    this.render(true);
                 });   
         });
         menu.addItem((item) => {
@@ -3055,9 +3058,9 @@ export class GridView extends ItemView {
     // 讀取視圖狀態
     async setState(state: any): Promise<void> {  
         if (state.state) {
-            this.sourceMode = state.state.sourceMode || '';
-            this.sourcePath = state.state.sourcePath || null;
-            this.sortType = state.state.sortType || '';
+            this.sourceMode = state.state.sourceMode || 'folder';
+            this.sourcePath = state.state.sourcePath || '/';
+            this.sortType = state.state.sortType || this.plugin.settings.defaultSortType;
             this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
             this.searchAllFiles = state.state.searchAllFiles ?? true;
