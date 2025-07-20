@@ -547,7 +547,7 @@
 .ge-header-buttons {
     display: flex;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 10px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
     flex-shrink: 0;
@@ -565,7 +565,6 @@
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
-    min-width: 38px;
 }
 
 .is-tablet .ge-header-buttons button:not(.clickable-icon) {
@@ -1606,4 +1605,175 @@ a.ge-current-folder:hover {
 .ge-popup-content .setting-item-name {
     font-size: var(--font-ui-medium);
     font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* 筆記檢視容器 Note View Container */
+.ge-note-view-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-primary);
+    z-index: 100;
+    overflow: auto;
+}
+
+.ge-note-close-button {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.2s ease;
+    color: var(--text-normal);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0.5;
+}
+
+.ge-note-close-button:hover {
+    background: var(--background-modifier-hover);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+}
+
+.ge-note-close-button:active {
+    transform: scale(0.98);
+}
+
+.ge-note-content-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--file-margins);
+    min-height: 100%;
+}
+
+.ge-note-title {
+    font-size: var(--inline-title-size);
+    font-weight: var(--inline-title-weight);
+    line-height: var(--inline-title-line-height);
+    font-style: var(--inline-title-style);
+    font-variant: var(--inline-title-variant);
+    font-family: var(--inline-title-font);
+    letter-spacing: -0.015em;
+    color: var(--inline-title-color);
+}
+
+.ge-note-content {
+    line-height: 1.6;
+    color: var(--text-normal);
+    font-size: var(--font-text-size);
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    pointer-events: auto;
+}
+
+.ge-note-content h1,
+.ge-note-content h2,
+.ge-note-content h3,
+.ge-note-content h4,
+.ge-note-content h5,
+.ge-note-content h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: var(--text-normal);
+}
+
+.ge-note-content p {
+    margin-bottom: 1em;
+}
+
+.ge-note-content pre {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    padding: 1em;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.ge-note-content code {
+    background: var(--background-secondary);
+    padding: 0.2em 0.4em;
+    border-radius: var(--radius-s);
+    font-family: var(--font-monospace);
+}
+
+.ge-note-content a {
+    color: var(--text-accent);
+    text-decoration: none;
+}
+
+.ge-note-content a:hover {
+    text-decoration: underline;
+}
+
+.ge-note-content blockquote {
+    border-left: 3px solid var(--text-accent);
+    margin: 1em 0;
+    padding-left: 1em;
+    color: var(--text-muted);
+    background: var(--background-secondary);
+    border-radius: 0 var(--radius-s) var(--radius-s) 0;
+}
+
+.ge-note-content ul,
+.ge-note-content ol {
+    margin: 1em 0;
+    padding-left: 2em;
+}
+
+.ge-note-content li {
+    margin: 0.5em 0;
+}
+
+.ge-note-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+.ge-note-content th,
+.ge-note-content td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 0.5em;
+    text-align: left;
+}
+
+.ge-note-content th {
+    background: var(--background-secondary);
+    font-weight: 600;
+}
+
+/* 隱藏網格內容 */
+.ge-grid-container.ge-hidden {
+    display: none;
+}
+
+/* 行動裝置適配 Mobile adaptation */
+@media (max-width: 768px) {
+    .ge-note-title {
+        font-size: 1.5em;
+    }
+    
+    .ge-note-close-button {
+        top: 15px;
+        right: 15px;
+        width: 35px;
+        height: 35px;
+    }
 }

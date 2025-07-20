@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip, MarkdownRenderer, Component } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { handleKeyDown } from './handleKeyDown';
 import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, sortFiles, ignoredFiles, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, isFolderIgnored } from './fileUtils';
@@ -53,13 +53,13 @@ export class GridView extends ItemView {
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
     hideHeaderElements: boolean = false; // 是否隱藏標題列元素（模式名稱和按鈕）
-    customOptionIndex: number = -1; // 自訂模式選項索引
-    // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
-    baseCardLayout: 'horizontal' | 'vertical' = 'horizontal';
-    // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
-    cardLayout: 'horizontal' | 'vertical' = 'horizontal';
-    // 用於取消尚未完成之批次排程的遞增令牌
-    private renderToken: number = 0;
+    customOptionIndex: number = -1; // 自訂模式選項索引    
+    baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
+    cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
+    private renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
+    // 筆記檢視相關
+    private isShowingNote: boolean = false;
+    private noteViewContainer: HTMLElement | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -171,6 +171,7 @@ export class GridView extends ItemView {
         }        
     }
 
+    // 當 resetScroll 為 true 時，會將捲動位置重置到最頂部
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
         // 如果新的狀態與當前狀態相同，則不進行任何操作
         if (this.sourceMode === mode && this.sourcePath === path) {
@@ -2459,8 +2460,6 @@ export class GridView extends ItemView {
             }
         }
 
-        
-
         if (this.plugin.statusBarItem) {
             this.plugin.statusBarItem.setText(`${files.length} ${t('files')}`);
         }
@@ -2668,6 +2667,24 @@ export class GridView extends ItemView {
                 // Shift 鍵：範圍選擇
                 this.handleRangeSelection(index);
                 this.hasKeyboardFocus = true;
+                event.preventDefault();
+                return;
+            } else if (event.altKey || this.plugin.settings.showNoteInGrid) {
+                // Alt 鍵或設定為預設時：在 grid container 中顯示筆記
+                this.selectItem(index);
+                this.hasKeyboardFocus = true;
+                
+                if (isMediaFile(file)) {
+                    // 媒體檔案：正常開啟
+                    if (isAudioFile(file)) {
+                        FloatingAudioPlayer.open(this.app, file);
+                    } else {
+                        this.openMediaFile(file, files);
+                    }
+                } else {
+                    // 非媒體檔案：在 grid container 中顯示筆記
+                    this.showNoteInGrid(file);
+                }
                 event.preventDefault();
                 return;
             } else {
@@ -3029,6 +3046,123 @@ export class GridView extends ItemView {
             const mediaModal = new MediaModal(this.app, file, filteredMediaFiles, this);
             mediaModal.open();
         });
+    }
+
+    // 在 grid container 中顯示筆記
+    async showNoteInGrid(file: TFile) {
+        // 關閉之前的筆記顯示
+        if (this.isShowingNote) {
+            this.hideNoteInGrid();
+        }
+
+        const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+        if (!gridContainer) return;
+
+        // 隱藏網格內容
+        gridContainer.addClass('ge-hidden');
+
+        // 創建筆記顯示容器
+        this.noteViewContainer = this.containerEl.createDiv('ge-note-view-container');
+        
+        // 創建關閉按鈕
+        const closeButton = this.noteViewContainer.createDiv('ge-note-close-button');
+        setIcon(closeButton, 'x');
+        closeButton.addEventListener('click', () => {
+            this.hideNoteInGrid();
+        });
+
+        // 創建筆記內容容器
+        const noteContent = this.noteViewContainer.createDiv('ge-note-content-container');
+        
+        // 創建筆記標題
+        const noteTitle = noteContent.createDiv('ge-note-title');
+        noteTitle.textContent = file.basename;
+        
+        // 創建筆記內容區域
+        const noteContentArea = noteContent.createDiv('ge-note-content');
+
+        try {
+            // 讀取筆記內容
+            const content = await this.app.vault.read(file);
+
+            // 使用 Obsidian 的 MarkdownRenderer 渲染內容
+            await MarkdownRenderer.render(
+                this.app,
+                content,
+                noteContentArea,
+                file.path,
+                this
+            );
+            
+            // 加上自訂屬性 data-source-path
+            noteContentArea
+                .querySelectorAll<HTMLImageElement>('img')
+                .forEach((img) => (img.dataset.sourcePath = file.path));
+
+            // 處理內部連結點擊
+            const handleLinkClick = (e: MouseEvent) => {
+                const target = e.target as HTMLElement;
+                const link = target.closest('a.internal-link');
+                if (link) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        const linkText = link.getAttribute('data-href') || href;
+                        const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
+                        if (linkedFile) {
+                            this.app.workspace.getLeaf().openFile(linkedFile);
+                        }
+                    }
+                }
+            };
+
+            // 使用 registerDomEvent 註冊事件
+            this.registerDomEvent(noteContentArea, 'click', handleLinkClick);
+        } catch (error) {
+            noteContentArea.textContent = '無法載入筆記內容';
+            console.error('Error loading note content:', error);
+        }
+
+        // 設定狀態
+        this.isShowingNote = true;
+
+        // 註冊鍵盤事件監聽器
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                this.hideNoteInGrid();
+                e.preventDefault();
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // 儲存事件監聽器以便後續移除
+        (this.noteViewContainer as any).keydownHandler = handleKeyDown;
+    }
+
+    // 隱藏筆記顯示
+    hideNoteInGrid() {
+        if (!this.isShowingNote) return;
+
+        const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+        if (gridContainer) {
+            gridContainer.removeClass('ge-hidden');
+        }
+
+        if (this.noteViewContainer) {
+            // 移除鍵盤事件監聽器
+            const keydownHandler = (this.noteViewContainer as any).keydownHandler;
+            if (keydownHandler) {
+                document.removeEventListener('keydown', keydownHandler);
+            }
+            
+            this.noteViewContainer.remove();
+            this.noteViewContainer = null;
+        }
+
+        this.isShowingNote = false;
     }
 
     // 保存視圖狀態

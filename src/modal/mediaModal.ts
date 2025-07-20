@@ -173,7 +173,7 @@ export class MediaModal extends Modal {
             // 圖片點擊事件（放大/縮小）
             img.addEventListener('click', (event) => {
                 event.stopPropagation();
-                this.toggleImageZoom(img);
+                this.toggleImageZoom(img, event);
             });
             
         } else if (isVideoFile(mediaFile) || isAudioFile(mediaFile)) {
@@ -264,11 +264,21 @@ export class MediaModal extends Modal {
     }
 
     // 切換圖片縮放
-    toggleImageZoom(img: HTMLImageElement) {
+    toggleImageZoom(img: HTMLImageElement, event?: MouseEvent) {
         const mediaView = this.contentEl.querySelector('.ge-media-view');
         if (!mediaView) return;
         
         if (!this.isZoomed) { // 放大
+            // 保存點擊位置相對於圖片的比例
+            let clickX = 0.5;
+            let clickY = 0.5;
+            
+            if (event) {
+                const rect = img.getBoundingClientRect();
+                clickX = (event.clientX - rect.left) / rect.width;
+                clickY = (event.clientY - rect.top) / rect.height;
+            }
+            
             if (mediaView.clientWidth > mediaView.clientHeight) {
                 if (img.naturalHeight < mediaView.clientHeight) {
                     img.style.maxWidth = 'none';
@@ -284,16 +294,30 @@ export class MediaModal extends Modal {
                 img.style.height = 'auto';
                 (mediaView as HTMLElement).style.overflowX = 'hidden';
                 (mediaView as HTMLElement).style.overflowY = 'scroll';
+                
+                // 計算滾動位置
+                requestAnimationFrame(() => {
+                    const newHeight = img.offsetHeight;
+                    const scrollY = Math.max(0, (newHeight * clickY) - (mediaView.clientHeight / 2));
+                    mediaView.scrollTop = scrollY;
+                });
             } else {
                 img.style.width = 'auto';
                 img.style.height = '100vh';
                 (mediaView as HTMLElement).style.overflowX = 'scroll';
                 (mediaView as HTMLElement).style.overflowY = 'hidden';
+                
+                // 計算滾動位置
+                requestAnimationFrame(() => {
+                    const newWidth = img.offsetWidth;
+                    const scrollX = Math.max(0, (newWidth * clickX) - (mediaView.clientWidth / 2));
+                    mediaView.scrollLeft = scrollX;
+                });
 
                 // 將事件處理程序存儲在變數中
-                this.handleWheel = (event) => {
-                    event.preventDefault();
-                    (mediaView as HTMLElement).scrollLeft += event.deltaY;
+                this.handleWheel = (wheelEvent) => {
+                    wheelEvent.preventDefault();
+                    (mediaView as HTMLElement).scrollLeft += wheelEvent.deltaY;
                 };
                 mediaView.addEventListener('wheel', this.handleWheel);
             }

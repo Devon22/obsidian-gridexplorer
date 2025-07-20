@@ -68,6 +68,7 @@ export interface GallerySettings {
     quickAccessCommandPath: string; // Path used by "Open quick access folder" command
     quickAccessModeType: string; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
+    showNoteInGrid: boolean; // 是否預設在 grid container 中顯示筆記（不需要按 Alt 鍵）
 }
 
 // 預設設定
@@ -127,6 +128,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     quickAccessCommandPath: '', // Path used by "Open quick access folder" command
     useQuickAccessAsNewTabMode: 'default',
     quickAccessModeType: 'all-files', // Default quick access view type
+    showNoteInGrid: false, // 預設不在 grid container 中顯示筆記
 };
 
 // 資料夾選擇器
@@ -648,6 +650,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
             
+        // 是否預設顯示筆記
+        new Setting(containerEl)
+            .setName(t('show_note_in_grid'))
+            .setDesc(t('show_note_in_grid_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showNoteInGrid)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showNoteInGrid = value;
+                        await this.plugin.saveSettings();
+                    });
+            });      
+
         // 筆記標題欄位名稱設定
         new Setting(containerEl)
         .setName(t('note_title_field'))
