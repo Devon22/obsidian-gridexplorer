@@ -3063,27 +3063,36 @@ export class GridView extends ItemView {
 
         // 創建筆記顯示容器
         this.noteViewContainer = this.containerEl.createDiv('ge-note-view-container');
-        
-        // 創建關閉按鈕
-        const closeButton = this.noteViewContainer.createDiv('ge-note-close-button');
-        setIcon(closeButton, 'x');
-        closeButton.addEventListener('click', () => {
-            this.hideNoteInGrid();
-        });
 
-        // 創建編輯筆記按鈕
-        const editButton = this.noteViewContainer.createDiv('ge-note-edit-button');
+        // 頂部列 (左右區塊)
+        const topBar = this.noteViewContainer.createDiv('ge-note-top-bar');
+        const leftBar = topBar.createDiv('ge-note-top-left');
+        const rightBar = topBar.createDiv('ge-note-top-right');
+
+        // 筆記標題
+        const noteTitle = leftBar.createDiv('ge-note-title');
+        noteTitle.textContent = file.basename;
+        setTooltip(noteTitle, file.basename);
+
+        // 編輯按鈕
+        const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
         setIcon(editButton, 'pencil');
         editButton.addEventListener('click', () => {
             this.app.workspace.getLeaf().openFile(file);
         });
 
+        // 關閉按鈕
+        const closeButton = rightBar.createEl('button', { cls: 'ge-note-close-button' });
+        setIcon(closeButton, 'x');
+        closeButton.addEventListener('click', () => {
+            this.hideNoteInGrid();
+        });
+
+        // 捲動內容容器
+        const scrollContainer = this.noteViewContainer.createDiv('ge-note-scroll-container');
+
         // 創建筆記內容容器
-        const noteContent = this.noteViewContainer.createDiv('ge-note-content-container');
-        
-        // 創建筆記標題
-        const noteTitle = noteContent.createDiv('ge-note-title');
-        noteTitle.textContent = file.basename;
+        const noteContent = scrollContainer.createDiv('ge-note-content-container');
         
         // 創建筆記內容區域
         const noteContentArea = noteContent.createDiv('ge-note-content');

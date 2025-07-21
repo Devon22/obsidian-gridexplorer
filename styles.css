@@ -1618,80 +1618,93 @@ a.ge-current-folder:hover {
     height: 100%;
     background: var(--background-primary);
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 筆記頂部按鈕列 */
+.ge-note-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    gap: 10px;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ge-note-top-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 20px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ge-note-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 15px;
+}
+
+/* 捲動區域 */
+.ge-note-scroll-container {
+    flex: 1 1 auto;
     overflow: auto;
+    background-color: var(--background-secondary);
 }
 
-.ge-note-close-button {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    width: 40px;
-    height: 40px;
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.2s ease;
-    color: var(--text-normal);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    opacity: 0.5;
-}
-
-.ge-note-close-button:hover {
-    background: var(--background-modifier-hover);
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-    opacity: 1;
-}
-
-.ge-note-close-button:active {
-    transform: scale(0.98);
-}
-
+.ge-note-close-button,
 .ge-note-edit-button {
-    position: fixed;
-    top: 65px;
-    right: 15px;
-    width: 40px;
-    height: 40px;
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 50%;
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.2s ease;
+    gap: 4px;
+    padding: 6px 12px;
+    background-color: var(--interactive-normal);
+    border-radius: var(--button-radius);
     color: var(--text-normal);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    opacity: 0.5;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
+.is-tablet .ge-note-close-button:not(.clickable-icon),
+.is-tablet .ge-note-edit-button:not(.clickable-icon) {
+    padding: 6px 12px !important;
+}
+
+.ge-header-buttons button:hover {
+    background-color: var(--interactive-hover);
+    transform: translateY(-1px);
+}
+
+.ge-header-buttons button:active {
+    transform: translateY(0);
+}
+
+.ge-note-close-button:hover,
 .ge-note-edit-button:hover {
-    background: var(--background-modifier-hover);
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    background-color: var(--interactive-hover);
+    transform: translateY(-1px);
     opacity: 1;
 }
 
+.ge-note-close-button:active,
 .ge-note-edit-button:active {
-    transform: scale(0.98);
+    transform: translateY(0);
 }
 
 .ge-note-content-container {
     max-width: 800px;
     margin: 0 auto;
-    padding: var(--file-margins);
+    padding: 0 20px;
     min-height: 100%;
 }
 
 .ge-note-title {
-    font-size: var(--inline-title-size);
+    font-size: 1.2em;
     font-weight: var(--inline-title-weight);
     line-height: var(--inline-title-line-height);
     font-style: var(--inline-title-style);
@@ -1699,6 +1712,9 @@ a.ge-current-folder:hover {
     font-family: var(--inline-title-font);
     letter-spacing: -0.015em;
     color: var(--inline-title-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ge-note-content {
@@ -1718,7 +1734,6 @@ a.ge-current-folder:hover {
 .ge-note-content h4,
 .ge-note-content h5,
 .ge-note-content h6 {
-    margin-top: 1.5em;
     margin-bottom: 0.5em;
     color: var(--text-normal);
 }
@@ -1795,9 +1810,8 @@ a.ge-current-folder:hover {
     display: none;
 }
 
-/* 行動裝置適配 Mobile adaptation */
-@media (max-width: 768px) {
-    .ge-note-title {
-        font-size: 1.5em;
-    }
+/* 行動裝置隱藏滾動條 Mobile hidden Scrollbar */
+.is-mobile .ge-note-view-container::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
 }
