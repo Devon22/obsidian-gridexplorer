@@ -3071,6 +3071,13 @@ export class GridView extends ItemView {
             this.hideNoteInGrid();
         });
 
+        // 創建編輯筆記按鈕
+        const editButton = this.noteViewContainer.createDiv('ge-note-edit-button');
+        setIcon(editButton, 'pencil');
+        editButton.addEventListener('click', () => {
+            this.app.workspace.getLeaf().openFile(file);
+        });
+
         // 創建筆記內容容器
         const noteContent = this.noteViewContainer.createDiv('ge-note-content-container');
         

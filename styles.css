@@ -1652,6 +1652,37 @@ a.ge-current-folder:hover {
     transform: scale(0.98);
 }
 
+.ge-note-edit-button {
+    position: fixed;
+    top: 65px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.2s ease;
+    color: var(--text-normal);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0.5;
+}
+
+.ge-note-edit-button:hover {
+    background: var(--background-modifier-hover);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+}
+
+.ge-note-edit-button:active {
+    transform: scale(0.98);
+}
+
 .ge-note-content-container {
     max-width: 800px;
     margin: 0 auto;
@@ -1692,10 +1723,6 @@ a.ge-current-folder:hover {
     color: var(--text-normal);
 }
 
-.ge-note-content p {
-    margin-bottom: 1em;
-}
-
 .ge-note-content pre {
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
@@ -1707,12 +1734,14 @@ a.ge-current-folder:hover {
 }
 
 .ge-note-content code {
-    background: var(--background-secondary);
+    background: var(--background-code);
     padding: 0.2em 0.4em;
     border-radius: var(--radius-s);
     font-family: var(--font-monospace);
+    font-size: 90%;
+    color: var(--text-code);
 }
-
+    
 .ge-note-content a {
     color: var(--text-accent);
     text-decoration: none;
@@ -1737,10 +1766,6 @@ a.ge-current-folder:hover {
     padding-left: 2em;
 }
 
-.ge-note-content li {
-    margin: 0.5em 0;
-}
-
 .ge-note-content table {
     border-collapse: collapse;
     width: 100%;
@@ -1759,6 +1784,12 @@ a.ge-current-folder:hover {
     font-weight: 600;
 }
 
+.ge-note-content hr {
+    border: none;
+    border-top: 1px solid;
+    border-color: var(--horizontal-line);
+}
+
 /* 隱藏網格內容 */
 .ge-grid-container.ge-hidden {
     display: none;
@@ -1768,12 +1799,5 @@ a.ge-current-folder:hover {
 @media (max-width: 768px) {
     .ge-note-title {
         font-size: 1.5em;
-    }
-    
-    .ge-note-close-button {
-        top: 15px;
-        right: 15px;
-        width: 35px;
-        height: 35px;
     }
 }
