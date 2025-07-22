@@ -9,6 +9,14 @@ export class MediaModal extends Modal {
     private isZoomed = false;
     private handleWheel: ((event: WheelEvent) => void) | null = null;
     private gridView: any; // 儲存 GridView 實例的引用
+    
+    // 觸控拖曳相關屬性
+    private touchStartX = 0;
+    private touchStartY = 0;
+    private touchStartTime = 0;
+    private isDragging = false;
+    private minSwipeDistance = 50; // 最小滑動距離
+    private maxSwipeTime = 300; // 最大滑動時間（毫秒）
 
     constructor(app: App, file: TFile, mediaFiles: TFile[], gridView?: any) {
         super(app);
@@ -90,6 +98,9 @@ export class MediaModal extends Modal {
             this.showNextMedia();
             return false;
         });
+        
+        // 註冊觸控事件（行動裝置拖曳翻頁）
+        this.registerTouchEvents(mediaContainer);
         
         // 顯示當前媒體檔案
         this.showMediaAtIndex(this.currentIndex);
@@ -341,5 +352,65 @@ export class MediaModal extends Modal {
             this.resetImageStyles(img);
             this.isZoomed = false;
         }
+    }
+    
+    // 註冊觸控事件處理器（行動裝置拖曳翻頁）
+    private registerTouchEvents(element: HTMLElement) {
+        element.addEventListener('touchstart', (e) => {
+            // 只有在非縮放狀態下才處理觸控事件
+            if (this.isZoomed) return;
+            
+            const touch = e.touches[0];
+            this.touchStartX = touch.clientX;
+            this.touchStartY = touch.clientY;
+            this.touchStartTime = Date.now();
+            this.isDragging = false;
+        }, { passive: true });
+        
+        element.addEventListener('touchmove', (e) => {
+            // 只有在非縮放狀態下才處理觸控事件
+            if (this.isZoomed) return;
+            
+            const touch = e.touches[0];
+            const deltaX = Math.abs(touch.clientX - this.touchStartX);
+            const deltaY = Math.abs(touch.clientY - this.touchStartY);
+            
+            // 如果水平移動距離大於垂直移動距離，則認為是水平拖曳
+            if (deltaX > deltaY && deltaX > 10) {
+                this.isDragging = true;
+                // 阻止預設的滾動行為
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        element.addEventListener('touchend', (e) => {
+            // 只有在非縮放狀態下才處理觸控事件
+            if (this.isZoomed) return;
+            
+            if (!this.isDragging) return;
+            
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - this.touchStartX;
+            const deltaY = touch.clientY - this.touchStartY;
+            const deltaTime = Date.now() - this.touchStartTime;
+            
+            // 檢查是否符合滑動條件
+            const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+            const isValidDistance = Math.abs(deltaX) >= this.minSwipeDistance;
+            const isValidTime = deltaTime <= this.maxSwipeTime;
+            
+            if (isHorizontalSwipe && isValidDistance && isValidTime) {
+                if (deltaX > 0) {
+                    // 向右滑動 - 顯示上一個媒體
+                    this.showPrevMedia();
+                } else {
+                    // 向左滑動 - 顯示下一個媒體
+                    this.showNextMedia();
+                }
+            }
+            
+            // 重置拖曳狀態
+            this.isDragging = false;
+        }, { passive: true });
     }
 }

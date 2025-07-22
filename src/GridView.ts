@@ -2280,12 +2280,15 @@ export class GridView extends ItemView {
                                     const tagsContainer = contentArea.createDiv('ge-tags-container');
                                     
                                     // 根據區塊寬度動態計算可顯示的標籤數量
-                                    const containerWidth = tagsContainer.getBoundingClientRect().width;
-                                    const tagWidth = 70;
-                                    const maxTags = Math.floor(containerWidth / tagWidth);
+                                    // const containerWidth = tagsContainer.getBoundingClientRect().width;
+                                    // const tagWidth = 70;
+                                    // const maxTags = Math.floor(containerWidth / tagWidth);
 
                                     // 取得要顯示的標籤
-                                    const displayTags = Array.from(allTags).slice(0, maxTags);
+                                    // const displayTags = Array.from(allTags).slice(0, maxTags);
+
+                                    // 取得所有標籤
+                                    const displayTags = Array.from(allTags);
                                 
                                     displayTags.forEach(tag => {
                                         const tagEl = tagsContainer.createEl('span', { 
@@ -2979,10 +2982,7 @@ export class GridView extends ItemView {
             }
             
             // 確保選中的項目在視圖中可見
-            selectedItem.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
-            });
+            selectedItem.scrollIntoView({ block: 'nearest' });
         }
     }
 

@@ -547,7 +547,7 @@
 .ge-header-buttons {
     display: flex;
     gap: 8px;
-    padding: 10px;
+    padding: 9px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
     flex-shrink: 0;
@@ -1245,7 +1245,7 @@ a.ge-current-folder:hover {
     position: absolute;
     top: 15%;
     height: 70%;
-    width: 10%;
+    width: 7%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1627,7 +1627,7 @@ a.ge-current-folder:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: 9px 0;
     gap: 10px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
@@ -1699,12 +1699,12 @@ a.ge-current-folder:hover {
 .ge-note-content-container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 20px;
     min-height: 100%;
 }
 
 .ge-note-title {
-    font-size: 1.2em;
+    font-size: 1em;
     font-weight: var(--inline-title-weight);
     line-height: var(--inline-title-line-height);
     font-style: var(--inline-title-style);
@@ -1720,7 +1720,6 @@ a.ge-current-folder:hover {
 .ge-note-content {
     line-height: 1.6;
     color: var(--text-normal);
-    font-size: var(--font-text-size);
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;
@@ -1736,6 +1735,10 @@ a.ge-current-folder:hover {
 .ge-note-content h6 {
     margin-bottom: 0.5em;
     color: var(--text-normal);
+}
+
+.ge-note-content > p:first-of-type {
+    margin-block-start: 0;
 }
 
 .ge-note-content pre {

@@ -541,7 +541,7 @@ export default class GridExplorerPlugin extends Plugin {
                 
                 if (gridItem) {
                     // 捲動到該項目的位置
-                    gridItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    gridItem.scrollIntoView({ block: 'nearest' });
                     // 選中該項目
                     const itemIndex = view.gridItems.indexOf(gridItem);
                     if (itemIndex >= 0) {
@@ -572,7 +572,7 @@ export default class GridExplorerPlugin extends Plugin {
                 
                 if (gridItem) {
                     // 捲動到該項目的位置
-                    gridItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    gridItem.scrollIntoView({ block: 'nearest' });
                     // 選中該項目
                     const itemIndex = view.gridItems.indexOf(gridItem);
                     if (itemIndex >= 0) {
