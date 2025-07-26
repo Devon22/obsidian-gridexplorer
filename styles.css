@@ -1737,7 +1737,7 @@ a.ge-current-folder:hover {
     color: var(--text-normal);
 }
 
-.ge-note-content > p:first-of-type {
+.ge-note-content > p:nth-child(2) {
     margin-block-start: 0;
 }
 
@@ -1817,4 +1817,57 @@ a.ge-current-folder:hover {
 .is-mobile .ge-note-view-container::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
+}
+
+/* --------------------------------------------------------------------------- */
+
+/* 捷徑選擇 Modal Shortcut Selection Modal */
+.shortcut-section {
+    margin-bottom: 20px;
+}
+
+.shortcut-section h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-normal);
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 5px;
+}
+
+.shortcut-option-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin: 2px 0;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--button-radius);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.shortcut-option-button:hover {
+    background-color: var(--background-modifier-hover);
+    transform: translateY(-1px);
+}
+
+.shortcut-option-button:active {
+    transform: translateY(0);
+}
+
+.shortcut-option-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.shortcut-option-icon svg {
+    width: 16px;
+    height: 16px;
 }

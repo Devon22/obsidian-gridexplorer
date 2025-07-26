@@ -114,8 +114,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     dateDividerMode: 'none', // 預設不使用日期分隔器
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
-    interceptAllTagClicks: false, // 預設不攔截所有tag點擊事件
-    interceptBreadcrumbClicks: false, // 預設不攔截Breadcrumb點擊事件
+    interceptAllTagClicks: true, // 預設攔截所有tag點擊事件
+    interceptBreadcrumbClicks: true, // 預設攔截Breadcrumb點擊事件
     customModes: [
         {
             internalName: 'custom-1750837329297',

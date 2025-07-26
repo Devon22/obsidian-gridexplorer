@@ -144,6 +144,7 @@ export default class GridExplorerPlugin extends Plugin {
                     });
                 }
                 if (file instanceof TFile) {
+                    // 開啟筆記
                     menu.addItem(item => {
                         item.setTitle(t('open_in_grid_view'));
                         item.setIcon('grid');
@@ -190,6 +191,27 @@ export default class GridExplorerPlugin extends Plugin {
                             });
                         }
                     });
+                    // 搜尋選取的筆記名稱
+                    const link = this.app.fileManager.generateMarkdownLink(file, "");
+                    const truncatedText = file.basename.length > 20 ? file.basename.substring(0, 20) + '...' : file.basename;
+                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「[[${truncatedText}]]」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
+                    menu.addItem(item => {
+                        item
+                            .setTitle(menuItemTitle)
+                            .setIcon('search')
+                            .setSection?.("view")
+                            .onClick(async () => {
+                                // 取得或啟用 GridView
+                                const view = await this.activateView('','');
+                                if (view instanceof GridView) {
+                                    // 設定搜尋模式和關鍵字
+                                    view.searchQuery = link;
+                                    // 重新渲染視圖
+                                    view.render(true); // resetScroll = true
+                                }
+                            });
+                    });
+                    // 顯示筆記屬性
                     menu.addItem((item) => {
                         item
                             .setTitle(t('set_note_attribute'))

@@ -12,6 +12,7 @@ import { showFolderRenameModal } from './modal/folderRenameModal';
 import { moveFolderSuggestModal } from './modal/moveFolderSuggestModal';
 import { showSearchModal } from './modal/searchModal';
 import { CustomModeModal } from './modal/customModeModal';
+import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
 import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { t } from './translations';
 
@@ -57,9 +58,8 @@ export class GridView extends ItemView {
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
     private renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
-    // 筆記檢視相關
-    private isShowingNote: boolean = false;
-    private noteViewContainer: HTMLElement | null = null;
+    private isShowingNote: boolean = false; // 是否正在顯示筆記
+    private noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -171,7 +171,8 @@ export class GridView extends ItemView {
         }        
     }
 
-    // 當 resetScroll 為 true 時，會將捲動位置重置到最頂部
+    // resetScroll 為 true 時，會將捲動位置重置到最頂部
+    // recordHistory 為 false 時，不會將當前狀態加入歷史記錄
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
         // 如果新的狀態與當前狀態相同，則不進行任何操作
         if (this.sourceMode === mode && this.sourcePath === path) {
@@ -472,6 +473,14 @@ export class GridView extends ItemView {
                         } catch (error) {
                             console.error('An error occurred while creating a new canvas:', error);
                         }
+                });
+            });
+            // 新增捷徑
+            menu.addItem((item) => {
+                item.setTitle(t('new_shortcut'))
+                .setIcon('shuffle')
+                .onClick(async () => {
+                    this.showShortcutSelectionModal();
                 });
             });
             menu.showAtMouseEvent(event);
@@ -2222,6 +2231,15 @@ export class GridView extends ItemView {
                                     }
                                     fileEl.style.height = '100%';
                                 }
+
+                                // 如果 frontmatter 中存在 redirect 欄位，將圖示設為 shuffle
+                                const redirectValue = metadata?.redirect;
+                                if (redirectValue) {
+                                    const iconContainer = fileEl.querySelector('.ge-icon-container');
+                                    if (iconContainer) {
+                                        setIcon(iconContainer as HTMLElement, 'shuffle');
+                                    }
+                                }
                             }
 
                             imageUrl = await findFirstImageInNote(this.app, content);
@@ -2705,7 +2723,46 @@ export class GridView extends ItemView {
                     }
                 } else {
                     // 開啟文件檔案
-                    this.app.workspace.getLeaf().openFile(file);
+                    const fileCache = this.app.metadataCache.getFileCache(file);
+                    const redirectType = fileCache?.frontmatter?.type;
+                    const redirectPath = fileCache?.frontmatter?.redirect;
+
+                    if (redirectType && typeof redirectPath === 'string' && redirectPath.trim() !== '') {
+                        let target;
+                        
+                        if (redirectType === 'file') {
+                            if (redirectPath.startsWith('[[') && redirectPath.endsWith(']]')) {
+                                const noteName = redirectPath.slice(2, -2);
+                                target = this.app.metadataCache.getFirstLinkpathDest(noteName, file.path);
+                            } else {
+                                target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
+                            }
+                            
+                            if (target instanceof TFile) {
+                                this.app.workspace.getLeaf().openFile(target);
+                            } else {
+                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                            }
+                        }
+                        else if (redirectType === 'folder') {
+                            // 判斷redirectPath是否為資料夾
+                            if (this.app.vault.getAbstractFileByPath(normalizePath(redirectPath)) instanceof TFolder) {
+                                this.setSource('folder', redirectPath, true);
+                                this.clearSelection();
+                            } else {
+                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                            }
+                        } else if (redirectType === 'mode') {
+                            // 判斷redirectPath是否為模式
+                            this.setSource(redirectPath, '', true);
+                            this.clearSelection();
+                        } else {
+                            new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                        }
+                    } else {
+                        // 沒有 redirect 就正常開啟當前檔案
+                        this.app.workspace.getLeaf().openFile(file);
+                    }
                 }
             }
         });
@@ -3181,6 +3238,56 @@ export class GridView extends ItemView {
         this.isShowingNote = false;
     }
 
+    // 顯示捷徑選擇 Modal
+    showShortcutSelectionModal() {
+        const modal = new ShortcutSelectionModal(this.app, this.plugin, async (option) => {
+            await this.createShortcut(option);
+        });
+        modal.open();
+    }
+
+    // 創建捷徑檔案
+    private async createShortcut(option: { type: 'mode' | 'folder' | 'file'; value: string; display: string; }) {
+        try {
+            // 生成不重複的檔案名稱
+            let counter = 0;
+            let shortcutName = `${option.display}`;
+            let newPath = `${shortcutName}.md`;
+            while (this.app.vault.getAbstractFileByPath(newPath)) {
+                counter++;
+                shortcutName = `${option.display} ${counter}`;
+                newPath = `${shortcutName}.md`;
+            }
+
+            // 創建新檔案
+            const newFile = await this.app.vault.create(newPath, '');
+
+            // 使用 processFrontMatter 來更新 frontmatter
+            await this.app.fileManager.processFrontMatter(newFile, (frontmatter: any) => {                
+                if (option.type === 'mode') {
+                    frontmatter.type = 'mode';
+                    frontmatter.redirect = option.value;
+                } else if (option.type === 'folder') {
+                    frontmatter.type = 'folder';
+                    frontmatter.redirect = option.value;
+                } else if (option.type === 'file') {
+                    const link = this.app.fileManager.generateMarkdownLink(
+                        this.app.vault.getAbstractFileByPath(option.value) as TFile, 
+                        ""
+                    );
+                    frontmatter.type = "file";
+                    frontmatter.redirect = link;
+                }
+            });
+
+            new Notice(`${t('shortcut_created')}: ${shortcutName}`);
+
+        } catch (error) {
+            console.error('Create shortcut error', error);
+            new Notice(t('Failed to create shortcut'));
+        }
+    }
+
     // 保存視圖狀態
     getState() {
         return {
@@ -3201,6 +3308,7 @@ export class GridView extends ItemView {
                 hideHeaderElements: this.hideHeaderElements,
                 showDateDividers: this.showDateDividers,
                 showNoteTags: this.showNoteTags,
+                recentSources: this.recentSources,
             }
         };
     }
@@ -3223,6 +3331,7 @@ export class GridView extends ItemView {
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;
             this.showDateDividers = state.state.showDateDividers ?? this.plugin.settings.dateDividerMode !== 'none';
             this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
+            this.recentSources = state.state.recentSources ?? [];
             this.render();
         }
     }

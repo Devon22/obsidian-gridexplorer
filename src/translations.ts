@@ -38,6 +38,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': '新增筆記',
         'new_folder': '新增資料夾',
         'new_canvas': '新增畫布',
+        'new_shortcut': '新增捷徑',
         'delete_folder': '刪除資料夾',
         'move_folder': '搬移資料夾',
         'select_destination_folder': '選擇目標資料夾',
@@ -160,6 +161,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': '輸入 Dataviewjs 代碼以取得檔案列表',
         'custom_mode_sub_options': '自訂模式子選項',
         'custom_mode_fields_placeholder': '輸入 frontmatter 欄位名稱，用逗號分隔 (如: date,category,status) (可選)',
+        'dataview_plugin_not_enabled': 'Dataview 外掛未啟用',
         'show_bookmarks_mode': '顯示書籤模式',
         'show_search_mode': '顯示搜尋結果模式',
         'show_backlinks_mode': '顯示反向連結模式',
@@ -183,11 +185,6 @@ export const TRANSLATIONS: Translations = {
         
         // 隱藏頂部元素
         'hide_header_elements': '隱藏頂部元素',
-
-        // 顯示"返回上層資料夾"選項設定
-        'show_parent_folder_item': '顯示「返回上層資料夾」',
-        'show_parent_folder_item_desc': '在網格的第一項顯示「返回上層資料夾」選項',
-        'parent_folder': '上層資料夾',
         
         // 預設開啟位置設定
         'default_open_location': '預設開啟位置',
@@ -229,6 +226,14 @@ export const TRANSLATIONS: Translations = {
         'searching': '搜尋中...',
         'no_files': '沒有找到任何檔案',
         'filter_folders': '篩選資料夾...',
+
+        // 快捷方式選擇對話框
+        'create_shortcut': '建立捷徑',
+        'select_folder': '選擇資料夾',
+        'select_file': '選擇檔案',
+        'target_not_found': '目標未找到',
+        'shortcut_created': '捷徑已建立',
+        'failed_to_create_shortcut': '建立捷徑失敗',
 
         // 資料夾筆記設定對話框
         'folder_note_settings': '資料夾筆記設定',
@@ -307,6 +312,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': 'New note',
         'new_folder': 'New folder',
         'new_canvas': 'New canvas',
+        'new_shortcut': 'New shortcut',
         'delete_folder': 'Delete Folder',
         'move_folder': 'Move Folder',
         'select_destination_folder': 'Select destination folder',
@@ -429,6 +435,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': 'Enter a Dataview query to get the list of files',
         'custom_mode_sub_options': 'Custom Mode Sub Options',
         'custom_mode_fields_placeholder': 'Enter frontmatter field names, separated by commas (e.g. date,category,status) (optional)',
+        'dataview_plugin_not_enabled': 'Dataview plugin is not enabled',
         'show_bookmarks_mode': 'Show bookmarks mode',
         'show_search_mode': 'Show search results mode',
         'show_backlinks_mode': 'Show backlinks mode',
@@ -452,11 +459,6 @@ export const TRANSLATIONS: Translations = {
         
         // Hide header elements setting
         'hide_header_elements': 'Hide header elements',
-        
-        // Show "Parent Folder" option setting
-        'show_parent_folder_item': 'Show "Parent Folder" item',
-        'show_parent_folder_item_desc': 'Show a "Parent Folder" item as the first item in the grid',
-        'parent_folder': 'Parent Folder',
         
         // Default open location setting
         'default_open_location': 'Default open location',
@@ -499,6 +501,14 @@ export const TRANSLATIONS: Translations = {
         'no_files': 'No files found',
         'filter_folders': 'Filter folders...',
 
+        // Shortcut Selection Dialog
+        'create_shortcut': 'Create Shortcut',
+        'select_folder': 'Select Folder',
+        'select_file': 'Select File',
+        'target_not_found': 'Target not found',
+        'shortcut_created': 'Shortcut created',
+        'failed_to_create_shortcut': 'Failed to create shortcut',
+        
         // Folder Note Settings Dialog
         'folder_note_settings': 'Folder Note Settings',
         'folder_sort_type': 'Folder Sort Type',
@@ -576,6 +586,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': '新建笔记',
         'new_folder': '新建文件夹',
         'new_canvas': '新建画布',
+        'new_shortcut': '新建快捷方式',
         'delete_folder': '删除文件夹',
         'untitled': '未命名',
         'files': '个文件',
@@ -696,6 +707,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': '输入 Dataviewjs 代码以获取文件列表',
         'custom_mode_sub_options': '自定义模式子选项',
         'custom_mode_fields_placeholder': '输入 frontmatter 栏位名称，用逗号分隔 (如: date,category,status) (可选)',
+        'dataview_plugin_not_enabled': 'Dataview 外掛未啟用',
         'show_bookmarks_mode': '显示书签模式',
         'show_search_mode': '显示搜索结果模式',
         'show_backlinks_mode': '显示反向链接模式',
@@ -719,11 +731,6 @@ export const TRANSLATIONS: Translations = {
         
         // 隐藏頂部元素
         'hide_header_elements': '隱藏頂部元素',
-        
-        // 显示"返回上级文件夹"选项设置
-        'show_parent_folder_item': '显示「返回上级文件夹」',
-        'show_parent_folder_item_desc': '在网格的第一项显示「返回上级文件夹」选项',
-        'parent_folder': '上级文件夹',
         
         // 默认打开位置设置
         'default_open_location': '默认打开位置',
@@ -766,6 +773,14 @@ export const TRANSLATIONS: Translations = {
         'no_files': '没有找到任何文件',
         'filter_folders': '筛选文件夹...',
 
+        // 快捷方式选择对话框
+        'create_shortcut': '创建快捷方式',
+        'select_folder': '选择文件夹',
+        'select_file': '选择文件',
+        'target_not_found': '目标未找到',
+        'shortcut_created': '快捷方式已创建',
+        'failed_to_create_shortcut': '创建快捷方式失败',
+        
         // 文件夹笔记设置对话框
         'folder_note_settings': '文件夹笔记设置',
         'folder_sort_type': '文件夹排序方式',
@@ -843,6 +858,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': '新規ノート',
         'new_folder': '新規フォルダ',
         'new_canvas': '新規キャンバス',
+        'new_shortcut': '新規ショートカット',
         'delete_folder': '削除フォルダ',
         'untitled': '無題',
         'files': 'ファイル',
@@ -963,6 +979,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': 'ファイルリストを取得する Dataviewjs コードを入力',
         'custom_mode_sub_options': 'カスタムモード子選択肢',
         'custom_mode_fields_placeholder': 'frontmatterのフィールド名をカンマ区切りで入力 (例: date,category,status) (任意)',
+        'dataview_plugin_not_enabled': 'Dataview プラグインが有効になっていません',
         'show_bookmarks_mode': 'ブックマークモードを表示',
         'show_search_mode': '検索結果モードを表示',
         'show_backlinks_mode': 'バックリンクモードを表示',
@@ -986,11 +1003,6 @@ export const TRANSLATIONS: Translations = {
         
         // 隠す頂部元素
         'hide_header_elements': '頂部元素を隠す',
-        
-        // "親フォルダ"オプション設定を表示
-        'show_parent_folder_item': '「親フォルダ」項目を表示',
-        'show_parent_folder_item_desc': 'グリッドの最初の項目として「親フォルダ」項目を表示します',
-        'parent_folder': '親フォルダ',
         
         // 開く場所設定
         'default_open_location': 'デフォルトの開く場所',
@@ -1032,6 +1044,14 @@ export const TRANSLATIONS: Translations = {
         'searching': '検索中...',
         'no_files': 'ファイルが見つかりません',
         'filter_folders': 'フォルダをフィルタリング...',
+
+        // ショートカット選択ダイアログ
+        'create_shortcut': 'ショートカットを作成',
+        'select_folder': 'フォルダを選択',
+        'select_file': 'ファイルを選択',
+        'target_not_found': '目標が見つかりません',
+        'shortcut_created': 'ショートカットが作成されました',
+        'failed_to_create_shortcut': 'ショートカットの作成に失敗しました',
 
         // フォルダーノート設定ダイアログ
         'folder_note_settings': 'フォルダーノート設定',
@@ -1111,6 +1131,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': 'Новая заметка',
         'new_folder': 'Новая папка',
         'new_canvas': 'Новый канвас',
+        'new_shortcut': 'Новый ярлык',
         'delete_folder': 'Удалить папку',
         'untitled': 'Без названия',
         'files': 'файлы',
@@ -1231,6 +1252,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': 'Введите код Dataview для получения списка файлов',
         'custom_mode_sub_options': 'Подопции пользовательского режима',
         'custom_mode_fields_placeholder': 'Введите названия полей frontmatter через запятую (напр.: date,category,status) (необязательно)',
+        'dataview_plugin_not_enabled': 'Dataview плагин не включен',
         'show_bookmarks_mode': 'Показывать режим закладок',
         'show_search_mode': 'Показывать режим результатов поиска',
         'show_backlinks_mode': 'Показывать режим обратных ссылок',
@@ -1254,11 +1276,6 @@ export const TRANSLATIONS: Translations = {
         
         // Hide header elements setting
         'hide_header_elements': 'Скрыть элементы заголовка',
-        
-        // Show "Parent Folder" option setting
-        'show_parent_folder_item': 'Показывать элемент "Родительская папка"',
-        'show_parent_folder_item_desc': 'Показывать элемент "Родительская папка" первым в сетке',
-        'parent_folder': 'Родительская папка',
         
         // Default open location setting
         'default_open_location': 'Место открытия по умолчанию',
@@ -1300,6 +1317,14 @@ export const TRANSLATIONS: Translations = {
         'searching': 'Поиск...',
         'no_files': 'Файлы не найдены',
         'filter_folders': 'Фильтровать папки...',
+
+        //
+        'create_shortcut': 'Создать ярлик',
+        'select_folder': 'Выбрать папку',
+        'select_file': 'Выбрать файл',
+        'target_not_found': 'Цель не найдена',
+        'shortcut_created': 'Ярлик создан',
+        'failed_to_create_shortcut': 'Не удалось создать ярлик',
 
         // Folder Note Settings Dialog
         'folder_note_settings': 'Настройки заметки папки',
@@ -1378,6 +1403,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': 'Нова нотатка',
         'new_folder': 'Нова папка',
         'new_canvas': 'Новий канвас',
+        'new_shortcut': 'Новий ярлик',
         'delete_folder': 'Видалити папку',
         'untitled': 'Без назви',
         'files': 'файли',
@@ -1498,6 +1524,7 @@ export const TRANSLATIONS: Translations = {
         'custom_mode_dataview_code_desc': 'Введіть код Dataview для отримання списку файлів',
         'custom_mode_sub_options': 'Підпараметри користувацького режиму',
         'custom_mode_fields_placeholder': 'Введіть назви полів frontmatter через кому (напр.: date,category,status) (необязательно)',
+        'dataview_plugin_not_enabled': 'Dataview плагін не включений',
         'show_bookmarks_mode': 'Показувати режим закладок',
         'show_search_mode': 'Показувати режим результатів пошуку',
         'show_backlinks_mode': 'Показувати режим зворотних посилань',
@@ -1521,11 +1548,6 @@ export const TRANSLATIONS: Translations = {
         
         // Hide header elements setting
         'hide_header_elements': 'Скрыть элементы заголовка',
-        
-        // Show "Parent Folder" option setting
-        'show_parent_folder_item': 'Показувати елемент "Батьківська папка"',
-        'show_parent_folder_item_desc': 'Показувати елемент "Батьківська папка" першим у сітці',
-        'parent_folder': 'Батьківська папка',
         
         // Default open location setting
         'default_open_location': 'Місце відкриття за замовчуванням',
@@ -1568,6 +1590,14 @@ export const TRANSLATIONS: Translations = {
         'no_files': 'Файли не знайдено',
         'filter_folders': 'Фільтрувати папки...',
 
+        // Shortcut Selection Dialog
+        'create_shortcut': 'Створити ярлик',
+        'select_folder': 'Вибрати папку',
+        'select_file': 'Вибрати файл',
+        'target_not_found': 'Цель не знайдена',
+        'shortcut_created': 'Ярлик створений',
+        'failed_to_create_shortcut': 'Не вдалося створити ярлик',
+        
         // Folder Note Settings Dialog
         'folder_note_settings': 'Налаштування нотатки папки',
         'folder_sort_type': 'Тип сортування папки',

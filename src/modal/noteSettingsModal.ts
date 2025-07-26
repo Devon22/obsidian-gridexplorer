@@ -124,6 +124,15 @@ export class NoteSettingsModal extends Modal {
         // 按鈕區域
         const buttonSetting = new Setting(contentEl);
         
+        // 支援多檔案時仍顯示新增重定向筆記按鈕
+        buttonSetting.addButton(button => {
+            button
+                .setButtonText(t('create_shortcut'))
+                .onClick(async () => {
+                    await this.createShortcut();
+                });
+        });
+        
         // 顯示確認按鈕在右側
         buttonSetting.addButton(button => {
             button
@@ -134,6 +143,46 @@ export class NoteSettingsModal extends Modal {
                     this.close();
                 });
         });
+    }
+
+    // 創建重定向筆記
+    private async createShortcut() {
+        try {
+            for (const originalFile of this.files) {
+                const originalName = originalFile.basename;
+                const extension = originalFile.extension;
+
+                // 生成不重複的新檔案路徑
+                let counter = 0;
+                let redirectName = `📄 ${originalName}`;
+                let newPath = `${originalFile.parent?.path || ''}/${redirectName}.${extension}`;
+                while (this.app.vault.getAbstractFileByPath(newPath)) {
+                    counter++;
+                    redirectName = `${originalName} ${counter}`;
+                    newPath = `${originalFile.parent?.path || ''}/${redirectName}.${extension}`;
+                }
+
+                // 創建新檔案（先不包含 frontmatter）
+                const newFile = await this.app.vault.create(newPath, '');
+
+                // 使用 processFrontMatter 來更新 frontmatter
+                await this.app.fileManager.processFrontMatter(newFile, (frontmatter: any) => {
+                    // 設置 redirect 和 summary
+                    const link = this.app.fileManager.generateMarkdownLink(originalFile, "");
+                    frontmatter.type = "file";
+                    frontmatter.redirect = link;
+                });
+            }
+
+            // 等待一小段時間以確保 metadata cache 已更新
+            setTimeout(() => {}, 200);
+
+            // 關閉 modal
+            this.close();
+
+        } catch (error) {
+            console.error('Create redirect note error', error);
+        }
     }
 
     // 讀取現有筆記的設定
