@@ -1,6 +1,7 @@
 import { TFile, TFolder, getFrontMatterInfo, App, Notice } from 'obsidian';
-import { type GallerySettings } from './settings';
 import { GridView } from './GridView';
+import { type GallerySettings } from './settings';
+import { t } from './translations';
 
 // 擴展 App 類型以包含 plugins 屬性
 declare module 'obsidian' {
@@ -507,7 +508,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         // 自訂模式
         const dvApi = app.plugins.plugins.dataview?.api;
         if (!dvApi) {
-            new Notice('Dataview plugin is not enabled.');
+            new Notice(t('Dataview plugin is not enabled.'));
             return [];
         }
 

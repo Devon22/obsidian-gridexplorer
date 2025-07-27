@@ -193,8 +193,8 @@ export default class GridExplorerPlugin extends Plugin {
                     });
                     // 搜尋選取的筆記名稱
                     const link = this.app.fileManager.generateMarkdownLink(file, "");
-                    const truncatedText = file.basename.length > 20 ? file.basename.substring(0, 20) + '...' : file.basename;
-                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「[[${truncatedText}]]」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
+                    const truncatedText = file.basename.length > 8 ? file.basename.substring(0, 8) + '...' : file.basename;
+                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', ` [[${truncatedText}]]`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
                     menu.addItem(item => {
                         item
                             .setTitle(menuItemTitle)
@@ -229,8 +229,8 @@ export default class GridExplorerPlugin extends Plugin {
             this.app.workspace.on('editor-menu', (menu: Menu, editor) => {
                 if (editor.somethingSelected()) {
                     const selectedText = editor.getSelection();
-                    // 截斷過長的文字，最多顯示 20 個字元
-                    const truncatedText = selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText;
+                    // 截斷過長的文字，最多顯示 15 個字元
+                    const truncatedText = selectedText.length > 15 ? selectedText.substring(0, 15) + '...' : selectedText;
                     const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
 
                     menu.addItem(item => {
@@ -257,8 +257,8 @@ export default class GridExplorerPlugin extends Plugin {
         // 註冊tag-wrangler右鍵選單
         this.registerEvent(
             (this.app.workspace as any).on('tag-wrangler:contextmenu', (menu: Menu, tagName: string) => {
-                // 截斷過長的文字，最多顯示 20 個字元
-                const truncatedText = tagName.length > 20 ? tagName.substring(0, 20) + '...' : tagName;
+                // 截斷過長的文字，最多顯示 15 個字元
+                const truncatedText = tagName.length > 15 ? tagName.substring(0, 15) + '...' : tagName;
                 const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「#${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
 
                 menu.addItem(item => {

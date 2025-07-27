@@ -1,8 +1,8 @@
 import type { GridView } from "./GridView";
 
 export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
-    // 如果沒有項目，直接返回
-    if (gridView.gridItems.length === 0) return;
+    // 如果沒有項目或正在檢視筆記，直接返回
+    if (gridView.gridItems.length === 0 || gridView.isShowingNote) return;
 
     // 如果有Modal視窗，直接返回
     if (document.querySelector('.modal-container')) return;

@@ -1653,7 +1653,8 @@ a.ge-current-folder:hover {
 .ge-note-scroll-container {
     flex: 1 1 auto;
     overflow: auto;
-    background-color: var(--background-secondary);
+    background-color: var(--background-primary);
+    font-size: var(--font-text-size);
 }
 
 .ge-note-close-button,

@@ -58,7 +58,7 @@ export class GridView extends ItemView {
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
     private renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
-    private isShowingNote: boolean = false; // 是否正在顯示筆記
+    isShowingNote: boolean = false; // 是否正在顯示筆記
     private noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
@@ -189,12 +189,31 @@ export class GridView extends ItemView {
             this.searchQuery = '';
         }
 
+        // 切換自訂模式時重設選項索引
+        if(mode.startsWith('custom-')) {
+            this.customOptionIndex = -1;
+            this.folderSortType = 'none';
+        }
+        
+        // 更新來源模式和路徑
+        if(mode !== '') this.sourceMode = mode; 
+        if(path !== '') this.sourcePath = path;
+        if(this.sourceMode === '') this.sourceMode = 'folder';
+        if(this.sourcePath === '') this.sourcePath = '/';
+
+        // 非資料夾模式時，強制路徑為根目錄
+        if(this.sourceMode !== 'folder') {
+            this.sourcePath = '/';
+        }
+        
+        // 讀取Folder設定
         this.folderSortType = '';
         this.pinnedList = [];
-        if (mode === 'folder') {
+        if (this.sourceMode === 'folder') {
+            console.log(this.sourcePath);
             // 檢查是否有與資料夾同名的 md 檔案
-            const folderName = path.split('/').pop() || '';
-            const mdFilePath = `${path}/${folderName}.md`;
+            const folderName = this.sourcePath.split('/').pop() || '';
+            const mdFilePath = `${this.sourcePath}/${folderName}.md`;
             const mdFile = this.app.vault.getAbstractFileByPath(mdFilePath);
             let tempLayout: 'horizontal' | 'vertical' = this.baseCardLayout;
             if (mdFile instanceof TFile) {
@@ -208,21 +227,6 @@ export class GridView extends ItemView {
         } else {
             // 非資料夾來源時，回復基礎卡片排列
             this.cardLayout = this.baseCardLayout;
-        }
-
-        if(mode.startsWith('custom-')) {
-            this.customOptionIndex = -1; // 切換自訂模式時重設選項索引
-            this.folderSortType = 'none';
-        }
-        
-        if(mode !== '') this.sourceMode = mode; 
-        if(path !== '') this.sourcePath = path;
-        if(this.sourceMode === '') this.sourceMode = 'folder';
-        if(this.sourcePath === '') this.sourcePath = '/';
-
-        // 非資料夾模式時，強制路徑為根目錄
-        if(this.sourceMode !== 'folder') {
-            this.sourcePath = '/';
         }
 
         // 通知 Obsidian 保存視圖狀態
@@ -2702,6 +2706,8 @@ export class GridView extends ItemView {
                     } else {
                         this.openMediaFile(file, files);
                     }
+                } else if (file.extension === 'pdf' || file.extension === 'canvas' || file.extension === 'base') {
+                    this.app.workspace.getLeaf(true).openFile(file);
                 } else {
                     // 非媒體檔案：在 grid container 中顯示筆記
                     this.showNoteInGrid(file);
@@ -3107,6 +3113,52 @@ export class GridView extends ItemView {
 
     // 在 grid container 中顯示筆記
     async showNoteInGrid(file: TFile) {
+        // 檢查是否為捷徑檔案
+        const fileCache = this.app.metadataCache.getFileCache(file);
+        const redirectType = fileCache?.frontmatter?.type;
+        const redirectPath = fileCache?.frontmatter?.redirect;
+
+        if (redirectType && typeof redirectPath === 'string' && redirectPath.trim() !== '') {
+            let target;
+            
+            if (redirectType === 'file') {
+                if (redirectPath.startsWith('[[') && redirectPath.endsWith(']]')) {
+                    const noteName = redirectPath.slice(2, -2);
+                    target = this.app.metadataCache.getFirstLinkpathDest(noteName, file.path);
+                } else {
+                    target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
+                }
+                
+                if (target instanceof TFile) {
+                    // 遞迴處理目標檔案
+                    this.showNoteInGrid(target);
+                    return;
+                } else {
+                    new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                    return;
+                }
+            }
+            else if (redirectType === 'folder') {
+                // 判斷redirectPath是否為資料夾
+                if (this.app.vault.getAbstractFileByPath(normalizePath(redirectPath)) instanceof TFolder) {
+                    this.setSource('folder', redirectPath, true);
+                    this.clearSelection();
+                    return;
+                } else {
+                    new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                    return;
+                }
+            } else if (redirectType === 'mode') {
+                // 判斷redirectPath是否為模式
+                this.setSource(redirectPath, '', true);
+                this.clearSelection();
+                return;
+            } else {
+                new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                return;
+            }
+        }
+
         // 關閉之前的筆記顯示
         if (this.isShowingNote) {
             this.hideNoteInGrid();
@@ -3148,8 +3200,18 @@ export class GridView extends ItemView {
         // 捲動內容容器
         const scrollContainer = this.noteViewContainer.createDiv('ge-note-scroll-container');
 
+        // 假設在視圖側邊欄則把字型調小
+        const isInSidebar = this.leaf.getRoot() === this.app.workspace.leftSplit || 
+                            this.leaf.getRoot() === this.app.workspace.rightSplit;
+        if (isInSidebar) {
+            scrollContainer.style.fontSize = '1em';
+        }
+
         // 創建筆記內容容器
         const noteContent = scrollContainer.createDiv('ge-note-content-container');
+        if (isInSidebar) {
+            noteContent.style.padding = '15px';
+        }
         
         // 創建筆記內容區域
         const noteContentArea = noteContent.createDiv('ge-note-content');

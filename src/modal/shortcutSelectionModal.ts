@@ -67,7 +67,7 @@ export class ShortcutSelectionModal extends Modal {
             modeOptions.push({
                 type: 'mode',
                 value: mode.internalName,
-                display: `🧩 ${mode.displayName}`
+                display: `${mode.icon} ${mode.displayName}`
             });
         });
 
