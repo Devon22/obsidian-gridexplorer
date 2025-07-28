@@ -210,7 +210,6 @@ export class GridView extends ItemView {
         this.folderSortType = '';
         this.pinnedList = [];
         if (this.sourceMode === 'folder') {
-            console.log(this.sourcePath);
             // 檢查是否有與資料夾同名的 md 檔案
             const folderName = this.sourcePath.split('/').pop() || '';
             const mdFilePath = `${this.sourcePath}/${folderName}.md`;
@@ -1880,95 +1879,129 @@ export class GridView extends ItemView {
             // 根據搜尋關鍵字進行過濾（不分大小寫）
             const searchTerms = this.searchQuery.toLowerCase().split(/\s+/).filter(term => term.trim() !== '');
             
-            // 分離標籤搜尋和一般搜尋
-            const tagTerms = searchTerms.filter(term => term.startsWith('#')).map(term => term.substring(1));
-            const normalTerms = searchTerms.filter(term => !term.startsWith('#'));
+            // 分離標籤搜尋、一般搜尋和連結搜尋
+            const tagTerms: string[] = [];
+            const linkTerms: string[] = [];
+            const normalTerms: string[] = [];
+            
+            for (const term of searchTerms) {
+                if (term.startsWith('#')) {
+                    tagTerms.push(term.substring(1));
+                } else if (term.startsWith('[[') && term.endsWith(']]')) {
+                    linkTerms.push(term.slice(2, -2)); // 移除 [[ 和 ]]
+                } else {
+                    normalTerms.push(term);
+                }
+            }
+
+            // 檢查是否有 Obsidian 連結格式 [[ ]]
+            let linkTargetFileSets: Set<string>[] = [];
+            const hasLinkSearch = linkTerms.length > 0;
+            
+            if (hasLinkSearch) {
+                for (const linkTarget of linkTerms) {                  
+                    // 尋找目標檔案
+                    let targetFile = this.app.vault.getAbstractFileByPath(linkTarget + '.md');
+                    if (!targetFile) {
+                        targetFile = this.app.metadataCache.getFirstLinkpathDest(linkTarget, '');
+                    }
+                    
+                    if (targetFile && 'extension' in targetFile) {
+                        // 使用 Obsidian 的 getBacklinksForFile API
+                        const backlinks = (this.app.metadataCache as any).getBacklinksForFile(targetFile);
+                        
+                        const currentLinkFiles = new Set<string>();
+                        if (backlinks) {
+                            // 收集所有反向連結的檔案路徑
+                            for (const [filePath, links] of backlinks.data.entries()) {
+                                currentLinkFiles.add(filePath);
+                            }
+                        }
+                        linkTargetFileSets.push(currentLinkFiles);
+                    } else {
+                        // 如果找不到目標檔案，加入空集合
+                        linkTargetFileSets.push(new Set<string>());
+                    }
+                }
+            }
             
             // 使用 Promise.all 來非同步地讀取所有檔案內容，順序可能會跟之前不同
             await Promise.all(
                 allFiles.map(async file => {
-                    const fileName = file.name.toLowerCase();
-                    // 檢查檔案名稱是否包含所有一般搜尋字串
-                    const matchesFileName = normalTerms.length === 0 || normalTerms.every(term => fileName.includes(term));
-                    
-                    // 如果只有標籤搜尋詞且不是 Markdown 檔案，直接跳過（因為標籤只存在於 Markdown 檔案中）
-                    if (tagTerms.length > 0 && normalTerms.length === 0 && file.extension !== 'md') {
-                        return;
-                    }
-                    
-                    // 如果沒有標籤搜尋詞，只有一般搜尋詞
-                    if (tagTerms.length === 0) {
-                        if (matchesFileName) {
-                            files.push(file);
-                        } else if (file.extension === 'md') {
-                            // 只對 Markdown 檔案進行內容搜尋
-                            const content = (await this.app.vault.cachedRead(file)).toLowerCase();
-                            // 檢查檔案內容是否包含所有一般搜尋字串
-                            const matchesContent = normalTerms.every(term => content.includes(term));
-                            if (matchesContent) {
-                                files.push(file);
-                            }
+                    // 檢查連結搜尋條件：檔案必須在所有連結的反向連結中
+                    if (hasLinkSearch) {
+                        const isInAllLinkTargets = linkTargetFileSets.every(linkSet => linkSet.has(file.path));
+                        if (!isInAllLinkTargets) {
+                            return; // 如果檔案不在所有連結的反向連結中，直接跳過
                         }
-                        return;
                     }
                     
-                    // 處理標籤搜尋
-                    if (file.extension === 'md') {
-                        // 檢查檔案是否包含所有標籤
-                        const fileCache = this.app.metadataCache.getFileCache(file);
-                        let matchesTags = false;
+                    const fileName = file.name.toLowerCase();
+                    let matchesNormalTerms = true;
+                    let matchesTags = true;
+                    
+                    // 檢查一般搜尋詞
+                    if (normalTerms.length > 0) {
+                        // 檢查檔案名稱是否包含所有一般搜尋字串
+                        const matchesFileName = normalTerms.every(term => fileName.includes(term));
                         
-                        if (fileCache) {
-                            const collectedTags: string[] = [];
+                        if (!matchesFileName && file.extension === 'md') {
+                            // 如果檔名不匹配且是 Markdown 檔案，檢查內容
+                            const content = (await this.app.vault.cachedRead(file)).toLowerCase();
+                            matchesNormalTerms = normalTerms.every(term => content.includes(term));
+                        } else {
+                            matchesNormalTerms = matchesFileName;
+                        }
+                    }
+                    
+                    // 檢查標籤搜尋詞
+                    if (tagTerms.length > 0) {
+                        if (file.extension !== 'md') {
+                            matchesTags = false; // 非 Markdown 檔案不能匹配標籤
+                        } else {
+                            const fileCache = this.app.metadataCache.getFileCache(file);
+                            matchesTags = false;
+                            
+                            if (fileCache) {
+                                const collectedTags: string[] = [];
 
-                            // 內文標籤
-                            if (Array.isArray(fileCache.tags)) {
-                                for (const t of fileCache.tags) {
-                                    if (t && t.tag) {
-                                        const clean = t.tag.toLowerCase().replace(/^#/, '');
-                                        collectedTags.push(...clean.split(/\s+/).filter(st => st.trim() !== ''));
-                                    }
-                                }
-                            }
-
-                            // frontmatter 標籤
-                            if (fileCache.frontmatter && fileCache.frontmatter.tags) {
-                                const fmTags = fileCache.frontmatter.tags;
-                                if (typeof fmTags === 'string') {
-                                    collectedTags.push(
-                                        ...fmTags.split(/[,\s]+/)
-                                            .map(t => t.toLowerCase().replace(/^#/, ''))
-                                            .filter(t => t.trim() !== '')
-                                    );
-                                } else if (Array.isArray(fmTags)) {
-                                    for (const t of fmTags) {
-                                        if (typeof t === 'string') {
-                                            const clean = t.toLowerCase().replace(/^#/, '');
+                                // 內文標籤
+                                if (Array.isArray(fileCache.tags)) {
+                                    for (const t of fileCache.tags) {
+                                        if (t && t.tag) {
+                                            const clean = t.tag.toLowerCase().replace(/^#/, '');
                                             collectedTags.push(...clean.split(/\s+/).filter(st => st.trim() !== ''));
                                         }
                                     }
                                 }
-                            }
 
-                            matchesTags = tagTerms.every(tag => collectedTags.includes(tag));
-                        }
-                        
-                        // 如果標籤匹配，且檔名或內容也匹配（如果有一般搜尋詞的話），則加入結果
-                        if (matchesTags) {
-                            if (matchesFileName) {
-                                files.push(file);
-                            } else if (normalTerms.length > 0) {
-                                // 如果有一般搜尋詞，還需檢查內容
-                                const content = (await this.app.vault.cachedRead(file)).toLowerCase();
-                                const matchesContent = normalTerms.every(term => content.includes(term));
-                                if (matchesContent) {
-                                    files.push(file);
+                                // frontmatter 標籤
+                                if (fileCache.frontmatter && fileCache.frontmatter.tags) {
+                                    const fmTags = fileCache.frontmatter.tags;
+                                    if (typeof fmTags === 'string') {
+                                        collectedTags.push(
+                                            ...fmTags.split(/[,\s]+/)
+                                                .map(t => t.toLowerCase().replace(/^#/, ''))
+                                                .filter(t => t.trim() !== '')
+                                        );
+                                    } else if (Array.isArray(fmTags)) {
+                                        for (const t of fmTags) {
+                                            if (typeof t === 'string') {
+                                                const clean = t.toLowerCase().replace(/^#/, '');
+                                                collectedTags.push(...clean.split(/\s+/).filter(st => st.trim() !== ''));
+                                            }
+                                        }
+                                    }
                                 }
-                            } else {
-                                // 如果只有標籤搜尋詞，且標籤匹配，則加入結果
-                                files.push(file);
+
+                                matchesTags = tagTerms.every(tag => collectedTags.includes(tag));
                             }
                         }
+                    }
+                    
+                    // 只有當所有條件都符合時才加入結果
+                    if (matchesNormalTerms && matchesTags) {
+                        files.push(file);
                     }
                 })
             );
@@ -2766,8 +2799,46 @@ export class GridView extends ItemView {
                             new Notice(`${t('target_not_found')}: ${redirectPath}`);
                         }
                     } else {
-                        // 沒有 redirect 就正常開啟當前檔案
-                        this.app.workspace.getLeaf().openFile(file);
+                        // 非捷徑就正常開啟檔案
+                        const leaf = this.app.workspace.getLeaf();
+                        if (this.searchQuery !== '') {
+                            this.app.vault.cachedRead(file).then((content) => {
+                                const searchQuery = this.searchQuery;
+                                const lowerContent = content.toLowerCase();
+                                let idx = -1;
+                                let lineNumber = 0;
+
+                                // 1. 先嘗試完整比對（不分大小寫）
+                                idx = lowerContent.indexOf(searchQuery.toLowerCase());
+                                
+                                // 2. 若找不到，嘗試拆開關鍵字搜尋
+                                if (idx === -1 && searchQuery.includes(' ')) {
+                                    const keywords = searchQuery.split(/\s+/).filter(k => k.trim() !== '');
+                                    if (keywords.length > 1) {
+                                        // 找第一個出現的關鍵字
+                                        for (const keyword of keywords) {
+                                            const keywordIdx = lowerContent.indexOf(keyword.toLowerCase());
+                                            if (keywordIdx !== -1) {
+                                                idx = keywordIdx;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (idx !== -1) {
+                                    lineNumber = content.substring(0, idx).split('\n').length - 1;
+                                    leaf.openFile(file, { eState: { line: lineNumber } }).then(() => {
+                                        (this.app as any)?.commands?.executeCommandById?.('editor:focus');
+                                    });
+                                    return;
+                                }
+                                // 若都找不到關鍵字，直接開檔
+                                leaf.openFile(file);
+                            });
+                        } else {
+                            leaf.openFile(file);
+                        }
                     }
                 }
             }
@@ -3205,6 +3276,7 @@ export class GridView extends ItemView {
                             this.leaf.getRoot() === this.app.workspace.rightSplit;
         if (isInSidebar) {
             scrollContainer.style.fontSize = '1em';
+            scrollContainer.style.backgroundColor = 'var(--background-secondary)';
         }
 
         // 創建筆記內容容器
