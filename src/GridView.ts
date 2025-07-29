@@ -188,23 +188,12 @@ export class GridView extends ItemView {
         if (this.searchQuery !== '' && this.searchAllFiles) {
             this.searchQuery = '';
         }
-
-        // 切換自訂模式時重設選項索引
-        if(mode.startsWith('custom-')) {
-            this.customOptionIndex = -1;
-            this.folderSortType = 'none';
-        }
         
         // 更新來源模式和路徑
         if(mode !== '') this.sourceMode = mode; 
         if(path !== '') this.sourcePath = path;
         if(this.sourceMode === '') this.sourceMode = 'folder';
         if(this.sourcePath === '') this.sourcePath = '/';
-
-        // 非資料夾模式時，強制路徑為根目錄
-        if(this.sourceMode !== 'folder') {
-            this.sourcePath = '/';
-        }
         
         // 讀取Folder設定
         this.folderSortType = '';
@@ -224,8 +213,15 @@ export class GridView extends ItemView {
             }
             this.cardLayout = tempLayout;
         } else {
-            // 非資料夾來源時，回復基礎卡片排列
-            this.cardLayout = this.baseCardLayout;
+            // 非資料夾模式時
+            this.cardLayout = this.baseCardLayout; // 回復基礎卡片排列
+            this.sourcePath = '/'; // 強制設定路徑為根目錄 (創建筆記用)
+
+            // 切換到自訂模式時重設選項索引
+            if(this.sourceMode.startsWith('custom-')) {
+                this.customOptionIndex = -1;
+                this.folderSortType = 'none';
+            }
         }
 
         // 通知 Obsidian 保存視圖狀態
