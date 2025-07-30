@@ -2,6 +2,7 @@ import { App, Modal, Platform } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
+import { isFolderIgnored } from '../fileUtils';
 
 // 顯示資料夾選擇 modal
 export function showFolderSelectionModal(app: App, plugin: GridExplorerPlugin, activeView?: GridView, buttonElement?: HTMLElement) {
@@ -267,9 +268,12 @@ export class FolderSelectionModal extends Modal {
         // 取得所有資料夾（排除被忽略的資料夾）
         const folders = this.app.vault.getAllFolders()
             .filter(folder => {
-                // 檢查資料夾是否在忽略清單中
-                return !this.plugin.settings.ignoredFolders.some(
-                    ignoredPath => folder.path === ignoredPath || folder.path.startsWith(ignoredPath + '/')
+                // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
+                return !isFolderIgnored(
+                    folder, 
+                    this.plugin.settings.ignoredFolders, 
+                    this.plugin.settings.ignoredFolderPatterns, 
+                    false // 在選擇資料夾時不考慮 showIgnoredFolders 設置
                 );
             })
             .sort((a, b) => a.path.localeCompare(b.path));
@@ -410,6 +414,36 @@ export class FolderSelectionModal extends Modal {
         let hasVisibleOptions = false;
         
         this.folderOptions.forEach(option => {
+            // 根據搜尋狀態動態調整資料夾顯示文字
+            const dataPath = option.getAttribute('data-path');
+            if (dataPath) {
+                // 這是一個資料夾選項
+                const nameSpan = option.querySelector('span:last-child') as HTMLSpanElement | null;
+                if (nameSpan) {
+                    if (searchTerm !== '') {
+                        // 顯示完整路徑
+                        nameSpan.textContent = dataPath;
+                    } else {
+                        // 僅顯示資料夾名稱
+                        nameSpan.textContent = dataPath.split('/').pop() || '/';
+                    }
+                }
+
+                // 根據搜尋狀態調整前綴縮排（ascii tree）
+                const prefixSpan = option.querySelector('.ge-folder-tree-prefix') as HTMLSpanElement | null;
+                if (prefixSpan) {
+                    if (searchTerm !== '') {
+                        // 搜尋時移除縮排
+                        prefixSpan.textContent = '';
+                    } else {
+                        // 恢復原始縮排
+                        const depthAttr = option.getAttribute('data-depth');
+                        const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
+                        prefixSpan.textContent = depth > 0 ? '   '.repeat(depth - 1) + '└ ' : '';
+                    }
+                }
+            }
+
             const text = option.textContent?.toLowerCase() || '';
             const fullPath = option.getAttribute('data-path')?.toLowerCase() || '';
             if (searchTerm === '' || text.includes(searchTerm) || fullPath.includes(searchTerm)) {

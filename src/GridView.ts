@@ -2145,18 +2145,34 @@ export class GridView extends ItemView {
                                             const fieldList = fields.split(',').map(f => f.trim()).filter(Boolean);
                                             const fieldValues: string[] = [];
                                             
-                                            // 收集所有欄位值
-                                            fieldList.forEach(field => {
-                                                if (metadata?.[field] !== undefined && metadata?.[field] !== '' && metadata?.[field] !== null) {
+                                            // 收集所有欄位值，並處理別名（"原始欄位|別名"）
+                                            fieldList.forEach(fieldEntry => {
+                                                // 解析欄位與顯示名稱
+                                                // 只從右邊數來的第一個 '|' 進行分割
+                                                // 例如 "State|A|狀態" 會變成 ["State|A", "狀態"]
+                                                const lastPipeIndex = fieldEntry.lastIndexOf('|');
+                                                let fieldKey, displayName;
+                                                
+                                                if (lastPipeIndex !== -1) {
+                                                    // 如果找到 '|'，則分割成欄位名稱和顯示名稱
+                                                    fieldKey = fieldEntry.substring(0, lastPipeIndex).trim();
+                                                    displayName = fieldEntry.substring(lastPipeIndex + 1).trim() || fieldKey;
+                                                } else {
+                                                    // 如果沒有 '|'，則使用原始欄位名稱
+                                                    fieldKey = fieldEntry.trim();
+                                                    displayName = fieldKey;
+                                                }
+    
+                                                if (metadata?.[fieldKey] !== undefined && metadata?.[fieldKey] !== '' && metadata?.[fieldKey] !== null) {
                                                     // 如果是數字，則加入千位分隔符號
-                                                    if (typeof metadata[field] === 'number') {
-                                                        metadata[field] = metadata[field].toLocaleString();
+                                                    if (typeof metadata[fieldKey] === 'number') {
+                                                        metadata[fieldKey] = metadata[fieldKey].toLocaleString();
                                                     }
                                                     // 如果是陣列，則轉換為字串
-                                                    if (Array.isArray(metadata[field])) {
-                                                        metadata[field] = metadata[field].join(', ');
+                                                    if (Array.isArray(metadata[fieldKey])) {
+                                                        metadata[fieldKey] = metadata[fieldKey].join(', ');
                                                     }
-                                                    fieldValues.push(`${field}: ${metadata[field]}`);
+                                                    fieldValues.push(`${displayName}: ${metadata[fieldKey]}`);
                                                 }
                                             });
                                             
