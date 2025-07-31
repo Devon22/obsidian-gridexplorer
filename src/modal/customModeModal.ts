@@ -154,7 +154,9 @@ export class CustomModeModal extends Modal {
 
         renderOptions();
 
-        new Setting(contentEl)
+        const saveSetting = new Setting(contentEl);
+        saveSetting.settingEl.classList.add('ge-save-footer');
+        saveSetting
             .addButton(button => {
                 button.setButtonText(t('save'))
                     .setCta()

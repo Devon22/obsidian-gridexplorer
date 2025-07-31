@@ -164,6 +164,18 @@ export class SearchModal extends Modal {
             searchScopeCheckbox.checked = false;
         }
 
+        // 創建只搜尋檔案名稱設定
+        const searchNameContainer = searchOptionsContainer.createDiv('ge-search-name-container');
+        const searchNameCheckbox = searchNameContainer.createEl('input', {
+            type: 'checkbox',
+            cls: 'ge-search-name-checkbox'
+        });
+        searchNameCheckbox.checked = this.gridView.searchFilesNameOnly;
+        searchNameContainer.createEl('span', {
+            text: t('search_files_name_only'),
+            cls: 'ge-search-name-label'
+        });
+
         // 創建搜尋媒體檔案設定
         const searchMediaFilesContainer = searchOptionsContainer.createDiv('ge-search-media-files-container');
         const searchMediaFilesCheckbox = searchMediaFilesContainer.createEl('input', {
@@ -187,6 +199,12 @@ export class SearchModal extends Modal {
             if (e.target !== searchScopeCheckbox) {
                 searchScopeCheckbox.checked = !searchScopeCheckbox.checked;
                 this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+            }
+        });
+        searchNameContainer.addEventListener('click', (e) => {
+            if (e.target !== searchNameCheckbox) {
+                searchNameCheckbox.checked = !searchNameCheckbox.checked;
+                this.gridView.searchFilesNameOnly = !searchNameCheckbox.checked;
             }
         });
         searchMediaFilesContainer.addEventListener('click', (e) => {
@@ -302,6 +320,7 @@ export class SearchModal extends Modal {
         const performSearch = () => {
             this.gridView.searchQuery = searchInput.value;
             this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+            this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
             this.gridView.app.workspace.requestSaveLayout();

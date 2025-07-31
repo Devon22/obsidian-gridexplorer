@@ -39,6 +39,7 @@ export class GridView extends ItemView {
     folderSortType: string = ''; // 資料夾排序模式
     searchQuery: string = ''; // 搜尋關鍵字
     searchAllFiles: boolean = true; // 是否搜尋所有筆記
+    searchFilesNameOnly: boolean = false; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean = false; // 是否搜尋媒體檔案
     randomNoteIncludeMedia: boolean = false; // 隨機筆記是否包含圖片和影片
     selectedItemIndex: number = -1; // 當前選中的項目索引
@@ -84,6 +85,15 @@ export class GridView extends ItemView {
                 return handleKeyDown(this, event);
             }
         });
+
+        // 監聽 dataview:index-ready
+        this.registerEvent(
+            (this.app.metadataCache as any).on('dataview:index-ready', () => {
+                if (this.sourceMode.startsWith('custom-')) {
+                    this.render();
+                }
+            })
+        );
     }
 
     getViewType() {
@@ -1938,15 +1948,31 @@ export class GridView extends ItemView {
                     
                     // 檢查一般搜尋詞
                     if (normalTerms.length > 0) {
-                        // 檢查檔案名稱是否包含所有一般搜尋字串
-                        const matchesFileName = normalTerms.every(term => fileName.includes(term));
-                        
-                        if (!matchesFileName && file.extension === 'md') {
-                            // 如果檔名不匹配且是 Markdown 檔案，檢查內容
-                            const content = (await this.app.vault.cachedRead(file)).toLowerCase();
-                            matchesNormalTerms = normalTerms.every(term => content.includes(term));
+                        if (this.searchFilesNameOnly) {
+                            // 僅檢查檔名
+                            matchesNormalTerms = normalTerms.every(term => fileName.includes(term));
                         } else {
-                            matchesNormalTerms = matchesFileName;
+                            // 檢查每個一般搜尋字串是否存在於檔名或（若為 Markdown）檔案內容中
+                            matchesNormalTerms = true;
+                            let contentLower: string | null = null;
+                            for (const term of normalTerms) {
+                                if (fileName.includes(term)) {
+                                    continue; // 此關鍵字已在檔名中找到
+                                }
+                                
+                                if (file.extension === 'md') {
+                                    // 延遲讀取內容，避免不必要的 IO
+                                    if (contentLower === null) {
+                                        contentLower = (await this.app.vault.cachedRead(file)).toLowerCase();
+                                    }
+                                    if (contentLower.includes(term)) {
+                                        continue; // 此關鍵字在內容中找到
+                                    }
+                                }
+                                // 若此關鍵字既不在檔名也不在內容中，則不符合
+                                matchesNormalTerms = false;
+                                break;
+                            }
                         }
                     }
                     
@@ -2003,34 +2029,40 @@ export class GridView extends ItemView {
             );
             
             // 排序檔案
-            if (this.sourceMode === 'bookmarks') {
-                // 保持原始順序
-                files.sort((a, b) => {
-                    const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
-                    const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
-                    return indexA - indexB;
-                });
-            } else if (this.sourceMode === 'recent-files') {
-                // 臨時的排序類型
-                const sortType = this.sortType;
-                this.sortType = 'mtime-desc';
+            if (this.searchAllFiles) {
+                // 搜尋所有檔案時
                 files = sortFiles(files, this);
-                this.sortType = sortType;
-            } else if (this.sourceMode === 'random-note') {
-                // 臨時的排序類型
-                const sortType = this.sortType;
-                this.sortType = 'random';
-                files = sortFiles(files, this);
-                this.sortType = sortType;
-            } else if (this.sourceMode.startsWith('custom-')) {
-                // 保持原始順序
-                files.sort((a, b) => {
-                    const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
-                    const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
-                    return indexA - indexB;
-                });
             } else {
-                files = sortFiles(files, this);
+                // 非搜尋所有檔案時
+                if (this.sourceMode === 'bookmarks') {
+                    // 保持原始順序
+                    files.sort((a, b) => {
+                        const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+                        const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+                        return indexA - indexB;
+                    });
+                } else if (this.sourceMode === 'recent-files') {
+                    // 臨時的排序類型
+                    const sortType = this.sortType;
+                    this.sortType = 'mtime-desc';
+                    files = sortFiles(files, this);
+                    this.sortType = sortType;
+                } else if (this.sourceMode === 'random-note') {
+                    // 臨時的排序類型
+                    const sortType = this.sortType;
+                    this.sortType = 'random';
+                    files = sortFiles(files, this);
+                    this.sortType = sortType;
+                } else if (this.sourceMode.startsWith('custom-')) {
+                    // 保持原始順序
+                    files.sort((a, b) => {
+                        const indexA = fileIndexMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+                        const indexB = fileIndexMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+                        return indexA - indexB;
+                    });
+                } else {
+                    files = sortFiles(files, this);
+                }
             }
 
             // 忽略檔案
@@ -2147,20 +2179,31 @@ export class GridView extends ItemView {
                                             
                                             // 收集所有欄位值，並處理別名（"原始欄位|別名"）
                                             fieldList.forEach(fieldEntry => {
-                                                // 解析欄位與顯示名稱
-                                                // 只從右邊數來的第一個 '|' 進行分割
-                                                // 例如 "State|A|狀態" 會變成 ["State|A", "狀態"]
-                                                const lastPipeIndex = fieldEntry.lastIndexOf('|');
-                                                let fieldKey, displayName;
+                                                // 解析欄位 (fieldKey)、別名 (labelName)、運算式 (calcExpr)
+                                                // 格式示例：
+                                                //   birthday|年齡 {{ Math.floor(...) }}
+                                                //   birthday {{ Math.floor(...) }}
+                                                //   birthday|年齡
+                                                //   birthday
                                                 
-                                                if (lastPipeIndex !== -1) {
-                                                    // 如果找到 '|'，則分割成欄位名稱和顯示名稱
-                                                    fieldKey = fieldEntry.substring(0, lastPipeIndex).trim();
-                                                    displayName = fieldEntry.substring(lastPipeIndex + 1).trim() || fieldKey;
+                                                let raw = fieldEntry.trim();
+                                                let calcExpr: string | null = null;
+                                                // 先取出運算區塊 {{ ... }}
+                                                const calcMatch = raw.match(/\{\{(.*?)\}\}/);
+                                                if (calcMatch) {
+                                                    calcExpr = calcMatch[1];
+                                                    raw = raw.substring(0, calcMatch.index).trim(); // 去掉運算部分
+                                                }
+                                                // 再處理 alias
+                                                const aliasIdx = raw.lastIndexOf('|');
+                                                let fieldKey: string;
+                                                let labelName: string;
+                                                if (aliasIdx !== -1) {
+                                                    fieldKey = raw.substring(0, aliasIdx).trim();
+                                                    labelName = raw.substring(aliasIdx + 1).trim() || fieldKey;
                                                 } else {
-                                                    // 如果沒有 '|'，則使用原始欄位名稱
-                                                    fieldKey = fieldEntry.trim();
-                                                    displayName = fieldKey;
+                                                    fieldKey = raw;
+                                                    labelName = fieldKey;
                                                 }
     
                                                 if (metadata?.[fieldKey] !== undefined && metadata?.[fieldKey] !== '' && metadata?.[fieldKey] !== null) {
@@ -2172,7 +2215,20 @@ export class GridView extends ItemView {
                                                     if (Array.isArray(metadata[fieldKey])) {
                                                         metadata[fieldKey] = metadata[fieldKey].join(', ');
                                                     }
-                                                    fieldValues.push(`${displayName}: ${metadata[fieldKey]}`);
+                                                    let outputValue: string | number | null = metadata[fieldKey];
+                                                    if (calcExpr) {
+                                                        try {
+                                                            const fn = new Function('value', 'metadata', 'app', 'dv', `return (${calcExpr});`);
+
+                                                            // 獲取 Dataview API
+                                                            const dvApi = this.app.plugins.plugins.dataview?.api;
+
+                                                            outputValue = fn(metadata[fieldKey], metadata, this.app, dvApi);
+                                                        } catch (error) {
+                                                            console.error('GridExplorer: evaluate displayName error', error);
+                                                        }
+                                                    }
+                                                    fieldValues.push(`${labelName}: ${outputValue}`);
                                                 }
                                             });
                                             

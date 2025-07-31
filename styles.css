@@ -926,6 +926,24 @@ a.ge-current-folder:hover {
     font-size: var(--font-ui-small);
 }
 
+/* 只搜尋檔案名稱設定樣式 Search Name Container */
+.ge-search-name-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.ge-search-name-checkbox {
+    cursor: pointer;
+}
+
+.ge-search-name-label {
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+}
+
 /* 搜尋媒體檔案設定樣式 Search Media Files Container */
 .ge-search-media-files-container {
     display: flex;
@@ -1451,6 +1469,23 @@ a.ge-current-folder:hover {
     gap: 0.5rem;
 }
 
+/* Save Footer */
+.ge-save-footer {
+    position: sticky;
+    bottom: 0;
+    background-color: transparent;
+    padding: 8px 0;
+    z-index: 10;
+}
+
+.setting-item .ge-save-footer {
+    border-top: none;
+}
+
+.ge-save-footer .setting-item-control button {
+    box-shadow: 0 5px 8px rgba(0, 0, 0, 0.4);
+}
+
 /* --------------------------------------------------------------------------- */
 
 /* Popup Modal Styles */
@@ -1872,3 +1907,4 @@ a.ge-current-folder:hover {
     width: 16px;
     height: 16px;
 }
+
