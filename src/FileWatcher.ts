@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isDocumentFile, isMediaFile } from './fileUtils';
@@ -160,16 +160,6 @@ export class FileWatcher {
                 }
             })
         );
-
-        // 僅當切換到本 GridView（最近檔案模式）時才重新渲染
-        // this.plugin.registerEvent(
-        //     this.app.workspace.on('active-leaf-change', (leaf) => {
-        //         // 若切換到的 Leaf 正是此 GridView 的 Leaf，且模式為 recent-files
-        //         if (leaf === this.gridView.leaf && this.gridView.sourceMode === 'recent-files') {
-        //             this.scheduleRender(2000);
-        //         }
-        //     })
-        // );
     }
 
     // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪

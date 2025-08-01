@@ -1,4 +1,4 @@
-import { TFile, TFolder, getFrontMatterInfo, App, Notice } from 'obsidian';
+import { TFile, TFolder, getFrontMatterInfo, Notice } from 'obsidian';
 import { GridView } from './GridView';
 import { type GallerySettings } from './settings';
 import { t } from './translations';
