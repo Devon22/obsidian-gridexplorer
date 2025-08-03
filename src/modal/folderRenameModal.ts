@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFolder, normalizePath } from 'obsidian';
+import { App, Modal, Setting, TFolder, normalizePath, Notice } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
@@ -62,9 +62,14 @@ export class FolderRenameModal extends Modal {
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 重新渲染視圖
             setTimeout(() => {
-                this.gridView.render();
+                if (!this.plugin.settings.showFolder) {
+                    this.gridView.setSource('folder', newPath || '/', true);
+                } else {
+                    this.gridView.render();
+                }
             }, 100);
         } catch (error) {
+            new Notice('Failed to rename folder');
             console.error('Failed to rename folder', error);
         }
     }

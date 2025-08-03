@@ -1608,7 +1608,7 @@ a.ge-current-folder:hover {
 
 .ge-popup-content .ge-search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 8px 26px 8px 12px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
     background-color: var(--background-primary);
@@ -1616,10 +1616,15 @@ a.ge-current-folder:hover {
     font-size: var(--font-ui-medium);
 }
 
+.ge-popup-content .ge-search-input:hover {
+    font-size: var(--font-ui-medium);
+}
+
 .ge-popup-content .ge-search-input:focus {
     outline: none;
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+    font-size: var(--font-ui-medium);
 }
 
 .ge-popup-content .ge-search-clear-button {
@@ -1627,8 +1632,8 @@ a.ge-current-folder:hover {
     right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;

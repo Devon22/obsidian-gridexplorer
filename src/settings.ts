@@ -36,6 +36,7 @@ export interface GallerySettings {
     multiLineTitle: boolean; // 標題允許兩行顯示
     summaryLength: number; // 筆記摘要的字數
     enableFileWatcher: boolean; // 是否啟用檔案監控
+    showFolder: boolean; // 是否顯示資料夾
     showMediaFiles: boolean; // 是否顯示圖片和影片
     showVideoThumbnails: boolean; // 是否顯示影片縮圖
     defaultOpenLocation: string; // 預設開啟位置
@@ -69,6 +70,7 @@ export interface GallerySettings {
     quickAccessModeType: string; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
     showNoteInGrid: boolean; // 是否預設在 grid container 中顯示筆記（不需要按 Alt 鍵）
+
 }
 
 // 預設設定
@@ -88,6 +90,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     multiLineTitle: false,
     summaryLength: 100, // 筆記摘要的字數，預設 100
     enableFileWatcher: true, // 預設啟用檔案監控
+    showFolder: true, // 預設顯示資料夾
     showMediaFiles: true, // 預設顯示圖片和影片
     showVideoThumbnails: true, // 預設顯示影片縮圖
     defaultOpenLocation: 'left', // 預設開啟位置：左側邊欄
@@ -620,6 +623,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.dateDividerMode)
                 .onChange(async (value) => {
                     this.plugin.settings.dateDividerMode = value;
+                    await this.plugin.saveSettings();
+                });
+        });
+
+        // 隱藏資料夾
+        new Setting(containerEl)
+        .setName(t('show_folder'))
+        .setDesc(t('show_folder_desc'))
+        .addToggle(toggle => {
+            toggle
+                .setValue(this.plugin.settings.showFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.showFolder = value;
                     await this.plugin.saveSettings();
                 });
         });

@@ -33,13 +33,6 @@ export function renderHeaderButton(gridView: GridView) {
         event.preventDefault();
         event.stopPropagation();
         
-        if (gridView.searchQuery !== '') {
-            gridView.searchQuery = '';
-            gridView.app.workspace.requestSaveLayout();
-            gridView.render();
-            return;
-        }
-        
         // 如果有歷史記錄
         if (gridView.recentSources.length > 0) {
             // 取得最近一筆歷史記錄
@@ -48,11 +41,18 @@ export function renderHeaderButton(gridView: GridView) {
             
             // 設定來源（不記錄到歷史）
             gridView.setSource(
-                lastSource.mode, 
-                lastSource.path || '', 
+                lastSource.mode,
+                lastSource.path || '',
                 true,  // 重設捲動位置
                 false  // 不記錄到歷史
             );
+            // 還原搜尋相關狀態
+            gridView.searchQuery = lastSource.searchQuery || '';
+            gridView.searchAllFiles = lastSource.searchAllFiles ?? true;
+            gridView.searchFilesNameOnly = lastSource.searchFilesNameOnly ?? false;
+            gridView.searchMediaFiles = lastSource.searchMediaFiles ?? false;
+            // 重新渲染以應用搜尋狀態
+            gridView.render();
         }
     });
 
@@ -121,6 +121,17 @@ export function renderHeaderButton(gridView: GridView) {
                                 icon = 'grid';
                             }
                     }
+
+                    // 處理搜尋顯示文字
+                    if (sourceInfo.searchQuery) {
+                        if (sourceInfo.searchAllFiles) {
+                            // 全域搜尋僅顯示搜尋字串
+                            displayText = '"' + (sourceInfo.searchQuery || t('search_results')) + '"';
+                        } else {
+                            // 其他情況附加搜尋字串
+                            displayText += `: "${sourceInfo.searchQuery}"`;
+                        }
+                    }
                     
                     // 添加歷史記錄到選單
                     menu.addItem((item) => {
@@ -140,6 +151,11 @@ export function renderHeaderButton(gridView: GridView) {
                                 }
 
                                 gridView.setSource(mode, path, true, false);
+                                gridView.searchQuery = sourceInfo.searchQuery || '';
+                                gridView.searchAllFiles = sourceInfo.searchAllFiles ?? true;
+                                gridView.searchFilesNameOnly = sourceInfo.searchFilesNameOnly ?? false;
+                                gridView.searchMediaFiles = sourceInfo.searchMediaFiles ?? false;
+                                gridView.render();
                             });
                     });
                 } catch (error) {

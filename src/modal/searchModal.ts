@@ -316,8 +316,23 @@ export class SearchModal extends Modal {
             });
         };
 
+        // 先保存開啟 Modal 時的原始狀態
+        const originalSearchQuery = this.gridView.searchQuery;
+        const originalSearchAllFiles = this.gridView.searchAllFiles;
+        const originalSearchFilesNameOnly = this.gridView.searchFilesNameOnly;
+        const originalSearchMediaFiles = this.gridView.searchMediaFiles;
+
         // 綁定搜尋事件
         const performSearch = () => {
+            // 在執行新搜尋之前，將當前狀態寫入歷史
+            this.gridView.pushHistory(
+                this.gridView.sourceMode,
+                this.gridView.sourcePath,
+                originalSearchQuery,
+                originalSearchAllFiles,
+                originalSearchFilesNameOnly,
+                originalSearchMediaFiles,
+            );
             this.gridView.searchQuery = searchInput.value;
             this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
             this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;

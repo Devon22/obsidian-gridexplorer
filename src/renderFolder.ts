@@ -3,7 +3,7 @@ import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
-import { moveFolderSuggestModal } from './modal/moveFolderSuggestModal';
+import { showFolderMoveModal } from './modal/folderMoveModal';
 import { t } from './translations';
 
 export async function renderFolder(gridView: GridView, container: HTMLElement) {
@@ -107,6 +107,9 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     }
                 });
             }
+
+            // 如果顯示資料夾關閉，則不顯示資料夾
+            if(!gridView.plugin.settings.showFolder) return;
 
             // 顯示子資料夾
             const subfolders = currentFolder.children
@@ -277,7 +280,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                             .setIcon('folder-cog')
                             .onClick(() => {
                                 if (folder instanceof TFolder) {
-                                    new moveFolderSuggestModal(gridView.plugin, folder, gridView).open();
+                                    new showFolderMoveModal(gridView.plugin, folder, gridView).open();
                                 }
                             });
                     });

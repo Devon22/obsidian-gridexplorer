@@ -56,9 +56,9 @@ export class GridView extends ItemView {
     customOptionIndex: number = -1; // 自訂模式選項索引    
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
-    private renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
+    renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
     isShowingNote: boolean = false; // 是否正在顯示筆記
-    private noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
+    noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -165,9 +165,23 @@ export class GridView extends ItemView {
     // 1. 若已有相同紀錄先移除，確保唯一
     // 2. 插入到陣列開頭，代表最新使用
     // 3. 超過上限時裁切
-    private pushHistory(mode: string, path: string | null) {
+    public pushHistory(
+        mode: string,
+        path: string | null,
+        searchQuery: string = '',
+        searchAllFiles: boolean = true,
+        searchFilesNameOnly: boolean = false,
+        searchMediaFiles: boolean = false,
+    ) {
         const sanitizedPath = path ?? '';
-        const key = JSON.stringify({ mode, path: sanitizedPath });
+        const key = JSON.stringify({
+            mode,
+            path: sanitizedPath,
+            searchQuery,
+            searchAllFiles,
+            searchFilesNameOnly,
+            searchMediaFiles,
+        });
         const existingIndex = this.recentSources.indexOf(key);
         if (existingIndex !== -1) {
             this.recentSources.splice(existingIndex, 1);
@@ -182,14 +196,27 @@ export class GridView extends ItemView {
     // resetScroll 為 true 時，會將捲動位置重置到最頂部
     // recordHistory 為 false 時，不會將當前狀態加入歷史記錄
     async setSource(mode: string, path = '', resetScroll = false, recordHistory = true) {
+
         // 如果新的狀態與當前狀態相同，則不進行任何操作
-        if (this.sourceMode === mode && this.sourcePath === path) {
+        if (this.sourceMode === mode && 
+            this.sourcePath === path &&
+            this.searchQuery === this.searchQuery &&
+            this.searchAllFiles === this.searchAllFiles &&
+            this.searchFilesNameOnly === this.searchFilesNameOnly &&
+            this.searchMediaFiles === this.searchMediaFiles) {
             return;
         }
 
         // 記錄之前的狀態到歷史記錄中（如果有）
         if (this.sourceMode && recordHistory) {
-            this.pushHistory(this.sourceMode, this.sourcePath);
+            this.pushHistory(
+                this.sourceMode,
+                this.sourcePath,
+                this.searchQuery,
+                this.searchAllFiles,
+                this.searchFilesNameOnly,
+                this.searchMediaFiles,
+            );
         }
 
         // 全域搜尋時切換路徑則清空搜尋
@@ -225,7 +252,7 @@ export class GridView extends ItemView {
             this.cardLayout = this.baseCardLayout; // 回復基礎卡片排列
             this.sourcePath = '/'; // 強制設定路徑為根目錄 (創建筆記用)
 
-            // 切換到自訂模式時重設選項索引
+            // 切換到自訂模式時重設選項索引並重設排序方式
             if(this.sourceMode.startsWith('custom-')) {
                 this.customOptionIndex = -1;
                 this.folderSortType = 'none';
@@ -730,14 +757,6 @@ export class GridView extends ItemView {
                                     // 創建標籤容器
                                     const tagsContainer = contentArea.createDiv('ge-tags-container');
                                     
-                                    // 根據區塊寬度動態計算可顯示的標籤數量
-                                    // const containerWidth = tagsContainer.getBoundingClientRect().width;
-                                    // const tagWidth = 70;
-                                    // const maxTags = Math.floor(containerWidth / tagWidth);
-
-                                    // 取得要顯示的標籤
-                                    // const displayTags = Array.from(allTags).slice(0, maxTags);
-
                                     // 取得所有標籤
                                     const displayTags = Array.from(allTags);
                                 
@@ -1191,6 +1210,17 @@ export class GridView extends ItemView {
                             // 判斷redirectPath是否為模式
                             this.setSource(redirectPath, '', true);
                             this.clearSelection();
+                        } else if (redirectType === 'uri') {
+                            // 檢查是否為 http/https 或 obsidian:// 協議
+                            if (redirectPath.startsWith('http://') || 
+                                redirectPath.startsWith('https://') || 
+                                redirectPath.startsWith('obsidian://') || 
+                                redirectPath.startsWith('file://')) {
+                                // 使用 window.open 打開網址或 obsidian 協議
+                                window.open(redirectPath, '_blank');
+                            } else {
+                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                            }
                         } else {
                             new Notice(`${t('target_not_found')}: ${redirectPath}`);
                         }

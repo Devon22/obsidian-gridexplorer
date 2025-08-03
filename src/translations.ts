@@ -30,6 +30,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': '重新整理',
         'reselect': '重新選擇位置',
         'no_backlinks': '沒有反向連結',
+        'back': '返回',
         'search': '搜尋',
         'search_placeholder': '搜尋關鍵字',
         'search_current_location_only': '僅搜尋目前位置',
@@ -83,6 +84,8 @@ export const TRANSLATIONS: Translations = {
 
         // 設定
         'grid_view_settings': '網格視圖設定',
+        'show_folder': '顯示資料夾',
+        'show_folder_desc': '直接在網格視圖中顯示資料夾，關閉時將以選單方式顯示資料夾',
         'show_media_files': '顯示媒體檔案',
         'show_media_files_desc': '在網格視圖中顯示媒體檔案',
         'show_video_thumbnails': '顯示影片縮圖',
@@ -305,6 +308,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': 'Refresh',
         'reselect': 'Reselect',
         'no_backlinks': 'No backlinks',
+        'back': 'Back',
         'search': 'Search',
         'search_placeholder': 'Search keyword',
         'search_current_location_only': 'Search current location only',
@@ -358,14 +362,16 @@ export const TRANSLATIONS: Translations = {
 
         // Settings
         'grid_view_settings': 'Grid view settings',
+        'show_folder': 'Show folder',
+        'show_folder_desc': 'Directly display folders in the grid view. When disabled, folders will be shown in a dropdown menu.',
         'show_media_files': 'Show media files',
-        'show_media_files_desc': 'Display media files in the grid view',
+        'show_media_files_desc': 'Display media files in the grid view.',
         'show_video_thumbnails': 'Show video thumbnails',
-        'show_video_thumbnails_desc': 'Display thumbnails for videos in the grid view, shows a play icon when disabled',
+        'show_video_thumbnails_desc': 'Display thumbnails for videos in the grid view, shows a play icon when disabled.',
         'show_note_in_grid': 'Show note in grid',
         'show_note_in_grid_desc': 'Display note in grid container when clicked. If disabled, you need to hold down the Alt key to display the note.',
         'show_note_tags': 'Show note tags',
-        'show_note_tags_desc': 'Display tags for notes in the grid view',
+        'show_note_tags_desc': 'Display tags for notes in the grid view.',
         'ignored_folders': 'Ignored folders',
         'ignored_folders_desc': 'Set folders to ignore here',
         'add_ignored_folder': 'Add ignored folder',
@@ -580,6 +586,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': '刷新',
         'reselect': '重新选择位置',
         'no_backlinks': '没有反向链接',
+        'back': '返回',
         'search': '搜索',
         'search_placeholder': '搜索关键字',
         'search_current_location_only': '仅搜索当前位置',
@@ -631,6 +638,8 @@ export const TRANSLATIONS: Translations = {
 
         // 设置
         'grid_view_settings': '网格视图设置',
+        'show_folder': '显示文件夹',
+        'show_folder_desc': '直接在网格视图中显示文件夹，关闭时将以下拉菜单方式显示文件夹',
         'show_media_files': '显示媒体文件',
         'show_media_files_desc': '在网格视图中显示媒体文件',
         'show_video_thumbnails': '显示视频缩略图',
@@ -853,6 +862,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': '更新',
         'reselect': '再選択',
         'no_backlinks': 'バックリンクなし',
+        'back': '戻る',
         'search': '検索',
         'search_placeholder': 'キーワード検索',
         'search_current_location_only': '現在の場所のみ検索',
@@ -904,6 +914,8 @@ export const TRANSLATIONS: Translations = {
 
         // 設定
         'grid_view_settings': 'グリッドビュー設定',
+        'show_folder': 'フォルダを表示',
+        'show_folder_desc': 'フォルダをグリッドビューに直接表示します。無効にすると、ドロップダウンメニューで表示されます',
         'show_media_files': 'メディアファイルを表示',
         'show_media_files_desc': 'グリッドビューでメディアファイルを表示する',
         'show_video_thumbnails': '動画のサムネイルを表示',
@@ -1127,6 +1139,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': 'Обновить',
         'reselect': 'Перевыбрать',
         'no_backlinks': 'Нет обратных ссылок',
+        'back': 'Назад',
         'search': 'Поиск',
         'search_placeholder': 'Ключевое слово для поиска',
         'search_current_location_only': 'Искать только в текущем расположении',
@@ -1178,6 +1191,8 @@ export const TRANSLATIONS: Translations = {
 
         // Settings
         'grid_view_settings': 'Настройки сеточного вида',
+        'show_folder': 'Показывать файлы',
+        'show_folder_desc': 'Показывать папки в виде сетки. При отключении папки будут отображаться в выпадающем меню',
         'show_media_files': 'Показывать медиафайлы',
         'show_media_files_desc': 'Отображать медиафайлы в сеточном виде',
         'show_video_thumbnails': 'Показывать миниатюры видео',
@@ -1400,6 +1415,7 @@ export const TRANSLATIONS: Translations = {
         'refresh': 'Оновити',
         'reselect': 'Переобрати',
         'no_backlinks': 'Немає зворотних посилань',
+        'back': 'Назад',
         'search': 'Пошук',
         'search_placeholder': 'Ключове слово для пошуку',
         'search_current_location_only': 'Шукати лише в поточному розташуванні',
@@ -1451,6 +1467,8 @@ export const TRANSLATIONS: Translations = {
 
         // Settings
         'grid_view_settings': 'Налаштування сіткового вигляду',
+        'show_folder': 'Показувати папки',
+        'show_folder_desc': 'Показувати папки у сітковому вигляді. Якщо вимкнено — папки будуть показані у випадаючому меню',
         'show_media_files': 'Показувати медіафайли',
         'show_media_files_desc': 'Відображати медіафайли у сітковому вигляді',
         'show_video_thumbnails': 'Показувати мініатюри відео',

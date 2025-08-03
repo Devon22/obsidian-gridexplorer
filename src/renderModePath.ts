@@ -2,6 +2,8 @@ import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip } fr
 import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
+import { showFolderRenameModal } from './modal/folderRenameModal';
+import { showFolderMoveModal } from './modal/folderMoveModal';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
 
@@ -79,8 +81,9 @@ export function renderModePath(gridView: GridView) {
 
     // 顯示目前資料夾及完整路徑
     if (gridView.sourceMode === 'folder' &&
-        (gridView.searchQuery === '' || (gridView.searchQuery && !gridView.searchAllFiles)) &&
-        gridView.sourcePath !== '/') {
+        (gridView.searchQuery === '' || (gridView.searchQuery && !gridView.searchAllFiles))) {
+
+        // 分割路徑
         const pathParts = gridView.sourcePath.split('/').filter(part => part.trim() !== '');
 
         // 建立路徑項目的資料結構
@@ -123,11 +126,19 @@ export function renderModePath(gridView: GridView) {
             let pathEl;
 
             if (isLast) {
-                // 當前資料夾使用 span 元素
-                pathEl = modenameContainer.createEl('a', {
-                    text: `${customFolderIcon} ${path.name}`.trim(),
-                    cls: 'ge-current-folder'
-                });
+                if (path.path === '/' && gridView.plugin.settings.showFolder) {
+                    // 當顯示資料夾開啟且是根目錄時，使用 span 元素
+                    pathEl = modenameContainer.createEl('span', {
+                        text: `${customFolderIcon} ${path.name}`.trim(),
+                        cls: 'ge-mode-title'
+                    });
+                } else {
+                    // 其他情況使用 a 元素
+                    pathEl = modenameContainer.createEl('a', {
+                        text: `${customFolderIcon} ${path.name}`.trim(),
+                        cls: 'ge-current-folder'
+                    });
+                }
             } else {
                 // 上層資料夾使用 a 元素（可點擊）
                 pathEl = modenameContainer.createEl('a', {
@@ -150,92 +161,61 @@ export function renderModePath(gridView: GridView) {
                 const pathIndex = i; // 直接使用索引，因為不再有分隔符
                 if (pathIndex < paths.length) {
                     const path = paths[pathIndex];
-                    el.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        gridView.setSource('folder', path.path, true);
-                        gridView.clearSelection();
-                    });
-
-                    // 為路徑元素添加右鍵選單，顯示路徑層級和同層級目錄
-                    el.addEventListener('contextmenu', async (event) => {
+                    el.addEventListener('click', async (event) => {
                         event.preventDefault();
                         event.stopPropagation();
 
-                        const menu = new Menu();
+                        if (!gridView.plugin.settings.showFolder) {
+                            // 與右鍵相同的選單 (子資料夾與層級導航)
+                            const menu = new Menu();
 
-                        // 1. 添加當前點擊的目錄
-                        menu.addItem((item) => {
-                            item.setTitle(path.name)
-                                .setIcon('folder')
-                                .onClick(() => {
-                                    gridView.setSource('folder', path.path, true);
-                                    gridView.clearSelection();
-                                });
-                        });
+                            // 1. 當前資料夾
+                            menu.addItem((item) => {
+                                item.setTitle(`${customFolderIcon} ${path.name}`)
+                                    .onClick(() => {
+                                        gridView.setSource('folder', path.path, true);
+                                        gridView.clearSelection();
+                                    });
+                            });
 
-                        // 2. 獲取並添加當前目錄下的所有子目錄
-                        const currentFolder = gridView.app.vault.getAbstractFileByPath(path.path);
-                        if (currentFolder && currentFolder instanceof TFolder) {
-                            const subFolders = currentFolder.children
-                                .filter(child => {
-                                    // 如果不是資料夾，則不顯示
-                                    if (!(child instanceof TFolder)) return false;
-
-                                    // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
-                                    return !isFolderIgnored(
-                                        child,
+                            // 2. 子資料夾
+                            const currentFolder = gridView.app.vault.getAbstractFileByPath(path.path);
+                            if (currentFolder && currentFolder instanceof TFolder) {
+                                const subFolders = currentFolder.children
+                                    .filter(child => child instanceof TFolder && !isFolderIgnored(
+                                        child as TFolder,
                                         gridView.plugin.settings.ignoredFolders,
                                         gridView.plugin.settings.ignoredFolderPatterns,
                                         gridView.showIgnoredFolders
+                                    ))
+                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+                                if (subFolders.length > 0) {
+                                    menu.addSeparator();
+                                    menu.addItem((item) =>
+                                        item.setTitle(t('sub_folders'))
+                                            .setIcon('folder-symlink')
+                                            .setDisabled(true)
                                     );
-                                })
-                                .sort((a, b) => a.name.localeCompare(b.name));
 
-                            if (subFolders.length > 0) {
-                                menu.addSeparator();
-                                menu.addItem((item) =>
-                                    item.setTitle(t('sub_folders'))
-                                        .setIcon('folder-symlink')
-                                        .setDisabled(true)
-                                );
-
-                                subFolders.forEach(folder => {
-                                    menu.addItem((item) => {
-                                        item.setTitle(folder.name)
-                                            .setIcon('folder')
-                                            .onClick(() => {
-                                                gridView.setSource('folder', folder.path, true);
-                                                gridView.clearSelection();
-                                            });
-                                    });
-                                });
-                            }
-                        }
-
-                        // 3. 添加上層路徑
-                        if (pathIndex > 0) {
-                            menu.addSeparator();
-                            menu.addItem((item) =>
-                                item.setTitle(t('parent_folders'))
-                                    .setIcon('arrow-up')
-                                    .setDisabled(true)
-                            );
-
-                            for (let i = pathIndex - 1; i >= 0; i--) {
-                                const p = paths[i];
-                                menu.addItem((item) => {
-                                    item.setTitle(p.name)
-                                        .setIcon(p.path === '/' ? 'folder-root' : 'folder')
-                                        .onClick(() => {
-                                            gridView.setSource('folder', p.path, true);
-                                            gridView.clearSelection();
+                                    subFolders.forEach((folder: any) => {
+                                        menu.addItem((item) => {
+                                            item.setTitle(`${customFolderIcon} ${folder.name}`)
+                                                .setIcon('corner-down-right')
+                                                .onClick(() => {
+                                                    gridView.setSource('folder', folder.path, true);
+                                                    gridView.clearSelection();
+                                                });
                                         });
-                                });
+                                    });
+                                }
                             }
-                        }
 
-                        menu.showAtMouseEvent(event);
+                            menu.showAtMouseEvent(event as MouseEvent);
+                        } else {
+                            gridView.setSource('folder', path.path, true);
+                            gridView.clearSelection();
+                        }
                     });
 
                     // 為最後一個路徑以外的路徑添加拖曳功能
@@ -298,16 +278,70 @@ export function renderModePath(gridView: GridView) {
             }
 
             if (el.className === 'ge-current-folder') {
-                // 將選單邏輯抽出，以同時支援 click 與 contextmenu
-                const showFolderMenu = (event: MouseEvent) => {
+                el.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
 
-                    const folder = gridView.app.vault.getAbstractFileByPath(gridView.sourcePath);
+                    const folder = gridView.app.vault.getAbstractFileByPath(gridView.sourcePath); // 當前資料夾
                     const folderName = gridView.sourcePath.split('/').pop() || '';
+                    const parentFolder = folder?.parent; // 上層資料夾
+
+                    const menu = new Menu();
+
+                    // 為當前資料夾加入子資料夾清單
+                    // 如果 showFolder = true，則只有根目錄加入子資料夾清單
+                    // 如果 showFolder = false，則當前資料夾（含根目錄）都加入子資料夾清單
+                    let current: TFolder | null = null;
+                    if (!gridView.plugin.settings.showFolder) {
+                        // 顯示當前資料夾的子資料夾
+                        current = folder instanceof TFolder ? folder : null;
+                        if (gridView.sourcePath === '/') {
+                            current = gridView.app.vault.getRoot();
+                        }
+                    } else {
+                        // 只顯示根目錄的子資料夾
+                        if (gridView.sourcePath === '/') {
+                            current = gridView.app.vault.getRoot();
+                        } else {
+                            // 如果不是根目錄，則不顯示子資料夾
+                            current = null;
+                        }
+                    }
+
+                    if (current) {
+                        const subFolders = current.children
+                            .filter(child => child instanceof TFolder && !isFolderIgnored(
+                                child as TFolder,
+                                gridView.plugin.settings.ignoredFolders,
+                                gridView.plugin.settings.ignoredFolderPatterns,
+                                gridView.showIgnoredFolders
+                            )) as TFolder[];
+
+                        if (subFolders.length > 0) {
+                            menu.addSeparator();
+                            menu.addItem((item) =>
+                                item.setTitle(t('sub_folders'))
+                                    .setIcon('folder-symlink')
+                                    .setDisabled(true)
+                            );
+
+                            subFolders.sort((a, b) => a.name.localeCompare(b.name)).forEach(sf => {
+                                menu.addItem((item) => {
+                                    item.setTitle(`${customFolderIcon} ${sf.name}`)
+                                        .setIcon('corner-down-right')
+                                        .onClick(() => {
+                                            gridView.setSource('folder', sf.path, true);
+                                            gridView.clearSelection();
+                                        });
+                                });
+                            });
+                        }
+                    }
+
                     const notePath = `${gridView.sourcePath}/${folderName}.md`;
                     const noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
-                    const menu = new Menu();
+
+                    menu.addSeparator();
 
                     if (noteFile instanceof TFile) {
                         // 打開資料夾筆記選項
@@ -341,23 +375,97 @@ export function renderModePath(gridView: GridView) {
                         });
                     } else {
                         // 建立 Folder note
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('create_folder_note'))
-                                .setIcon('file-cog')
-                                .onClick(() => {
-                                    if (folder instanceof TFolder) {
-                                        showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
-                                    }
-                                });
-                        });
+                        if (gridView.sourcePath !== '/') {
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('create_folder_note'))
+                                    .setIcon('file-cog')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
+                                        }
+                                    });
+                            });
+                        }
                     }
-                    menu.showAtMouseEvent(event);
-                };
 
-                // 左鍵與右鍵都呼叫相同的選單
-                el.addEventListener('click', showFolderMenu);
-                el.addEventListener('contextmenu', showFolderMenu);
+                    if (!gridView.plugin.settings.showFolder && gridView.sourcePath !== '/') {
+                        menu.addSeparator();
+                        if (folder) {
+                            if (!gridView.plugin.settings.ignoredFolders.includes(folder.path)) {
+                                //加入"忽略此資料夾"選項
+                                menu.addItem((item) => {
+                                    item
+                                        .setTitle(t('ignore_folder'))
+                                        .setIcon('folder-x')
+                                        .onClick(() => {
+                                            gridView.plugin.settings.ignoredFolders.push(folder.path);
+                                            gridView.plugin.saveSettings();
+                                            setTimeout(() => {
+                                                // 回上層資料夾
+                                                gridView.setSource('folder', parentFolder?.path || '/', true);
+                                            }, 100);
+                                        });
+                                });
+                            } else {
+                                //加入"取消忽略此資料夾"選項
+                                menu.addItem((item) => {
+                                    item
+                                        .setTitle(t('unignore_folder'))
+                                        .setIcon('folder-up')
+                                        .onClick(() => {
+                                            gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
+                                            gridView.plugin.saveSettings();
+                                            setTimeout(() => {
+                                                // 回上層資料夾
+                                                gridView.setSource('folder', parentFolder?.path || '/', true);
+                                            }, 100);
+                                        });
+                                });
+                            }
+                            // 搬移資料夾
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('move_folder'))
+                                    .setIcon('folder-cog')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            new showFolderMoveModal(gridView.plugin, folder, gridView).open();
+                                        }
+                                    });
+                            });
+                            // 重新命名資料夾
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('rename_folder'))
+                                    .setIcon('file-cog')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderRenameModal(gridView.app, gridView.plugin, folder, gridView);
+                                        }
+                                    });
+                            });
+                            // 刪除資料夾
+                            menu.addItem((item) => {
+                                (item as any).setWarning(true);
+                                item
+                                    .setTitle(t('delete_folder'))
+                                    .setIcon('trash')
+                                    .onClick(async () => {
+                                        if (folder instanceof TFolder) {
+                                            await gridView.app.fileManager.trashFile(folder);
+                                            setTimeout(() => {
+                                                // 回上層資料夾
+                                                gridView.setSource('folder', parentFolder?.path || '/', true);
+                                            }, 100);
+                                        }
+                                    });
+                            });
+                        }
+                    }
+
+                    menu.showAtMouseEvent(event);
+                });
             }
         }
     } else if (!(gridView.searchQuery !== '' && gridView.searchAllFiles)) {

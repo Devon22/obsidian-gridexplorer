@@ -1,14 +1,14 @@
-import { SuggestModal, TFolder, normalizePath } from 'obsidian';
+import { SuggestModal, TFolder, normalizePath, Notice } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 
-export class moveFolderSuggestModal extends SuggestModal<string> {
+export class showFolderMoveModal extends SuggestModal<string> {
     private readonly allPaths: string[];
 
     constructor(
         private readonly plugin: GridExplorerPlugin,
         private readonly folder: TFolder,
-        private readonly view: GridView
+        private readonly gridView: GridView
     ) {
         super(plugin.app);
         // 預先快取所有資料夾路徑以加速篩選
@@ -40,8 +40,15 @@ export class moveFolderSuggestModal extends SuggestModal<string> {
 
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 給檔案系統一點時間處理，然後重新整理視圖
-            setTimeout(() => this.view.render(), 100);
+            setTimeout(() => {
+                if (!this.plugin.settings.showFolder) {
+                    this.gridView.setSource('folder', newPath || '/', true);
+                } else {
+                    this.gridView.render();
+                }
+            }, 100);
         } catch (err) {
+            new Notice('Failed to move folder');
             console.error('Failed to move folder', err);
         }
     }
