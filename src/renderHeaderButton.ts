@@ -29,7 +29,7 @@ export function renderHeaderButton(gridView: GridView) {
     // 添加回上一步按鈕
     const backButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('back') } });
     setIcon(backButton, 'arrow-left');
-    backButton.addEventListener('click', (event) => {
+    backButton.addEventListener('click', async (event) => {
         event.preventDefault();
         event.stopPropagation();
         
@@ -40,7 +40,7 @@ export function renderHeaderButton(gridView: GridView) {
             gridView.recentSources.shift(); // 從歷史記錄中移除
             
             // 設定來源（不記錄到歷史）
-            gridView.setSource(
+            await gridView.setSource(
                 lastSource.mode,
                 lastSource.path || '',
                 true,  // 重設捲動位置
@@ -52,7 +52,7 @@ export function renderHeaderButton(gridView: GridView) {
             gridView.searchFilesNameOnly = lastSource.searchFilesNameOnly ?? false;
             gridView.searchMediaFiles = lastSource.searchMediaFiles ?? false;
             // 重新渲染以應用搜尋狀態
-            gridView.render();
+            await gridView.render();
         }
     });
 

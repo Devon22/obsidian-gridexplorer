@@ -262,7 +262,7 @@ export class GridView extends ItemView {
         // 通知 Obsidian 保存視圖狀態
         this.app.workspace.requestSaveLayout();
 
-        this.render(resetScroll);
+        await this.render(resetScroll);
     }
 
     async render(resetScroll = false) {

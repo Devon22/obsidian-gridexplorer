@@ -340,7 +340,7 @@ export default class GridExplorerPlugin extends Plugin {
             const view = await this.activateView('', '');
             if (view instanceof GridView) {
                 view.searchQuery = `#${tagName}`;
-                view.render(true); // resetScroll
+                await view.render(true); // resetScroll
             }
         }, true); // 用 capture，可在其他 listener 前先吃到
 
