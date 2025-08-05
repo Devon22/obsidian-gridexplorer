@@ -1929,3 +1929,51 @@ a.ge-current-folder:hover {
     height: 16px;
 }
 
+/* --------------------------------------------------------------------------- */
+
+/* 通用輸入框樣式 Universal Input Field Styles */
+.ge-input-field {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: var(--input-radius) !important;
+    background-color: var(--background-primary) !important;
+    color: var(--text-normal) !important;
+    font-size: 14px !important;
+    font-family: var(--font-interface) !important;
+    transition: border-color 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.ge-input-field:focus {
+    outline: none !important;
+}
+
+.ge-input-field::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 1 !important;
+}
+
+/* 確保不同 input type 有一致的外觀 */
+.ge-input-field[type="text"],
+.ge-input-field[type="url"],
+.ge-input-field[type="search"],
+.ge-input-field[type="email"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+}
+
+/* 輸入框容器樣式 */
+.ge-input-field-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+/* Modal 中的輸入框容器 */
+.modal .ge-input-field-container {
+    margin-bottom: 16px;
+    display: block;
+}

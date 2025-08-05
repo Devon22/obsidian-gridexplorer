@@ -1,9 +1,10 @@
 import { App, Modal, TFolder, TFile, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { t } from '../translations';
+import { showSearchInputModal, showUriInputModal } from './inputModal';
 
 interface ShortcutOption {
-    type: 'mode' | 'folder' | 'file';
+    type: 'mode' | 'folder' | 'file' | 'search' | 'uri';
     value: string;
     display: string;
 }
@@ -27,7 +28,7 @@ export class ShortcutSelectionModal extends Modal {
 
         // 資料夾選擇按鈕
         const folderButton = contentEl.createDiv('shortcut-option-button');
-        folderButton.createSpan({ text: `📂 ${t('select_folder')}`});
+        folderButton.createSpan({ text: `📂 ${t('select_folder')}` });
 
         // 點擊資料夾按鈕時打開資料夾選擇模態框
         folderButton.addEventListener('click', () => {
@@ -44,7 +45,7 @@ export class ShortcutSelectionModal extends Modal {
 
         // 檔案選擇按鈕
         const fileButton = contentEl.createDiv('shortcut-option-button');
-        fileButton.createSpan({ text: `📄 ${t('select_file')}`});
+        fileButton.createSpan({ text: `📄 ${t('select_file')}` });
 
         // 點擊檔案按鈕時打開檔案選擇模態框
         fileButton.addEventListener('click', () => {
@@ -59,6 +60,73 @@ export class ShortcutSelectionModal extends Modal {
             }).open();
         });
 
+        // 搜尋文字按鈕
+        const searchButton = contentEl.createDiv('shortcut-option-button');
+        searchButton.createSpan({ text: `🔎 ${t('search_text')}` });
+
+        // 點擊搜尋按鈕時打開搜尋輸入模態框
+        searchButton.addEventListener('click', () => {
+            showSearchInputModal(this.app, (searchText) => {
+                this.onSubmit({
+                    type: 'search',
+                    value: searchText,
+                    display: `🔎 ${searchText}`
+                });
+                this.close();
+            });
+        });
+
+        // URI 按鈕
+        const uriButton = contentEl.createDiv('shortcut-option-button');
+        uriButton.createSpan({ text: `🌐 ${t('enter_uri')}` });
+
+        // 點擊 URI 按鈕時打開 URI 輸入模態框
+        uriButton.addEventListener('click', () => {
+            showUriInputModal(this.app, (uri) => {
+                // 為顯示生成友好的名稱
+                let displayName: string;
+                try {
+                    if (uri.startsWith('obsidian://')) {
+                        // 嘗試提取 vault 參數
+                        const vaultMatch = uri.match(/[?&]vault=([^&]+)/);
+                        if (vaultMatch) {
+                            const vaultName = decodeURIComponent(vaultMatch[1]);
+                            displayName = `🌐 Obsidian Link (${vaultName})`;
+                        } else {
+                            displayName = '🌐 Obsidian Link';
+                        }
+                    } else if (uri.startsWith('http://') || uri.startsWith('https://')) {
+                        const url = new URL(uri);
+                        let domain = url.hostname;
+                        if (domain.startsWith('www.')) {
+                            domain = domain.substring(4);
+                        }
+                        displayName = `🌐 ${domain}`;
+                    } else if (uri.startsWith('file://')) {
+                        displayName = '🌐 Local File';
+                    } else {
+                        const protocolMatch = uri.match(/^([^:]+):/);
+                        if (protocolMatch) {
+                            displayName = `🌐 ${protocolMatch[1].toUpperCase()} Link`;
+                        } else {
+                            displayName = `🌐 ${uri.substring(0, 20)}${uri.length > 20 ? '...' : ''}`;
+                        }
+                    }
+                } catch (error) {
+                    displayName = `🌐 ${uri.substring(0, 20)}${uri.length > 20 ? '...' : ''}`;
+                }
+
+                this.onSubmit({
+                    type: 'uri',
+                    value: uri,
+                    display: displayName
+                });
+                this.close();
+            });
+        });
+
+        contentEl.createEl('p');
+        
         // 初始化模式選項，先添加自定義模式
         const modeOptions: ShortcutOption[] = [];
 
@@ -74,7 +142,7 @@ export class ShortcutSelectionModal extends Modal {
         // 添加內建模式
         modeOptions.push(
             { type: 'mode', value: 'bookmarks', display: `📑 ${t('bookmarks_mode')}` },
-            { type: 'mode', value: 'search', display: `🔎 ${t('search_results')}` },
+            { type: 'mode', value: 'search', display: `🔍 ${t('search_results')}` },
             { type: 'mode', value: 'backlinks', display: `🔗 ${t('backlinks_mode')}` },
             { type: 'mode', value: 'outgoinglinks', display: `🔗 ${t('outgoinglinks_mode')}` },
             { type: 'mode', value: 'all-files', display: `📔 ${t('all_files_mode')}` },

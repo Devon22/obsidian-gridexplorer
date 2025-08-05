@@ -181,7 +181,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         event.stopPropagation();
                         openFolderInNewView(gridView, folder.path);
                     } else {
-                        gridView.setSource('folder', folder.path, true);
+                        gridView.setSource('folder', folder.path);
                         gridView.clearSelection();
                     }
                 });
@@ -305,9 +305,9 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 if (folder instanceof TFolder) {
                                     await gridView.app.fileManager.trashFile(folder);
                                     // 重新渲染視圖
-                                    setTimeout(() => {
+                                    requestAnimationFrame(() => {
                                         gridView.render();
-                                    }, 100);
+                                    });
                                 }
                             });
                     });

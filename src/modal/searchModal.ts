@@ -339,7 +339,7 @@ export class SearchModal extends Modal {
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
             this.gridView.app.workspace.requestSaveLayout();
-            this.gridView.render(true);
+            this.gridView.render();
             this.close();
         };
 

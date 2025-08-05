@@ -39,20 +39,16 @@ export function renderHeaderButton(gridView: GridView) {
             const lastSource = JSON.parse(gridView.recentSources[0]);
             gridView.recentSources.shift(); // 從歷史記錄中移除
             
-            // 設定來源（不記錄到歷史）
+            // 設定來源及搜尋狀態（不記錄到歷史）
             await gridView.setSource(
                 lastSource.mode,
                 lastSource.path || '',
-                true,  // 重設捲動位置
-                false  // 不記錄到歷史
+                false, // 不記錄到歷史
+                lastSource.searchQuery || '',
+                lastSource.searchAllFiles ?? true,
+                lastSource.searchFilesNameOnly ?? false,
+                lastSource.searchMediaFiles ?? false
             );
-            // 還原搜尋相關狀態
-            gridView.searchQuery = lastSource.searchQuery || '';
-            gridView.searchAllFiles = lastSource.searchAllFiles ?? true;
-            gridView.searchFilesNameOnly = lastSource.searchFilesNameOnly ?? false;
-            gridView.searchMediaFiles = lastSource.searchMediaFiles ?? false;
-            // 重新渲染以應用搜尋狀態
-            await gridView.render();
         }
     });
 
@@ -138,7 +134,7 @@ export function renderHeaderButton(gridView: GridView) {
                         item
                             .setTitle(`${displayText}`)
                             .setIcon(`${icon}`)
-                            .onClick(() => {
+                            .onClick(async () => {
                                 // 找出當前點擊的紀錄索引
                                 const clickedIndex = gridView.recentSources.findIndex(source => {
                                     const parsed = JSON.parse(source);
@@ -150,12 +146,16 @@ export function renderHeaderButton(gridView: GridView) {
                                     gridView.recentSources = gridView.recentSources.slice(clickedIndex + 1);
                                 }
 
-                                gridView.setSource(mode, path, true, false);
-                                gridView.searchQuery = sourceInfo.searchQuery || '';
-                                gridView.searchAllFiles = sourceInfo.searchAllFiles ?? true;
-                                gridView.searchFilesNameOnly = sourceInfo.searchFilesNameOnly ?? false;
-                                gridView.searchMediaFiles = sourceInfo.searchMediaFiles ?? false;
-                                gridView.render();
+                                // 設定來源及搜尋狀態（不記錄到歷史）
+                                await gridView.setSource(
+                                    mode,
+                                    path,
+                                    false, // 不記錄到歷史
+                                    sourceInfo.searchQuery || '',
+                                    sourceInfo.searchAllFiles ?? true,
+                                    sourceInfo.searchFilesNameOnly ?? false,
+                                    sourceInfo.searchMediaFiles ?? false
+                                );
                             });
                     });
                 } catch (error) {
@@ -220,7 +220,10 @@ export function renderHeaderButton(gridView: GridView) {
                 try {
                     // 建立新資料夾
                     await gridView.app.vault.createFolder(newFolderPath);
-                    gridView.render(false);
+                    // 重新渲染視圖
+                    requestAnimationFrame(() => {
+                        gridView.render();
+                    });
                 } catch (error) {
                     console.error('An error occurred while creating a new folder:', error);
                 }
@@ -446,16 +449,115 @@ export function renderHeaderButton(gridView: GridView) {
     });
 }
 
+// 將 URI 轉換為合適的檔名
+function generateFilenameFromUri(uri: string): string {
+    try {
+        // 處理 obsidian:// 協議
+        if (uri.startsWith('obsidian://')) {
+            const match = uri.match(/obsidian:\/\/([^?]+)/);
+            let vaultName = '';
+            
+            // 嘗試提取 vault 參數
+            const vaultMatch = uri.match(/[?&]vault=([^&]+)/);
+            if (vaultMatch) {
+                vaultName = decodeURIComponent(vaultMatch[1]);
+                // 清理 vault 名稱，移除不適合檔名的字符
+                vaultName = vaultName.replace(/[<>:"/\\|?*]/g, '_');
+            }
+            
+            if (match) {
+                const action = match[1];
+                const vaultSuffix = vaultName ? ` (${vaultName})` : '';
+                
+                // 根據不同的 obsidian 動作生成檔名
+                switch (action) {
+                    case 'open':
+                        return `🌐 Obsidian Open${vaultSuffix}`;
+                    case 'new':
+                        return `🌐 Obsidian New${vaultSuffix}`;
+                    case 'search':
+                        return `🌐 Obsidian Search${vaultSuffix}`;
+                    case 'hook-get-address':
+                        return `🌐 Obsidian Hook${vaultSuffix}`;
+                    default:
+                        return `🌐 Obsidian ${action}${vaultSuffix}`;
+                }
+            }
+            return vaultName ? `🌐 Obsidian Link (${vaultName})` : '🌐 Obsidian Link';
+        }
+        
+        // 處理 file:// 協議
+        if (uri.startsWith('file://')) {
+            const filename = uri.split('/').pop() || 'Local File';
+            return `🌐 ${filename}`;
+        }
+        
+        // 處理 http/https 協議
+        if (uri.startsWith('http://') || uri.startsWith('https://')) {
+            const url = new URL(uri);
+            let domain = url.hostname;
+            
+            // 移除 www. 前綴
+            if (domain.startsWith('www.')) {
+                domain = domain.substring(4);
+            }
+            
+            // 如果有路徑，嘗試提取有意義的部分
+            if (url.pathname && url.pathname !== '/') {
+                const pathParts = url.pathname.split('/').filter(part => part.length > 0);
+                if (pathParts.length > 0) {
+                    const lastPart = pathParts[pathParts.length - 1];
+                    // 如果最後一部分看起來像檔名或有意義的標識符
+                    if (lastPart.length < 50 && !lastPart.includes('?')) {
+                        return `🌐 ${domain} - ${lastPart}`;
+                    }
+                }
+            }
+            
+            return `🌐 ${domain}`;
+        }
+        
+        // 其他協議的處理
+        const protocolMatch = uri.match(/^([^:]+):/);
+        if (protocolMatch) {
+            const protocol = protocolMatch[1].toUpperCase();
+            return `🌐 ${protocol} Link`;
+        }
+        
+        // 如果不是標準 URI，直接使用前 30 個字符
+        const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
+        return `🌐 ${cleanUri}`;
+        
+    } catch (error) {
+        // 如果解析失敗，使用安全的預設名稱
+        const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
+        return `🌐 ${cleanUri}`;
+    }
+}
+
 // 創建捷徑檔案
-async function createShortcut(gridView: GridView, option: { type: 'mode' | 'folder' | 'file'; value: string; display: string; }) {
+async function createShortcut(
+    gridView: GridView, 
+    option: { type: 'mode' | 'folder' | 'file' | 'search' | 'uri'; 
+    value: string; 
+    display: string; }) {
     try {
         // 生成不重複的檔案名稱
         let counter = 0;
-        let shortcutName = `${option.display}`;
+        let shortcutName: string;
+        
+        // 對於 URI 類型，使用特殊的檔名生成邏輯
+        if (option.type === 'uri') {
+            shortcutName = generateFilenameFromUri(option.value);
+        } else {
+            shortcutName = `${option.display}`;
+        }
+        
         let newPath = `${shortcutName}.md`;
         while (gridView.app.vault.getAbstractFileByPath(newPath)) {
             counter++;
-            shortcutName = `${option.display} ${counter}`;
+            const baseName = option.type === 'uri' ? generateFilenameFromUri(option.value) : option.display;
+            shortcutName = `${baseName} ${counter}`;
             newPath = `${shortcutName}.md`;
         }
 
@@ -477,6 +579,12 @@ async function createShortcut(gridView: GridView, option: { type: 'mode' | 'fold
                 );
                 frontmatter.type = "file";
                 frontmatter.redirect = link;
+            } else if (option.type === 'search') {
+                frontmatter.type = 'search';
+                frontmatter.redirect = option.value;
+            } else if (option.type === 'uri') {
+                frontmatter.type = 'uri';
+                frontmatter.redirect = option.value;
             }
         });
 
@@ -484,6 +592,6 @@ async function createShortcut(gridView: GridView, option: { type: 'mode' | 'fold
 
     } catch (error) {
         console.error('Create shortcut error', error);
-        new Notice(t('Failed to create shortcut'));
+        new Notice(t('failed_to_create_shortcut'));
     }
 }

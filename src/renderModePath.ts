@@ -173,7 +173,7 @@ export function renderModePath(gridView: GridView) {
                             menu.addItem((item) => {
                                 item.setTitle(`${customFolderIcon} ${path.name}`)
                                     .onClick(() => {
-                                        gridView.setSource('folder', path.path, true);
+                                        gridView.setSource('folder', path.path);
                                         gridView.clearSelection();
                                     });
                             });
@@ -203,7 +203,7 @@ export function renderModePath(gridView: GridView) {
                                             item.setTitle(`${customFolderIcon} ${folder.name}`)
                                                 .setIcon('corner-down-right')
                                                 .onClick(() => {
-                                                    gridView.setSource('folder', folder.path, true);
+                                                    gridView.setSource('folder', folder.path);
                                                     gridView.clearSelection();
                                                 });
                                         });
@@ -213,7 +213,7 @@ export function renderModePath(gridView: GridView) {
 
                             menu.showAtMouseEvent(event as MouseEvent);
                         } else {
-                            gridView.setSource('folder', path.path, true);
+                            gridView.setSource('folder', path.path);
                             gridView.clearSelection();
                         }
                     });
@@ -330,7 +330,7 @@ export function renderModePath(gridView: GridView) {
                                     item.setTitle(`${customFolderIcon} ${sf.name}`)
                                         .setIcon('corner-down-right')
                                         .onClick(() => {
-                                            gridView.setSource('folder', sf.path, true);
+                                            gridView.setSource('folder', sf.path);
                                             gridView.clearSelection();
                                         });
                                 });
@@ -401,10 +401,10 @@ export function renderModePath(gridView: GridView) {
                                         .onClick(() => {
                                             gridView.plugin.settings.ignoredFolders.push(folder.path);
                                             gridView.plugin.saveSettings();
-                                            setTimeout(() => {
+                                            requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/', true);
-                                            }, 100);
+                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                            });
                                         });
                                 });
                             } else {
@@ -416,10 +416,10 @@ export function renderModePath(gridView: GridView) {
                                         .onClick(() => {
                                             gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
                                             gridView.plugin.saveSettings();
-                                            setTimeout(() => {
+                                            requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/', true);
-                                            }, 100);
+                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                            });
                                         });
                                 });
                             }
@@ -454,10 +454,10 @@ export function renderModePath(gridView: GridView) {
                                     .onClick(async () => {
                                         if (folder instanceof TFolder) {
                                             await gridView.app.fileManager.trashFile(folder);
-                                            setTimeout(() => {
+                                            requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/', true);
-                                            }, 100);
+                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                            });
                                         }
                                     });
                             });
@@ -562,7 +562,7 @@ export function renderModePath(gridView: GridView) {
                                 .setChecked(m.internalName === gridView.sourceMode)
                                 .onClick(() => {
                                     // 切換至選取的自訂模式並重新渲染
-                                    gridView.setSource(m.internalName, '', true);
+                                    gridView.setSource(m.internalName);
                                 });
                         });
                     });
@@ -676,7 +676,7 @@ export function renderModePath(gridView: GridView) {
                                         .setChecked(gridView.customOptionIndex === -1)
                                         .onClick(() => {
                                             gridView.customOptionIndex = -1;
-                                            gridView.render(true);
+                                            gridView.render();
                                         });
                                 });
                                 mode.options!.forEach((opt, idx) => {
@@ -686,7 +686,7 @@ export function renderModePath(gridView: GridView) {
                                             .setChecked(idx === gridView.customOptionIndex)
                                             .onClick(() => {
                                                 gridView.customOptionIndex = idx;
-                                                gridView.render(true);
+                                                gridView.render();
                                             });
                                     });
                                 });
@@ -703,7 +703,7 @@ export function renderModePath(gridView: GridView) {
                             new CustomModeModal(gridView.app, gridView.plugin, gridView.plugin.settings.customModes[modeIndex], (result) => {
                                 gridView.plugin.settings.customModes[modeIndex] = result;
                                 gridView.plugin.saveSettings();
-                                gridView.render(true);
+                                gridView.render();
                             }).open();
                         });
                     }
@@ -718,11 +718,3 @@ export function renderModePath(gridView: GridView) {
         });
     }
 }
-
-// ----------------------------------------------------
-// 搬移建議：
-// 1. 先整段複製原始碼貼到此函式底下，並把所有 `gridView.` 前綴改成 `gridView.`。
-// 2. 逐步補上缺少的 import 與型別。
-// 3. GridView.render 內原本的程式替換為呼叫 renderModePath()。
-// 4. 若 render() 需要重新渲染，可在 GridView 內保留 render() 呼叫不變。
-// ----------------------------------------------------

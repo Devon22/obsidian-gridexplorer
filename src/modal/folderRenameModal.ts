@@ -63,7 +63,7 @@ export class FolderRenameModal extends Modal {
             // 重新渲染視圖
             setTimeout(() => {
                 if (!this.plugin.settings.showFolder) {
-                    this.gridView.setSource('folder', newPath || '/', true);
+                    this.gridView.setSource('folder', newPath || '/');
                 } else {
                     this.gridView.render();
                 }

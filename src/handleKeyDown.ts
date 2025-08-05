@@ -36,7 +36,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
                 if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                     // 獲取上一層資料夾路徑
                     const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    gridView.setSource('folder', parentPath, true);
+                    gridView.setSource('folder', parentPath);
                     gridView.clearSelection();
                     event.preventDefault();
                 }
@@ -100,7 +100,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
                 if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                     // 獲取上一層資料夾路徑
                     const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    gridView.setSource('folder', parentPath, true);
+                    gridView.setSource('folder', parentPath);
                     gridView.clearSelection();
                     event.preventDefault();
                 }
@@ -176,7 +176,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
             if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                 // 獲取上一層資料夾路徑
                 const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                gridView.setSource('folder', parentPath, true);
+                gridView.setSource('folder', parentPath);
                 gridView.clearSelection();
                 event.preventDefault();
             }

@@ -51,10 +51,13 @@ export default class GridExplorerPlugin extends Plugin {
         this.addCommand({
             id: 'view-backlinks-in-grid-view',
             name: t('open_backlinks_in_grid_view'),
-            callback: () => {
+            callback: async () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (activeFile) {
-                    this.activateView('backlinks');
+                    const view = await this.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('backlinks');
+                    }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
                     this.openNoteInFolder(this.app.vault.getRoot());
@@ -66,10 +69,13 @@ export default class GridExplorerPlugin extends Plugin {
         this.addCommand({
             id: 'view-outgoinglinks-in-grid-view',
             name: t('open_outgoinglinks_in_grid_view'),
-            callback: () => {
+            callback: async () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (activeFile) {
-                    this.activateView('outgoinglinks');
+                    const view = await this.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('outgoinglinks');
+                    }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
                     this.openNoteInFolder(this.app.vault.getRoot());
@@ -117,7 +123,10 @@ export default class GridExplorerPlugin extends Plugin {
             id: 'open-quick-access-mode',
             name: t('open_quick_access_mode'),
             callback: async () => {
-                this.activateView(this.settings.quickAccessModeType);
+                const view = await this.activateView();
+                if (view instanceof GridView) {
+                    await view.setSource(this.settings.quickAccessModeType);
+                }
             }
         });
 
@@ -162,22 +171,24 @@ export default class GridExplorerPlugin extends Plugin {
                             item
                                 .setTitle(t('open_backlinks_in_grid_view'))
                                 .setIcon('links-coming-in')
-                                .onClick(() => {
+                                .onClick(async () => {
                                     this.app.workspace.getLeaf().openFile(file);
-                                    setTimeout(() => {
-                                        this.activateView('backlinks');
-                                    }, 100);
+                                    const view = await this.activateView();
+                                    if (view instanceof GridView) {
+                                        await view.setSource('backlinks');
+                                    }
                                 });
                         });
                         ogSubmenu.addItem((item) => {
                             item
                                 .setTitle(t('open_outgoinglinks_in_grid_view'))
                                 .setIcon('links-going-out')
-                                .onClick(() => {
+                                .onClick(async () => {
                                     this.app.workspace.getLeaf().openFile(file);
-                                    setTimeout(() => {
-                                        this.activateView('outgoinglinks');
-                                    }, 100);
+                                    const view = await this.activateView();
+                                    if (view instanceof GridView) {
+                                        await view.setSource('outgoinglinks');
+                                    }
                                 });
                         });
                         if (this.settings.showRecentFilesMode && file instanceof TFile) {
@@ -202,12 +213,9 @@ export default class GridExplorerPlugin extends Plugin {
                             .setSection?.("view")
                             .onClick(async () => {
                                 // 取得或啟用 GridView
-                                const view = await this.activateView('','');
+                                const view = await this.activateView();
                                 if (view instanceof GridView) {
-                                    // 設定搜尋模式和關鍵字
-                                    view.searchQuery = link;
-                                    // 重新渲染視圖
-                                    view.render(true); // resetScroll = true
+                                    await view.setSource('', '', true, link);
                                 }
                             });
                     });
@@ -241,12 +249,9 @@ export default class GridExplorerPlugin extends Plugin {
                             .onClick(async () => {
                                 const selectedText = editor.getSelection();
                                 // 取得或啟用 GridView
-                                const view = await this.activateView('','');
+                                const view = await this.activateView();
                                 if (view instanceof GridView) {
-                                    // 設定搜尋模式和關鍵字
-                                    view.searchQuery = selectedText;
-                                    // 重新渲染視圖
-                                    view.render(true); // resetScroll = true
+                                    await view.setSource('', '', true, selectedText);
                                 }
                             });
                     });
@@ -268,12 +273,9 @@ export default class GridExplorerPlugin extends Plugin {
                         .setSection?.("view")
                         .onClick(async () => {
                             // 取得或啟用 GridView
-                            const view = await this.activateView('','');
+                            const view = await this.activateView();
                             if (view instanceof GridView) {
-                                // 設定搜尋模式和關鍵字
-                                view.searchQuery = `#${tagName}`;
-                                // 重新渲染視圖
-                                view.render(true); // resetScroll = true
+                                await view.setSource('', '', true, `#${tagName}`);
                             }
                         });
                 });
@@ -337,10 +339,9 @@ export default class GridExplorerPlugin extends Plugin {
             evt.stopPropagation();
 
             // 叫出 GridView，並把搜尋字串設成這個 tag
-            const view = await this.activateView('', '');
+            const view = await this.activateView();
             if (view instanceof GridView) {
-                view.searchQuery = `#${tagName}`;
-                await view.render(true); // resetScroll
+                await view.setSource('', '', true, `#${tagName}`);
             }
         }, true); // 用 capture，可在其他 listener 前先吃到
 
@@ -381,10 +382,9 @@ export default class GridExplorerPlugin extends Plugin {
             const folder = this.app.vault.getAbstractFileByPath(folderPath);
 
             if (folder instanceof TFolder) {
-                const view = await this.activateView('folder', folderPath);
+                const view = await this.activateView();
                 if (view instanceof GridView) {
-                    view.searchQuery = ''; // 清空搜尋字串
-                    view.render(true); // resetScroll
+                    await view.setSource('folder', folderPath, true, '');
                 }
             }
         }, true); // 使用 capture 階段以確保優先處理
@@ -548,29 +548,32 @@ export default class GridExplorerPlugin extends Plugin {
 
     // 打開最近文件
     async openNoteInRecentFiles(file: TFile) {
-        const view = await this.activateView('recent-files') as GridView;
-        // 如果是文件，等待視圖渲染完成後捲動到該文件位置
-        if (file instanceof TFile) {
-            // 等待下一個事件循環以確保視圖已完全渲染
-            setTimeout(() => {
-                const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
-                if (!gridContainer) return;
-                
-                // 找到對應的網格項目
-                const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
-                    item => (item as HTMLElement).dataset.filePath === file.path
-                ) as HTMLElement;
-                
-                if (gridItem) {
-                    // 捲動到該項目的位置
-                    gridItem.scrollIntoView({ block: 'nearest' });
-                    // 選中該項目
-                    const itemIndex = view.gridItems.indexOf(gridItem);
-                    if (itemIndex >= 0) {
-                        view.selectItem(itemIndex);
+        const view = await this.activateView();
+        if (view instanceof GridView) {
+            await view.setSource('recent-files');
+            // 如果是文件，等待視圖渲染完成後捲動到該文件位置
+            if (file instanceof TFile) {
+                // 等待下一個事件循環以確保視圖已完全渲染
+                requestAnimationFrame(() => {
+                    const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
+                    if (!gridContainer) return;
+                    
+                    // 找到對應的網格項目
+                    const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
+                        item => (item as HTMLElement).dataset.filePath === file.path
+                    ) as HTMLElement;
+                    
+                    if (gridItem) {
+                        // 捲動到該項目的位置
+                        gridItem.scrollIntoView({ block: 'nearest' });
+                        // 選中該項目
+                        const itemIndex = view.gridItems.indexOf(gridItem);
+                        if (itemIndex >= 0) {
+                            view.selectItem(itemIndex);
+                        }
                     }
-                }
-            }, 100);
+                });
+            }
         }
     }
 
@@ -578,35 +581,37 @@ export default class GridExplorerPlugin extends Plugin {
     async openNoteInFolder(file: TFile | TFolder = this.app.vault.getRoot()) {
         // 如果是文件，使用其父資料夾路徑
         const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
-        const view = await this.activateView('folder', folderPath) as GridView;
-        
-        // 如果是文件，等待視圖渲染完成後捲動到該文件位置
-        if (file instanceof TFile) {
-            // 等待下一個事件循環以確保視圖已完全渲染
-            setTimeout(() => {
-                const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
-                if (!gridContainer) return;
-                
-                // 找到對應的網格項目
-                const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
-                    item => (item as HTMLElement).dataset.filePath === file.path
-                ) as HTMLElement;
-                
-                if (gridItem) {
-                    // 捲動到該項目的位置
-                    gridItem.scrollIntoView({ block: 'nearest' });
-                    // 選中該項目
-                    const itemIndex = view.gridItems.indexOf(gridItem);
-                    if (itemIndex >= 0) {
-                        view.selectItem(itemIndex);
+        const view = await this.activateView();
+        if (view instanceof GridView) {
+            await view.setSource('folder', folderPath);
+            // 如果是文件，等待視圖渲染完成後捲動到該文件位置
+            if (file instanceof TFile) {
+                // 等待下一個事件循環以確保視圖已完全渲染
+                requestAnimationFrame(() => {
+                    const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
+                    if (!gridContainer) return;
+                    
+                    // 找到對應的網格項目
+                    const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
+                        item => (item as HTMLElement).dataset.filePath === file.path
+                    ) as HTMLElement;
+                    
+                    if (gridItem) {
+                        // 捲動到該項目的位置
+                        gridItem.scrollIntoView({ block: 'nearest' });
+                        // 選中該項目
+                        const itemIndex = view.gridItems.indexOf(gridItem);
+                        if (itemIndex >= 0) {
+                            view.selectItem(itemIndex);
+                        }
                     }
-                }
-            }, 100);
+                });
+            }
         }
     }
 
     // 激活視圖
-    async activateView(mode = 'folder', path = '') {
+    async activateView() {
         const { workspace } = this.app;
 
         let leaf = null;
@@ -638,11 +643,6 @@ export default class GridExplorerPlugin extends Plugin {
         }
         
         await leaf.setViewState({ type: 'grid-view', active: true });
-
-        // 設定資料來源
-        if (leaf.view instanceof GridView) {
-            await leaf.view.setSource(mode, path);
-        }
 
         // 確保視圖是活躍的
         workspace.revealLeaf(leaf);

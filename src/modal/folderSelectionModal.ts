@@ -72,11 +72,14 @@ export class FolderSelectionModal extends Modal {
                     text: `${mode.icon} ${mode.displayName}`
                 });
 
-                customOption.addEventListener('click', () => {
+                customOption.addEventListener('click', async () => {
                     if (this.activeView) {
-                        this.activeView.setSource(mode.internalName, '', true);
+                        await this.activeView.setSource(mode.internalName);
                     } else {
-                        this.plugin.activateView(mode.internalName);
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource(mode.internalName);
+                        }
                     }
                     this.close();
                 });
@@ -93,11 +96,14 @@ export class FolderSelectionModal extends Modal {
                     text: `📑 ${t('bookmarks_mode')}`
                 });
 
-                bookmarkOption.addEventListener('click', () => {
+                bookmarkOption.addEventListener('click', async () => {
                     if (this.activeView) {
-                        this.activeView.setSource('bookmarks', '', true);
+                        await this.activeView.setSource('bookmarks');
                     } else {
-                        this.plugin.activateView('bookmarks');
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('bookmarks');
+                        }
                     }
                     this.close();
                 });
@@ -118,11 +124,14 @@ export class FolderSelectionModal extends Modal {
                             text: `🔍 ${t('search_results')}: ${searchInputEl.value}`
                         });
 
-                        searchOption.addEventListener('click', () => {
+                        searchOption.addEventListener('click', async () => {
                             if (this.activeView) {
-                                this.activeView.setSource('search', '', true);
+                                await this.activeView.setSource('search');
                             } else {
-                                this.plugin.activateView('search');
+                                const view = await this.plugin.activateView();
+                                if (view instanceof GridView) {
+                                    await view.setSource('search');
+                                }
                             }
                             this.close();
                         });
@@ -142,11 +151,14 @@ export class FolderSelectionModal extends Modal {
                     text: `🔗 ${t('backlinks_mode')}${activeFileName}`
                 });
 
-                backlinksOption.addEventListener('click', () => {
+                backlinksOption.addEventListener('click', async () => {
                     if (this.activeView) {
-                        this.activeView.setSource('backlinks', '', true);
+                        await this.activeView.setSource('backlinks');
                     } else {
-                        this.plugin.activateView('backlinks');
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('backlinks');
+                        }
                     }
                     this.close();
                 });
@@ -164,11 +176,14 @@ export class FolderSelectionModal extends Modal {
                     text: `🔗 ${t('outgoinglinks_mode')}${activeFileName}`
                 });
 
-                outgoinglinksOption.addEventListener('click', () => {
+                outgoinglinksOption.addEventListener('click', async () => {
                     if (this.activeView) {
-                        this.activeView.setSource('outgoinglinks', '', true);
+                        await this.activeView.setSource('outgoinglinks');
                     } else {
-                        this.plugin.activateView('outgoinglinks');
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('outgoinglinks');
+                        }
                     }
                     this.close();
                 });
@@ -183,11 +198,14 @@ export class FolderSelectionModal extends Modal {
                 text: `📅 ${t('recent_files_mode')}`
             });
 
-            recentFilesOption.addEventListener('click', () => {
+            recentFilesOption.addEventListener('click', async () => {
                 if (this.activeView) {
-                    this.activeView.setSource('recent-files', '', true);
+                    await this.activeView.setSource('recent-files');
                 } else {
-                    this.plugin.activateView('recent-files');
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('recent-files');
+                    }
                 }
                 this.close();
             });
@@ -201,11 +219,14 @@ export class FolderSelectionModal extends Modal {
                 text: `📔 ${t('all_files_mode')}`
             });
 
-            allFilesOption.addEventListener('click', () => {
+            allFilesOption.addEventListener('click', async () => {
                 if (this.activeView) {
-                    this.activeView.setSource('all-files', '', true);
+                    await this.activeView.setSource('all-files');
                 } else {
-                    this.plugin.activateView('all-files');
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('all-files');
+                    }
                 }
                 this.close();
             });
@@ -219,11 +240,14 @@ export class FolderSelectionModal extends Modal {
                 text: `🎲 ${t('random_note_mode')}`
             });
 
-            randomNoteOption.addEventListener('click', () => {
+            randomNoteOption.addEventListener('click', async () => {
                 if (this.activeView) {
-                    this.activeView.setSource('random-note', '', true);
+                    await this.activeView.setSource('random-note');
                 } else {
-                    this.plugin.activateView('random-note');
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('random-note');
+                    }
                 }
                 this.close();
             });
@@ -237,11 +261,14 @@ export class FolderSelectionModal extends Modal {
                 text: `☑️ ${t('tasks_mode')}`
             });
 
-            tasksOption.addEventListener('click', () => {
+            tasksOption.addEventListener('click', async () => {
                 if (this.activeView) {
-                    this.activeView.setSource('tasks', '', true);
+                    await this.activeView.setSource('tasks');
                 } else {
-                    this.plugin.activateView('tasks');
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('tasks');
+                    }
                 }
                 this.close();
             });
@@ -255,11 +282,14 @@ export class FolderSelectionModal extends Modal {
             text: `${customFolderIcon} /`
         });
 
-        rootFolderOption.addEventListener('click', () => {
+        rootFolderOption.addEventListener('click', async () => {
             if (this.activeView) {
-                this.activeView.setSource('folder', '/', true);
+                await this.activeView.setSource('folder', '/');
             } else {
-                this.plugin.activateView('folder', '/');
+                const view = await this.plugin.activateView();
+                if (view instanceof GridView) {
+                    await view.setSource('folder', '/');
+                }
             }
             this.close();
         });
@@ -307,11 +337,14 @@ export class FolderSelectionModal extends Modal {
             nameSpan.textContent = displayName;
             folderOption.appendChild(nameSpan);
 
-            folderOption.addEventListener('click', () => {
+            folderOption.addEventListener('click', async () => {
                 if (this.activeView) {
-                    this.activeView.setSource('folder', folder.path, true);
+                    await this.activeView.setSource('folder', folder.path);
                 } else {
-                    this.plugin.activateView('folder', folder.path);
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('folder', folder.path);
+                    }
                 }
                 this.close();
             });

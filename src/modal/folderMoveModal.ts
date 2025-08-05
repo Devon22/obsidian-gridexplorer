@@ -42,7 +42,7 @@ export class showFolderMoveModal extends SuggestModal<string> {
             // 給檔案系統一點時間處理，然後重新整理視圖
             setTimeout(() => {
                 if (!this.plugin.settings.showFolder) {
-                    this.gridView.setSource('folder', newPath || '/', true);
+                    this.gridView.setSource('folder', newPath || '/');
                 } else {
                     this.gridView.render();
                 }
