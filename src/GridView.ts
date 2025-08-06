@@ -1159,7 +1159,7 @@ export class GridView extends ItemView {
                 event.preventDefault();
                 return;
             } else if (event.altKey || this.plugin.settings.showNoteInGrid) {
-                // Alt 鍵或設定為預設時：在 grid container 中顯示筆記
+                // Alt 鍵或設定為預設時：網格視圖中直接顯示筆記
                 this.selectItem(index);
                 this.hasKeyboardFocus = true;
 
@@ -1173,8 +1173,11 @@ export class GridView extends ItemView {
                 } else if (file.extension === 'pdf' || file.extension === 'canvas' || file.extension === 'base') {
                     this.app.workspace.getLeaf(true).openFile(file);
                 } else {
-                    // 非媒體檔案：在 grid container 中顯示筆記
-                    this.showNoteInGrid(file);
+                    // 非媒體檔案
+                    // 如果是捷徑檔案，則開啟捷徑，否則在網格視圖中直接顯示筆記
+                    if (!this.openShortcutFile(file)) {
+                        this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
+                    }
                 }
                 event.preventDefault();
                 return;
@@ -1192,58 +1195,9 @@ export class GridView extends ItemView {
                         this.openMediaFile(file, files);
                     }
                 } else {
-                    // 開啟文件檔案
-                    const fileCache = this.app.metadataCache.getFileCache(file);
-                    const redirectType = fileCache?.frontmatter?.type;
-                    const redirectPath = fileCache?.frontmatter?.redirect;
-
-                    if (redirectType && typeof redirectPath === 'string' && redirectPath.trim() !== '') {
-                        let target;
-
-                        if (redirectType === 'file') {
-                            if (redirectPath.startsWith('[[') && redirectPath.endsWith(']]')) {
-                                const noteName = redirectPath.slice(2, -2);
-                                target = this.app.metadataCache.getFirstLinkpathDest(noteName, file.path);
-                            } else {
-                                target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
-                            }
-
-                            if (target instanceof TFile) {
-                                this.app.workspace.getLeaf().openFile(target);
-                            } else {
-                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
-                            }
-                        }
-                        else if (redirectType === 'folder') {
-                            // 判斷redirectPath是否為資料夾
-                            if (this.app.vault.getAbstractFileByPath(normalizePath(redirectPath)) instanceof TFolder) {
-                                this.setSource('folder', redirectPath);
-                                this.clearSelection();
-                            } else {
-                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
-                            }
-                        } else if (redirectType === 'mode') {
-                            // 判斷redirectPath是否為模式
-                            this.setSource(redirectPath);
-                            this.clearSelection();
-                        } else if (redirectType === 'search') {
-                            this.setSource('', '', true, redirectPath);
-                            this.clearSelection();
-                        } else if (redirectType === 'uri') {
-                            // 檢查是否為 http/https 或 obsidian:// 協議
-                            if (redirectPath.startsWith('http://') ||
-                                redirectPath.startsWith('https://') ||
-                                redirectPath.startsWith('obsidian://') ||
-                                redirectPath.startsWith('file://')) {
-                                // 使用 window.open 打開網址或 obsidian 協議
-                                window.open(redirectPath, '_blank');
-                            } else {
-                                new Notice(`${t('target_not_found')}: ${redirectPath}`);
-                            }
-                        } else {
-                            new Notice(`${t('target_not_found')}: ${redirectPath}`);
-                        }
-                    } else {
+                    // 非媒體檔案
+                    // 如果是捷徑檔案，則開啟捷徑，否則正常開啟檔案
+                    if (!this.openShortcutFile(file)) {
                         // 非捷徑就正常開啟檔案
                         const leaf = this.app.workspace.getLeaf();
                         if (this.searchQuery !== '') {
@@ -1471,6 +1425,27 @@ export class GridView extends ItemView {
                     this.render();
                 });
         });
+        menu.addItem(item => {
+            item
+                .setTitle(t('back'))
+                .setIcon("arrow-left")
+                .onClick(() => {
+                    if (this.recentSources.length > 0) {
+                        const lastSource = JSON.parse(this.recentSources[0]);
+                        this.recentSources.shift();
+                        
+                        this.setSource(
+                            lastSource.mode,
+                            lastSource.path || '',
+                            false,
+                            lastSource.searchQuery || '',
+                            lastSource.searchAllFiles ?? true,
+                            lastSource.searchFilesNameOnly ?? false,
+                            lastSource.searchMediaFiles ?? false
+                        );
+                    }
+                });
+        });
         menu.addItem((item) => {
             item
                 .setTitle(t('reselect'))
@@ -1597,17 +1572,74 @@ export class GridView extends ItemView {
         });
     }
 
-    // 在 grid container 中顯示筆記
-    async showNoteInGrid(file: TFile) {
-        // 檢查是否為捷徑檔案
+    // 開啟捷徑檔案
+    openShortcutFile(file: TFile): boolean {
         const fileCache = this.app.metadataCache.getFileCache(file);
+        if (!fileCache?.frontmatter) return false;
         const redirectType = fileCache?.frontmatter?.type;
         const redirectPath = fileCache?.frontmatter?.redirect;
 
         if (redirectType && typeof redirectPath === 'string' && redirectPath.trim() !== '') {
-            this.app.workspace.getLeaf().openFile(file);
-            return;
+            let target;
+
+            if (redirectType === 'file') {
+                if (redirectPath.startsWith('[[') && redirectPath.endsWith(']]')) {
+                    const noteName = redirectPath.slice(2, -2);
+                    target = this.app.metadataCache.getFirstLinkpathDest(noteName, file.path);
+                } else {
+                    target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
+                }
+                if (!target) return false;
+
+                if (target instanceof TFile) {
+                    this.app.workspace.getLeaf().openFile(target);
+                    return true;
+                } else {
+                    new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                }
+            } else if (redirectType === 'folder') {
+                target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
+                if (!target) return false;
+
+                // 判斷redirectPath是否為資料夾
+                if (target instanceof TFolder) {
+                    this.setSource('folder', redirectPath);
+                    this.clearSelection();
+                    return true;
+                } else {
+                    new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                }
+            } else if (redirectType === 'mode') {
+                // 判斷redirectPath是否為模式
+                this.setSource(redirectPath);
+                this.clearSelection();
+                return true;
+            } else if (redirectType === 'search') {
+                this.setSource('', '', true, redirectPath);
+                this.clearSelection();
+                return true;
+            } else if (redirectType === 'uri') {
+                // 檢查是否為 http/https 或 obsidian:// 協議
+                if (redirectPath.startsWith('http://') ||
+                    redirectPath.startsWith('https://') ||
+                    redirectPath.startsWith('obsidian://') ||
+                    redirectPath.startsWith('file://')) {
+                    // 使用 window.open 打開網址或 obsidian 協議
+                    window.open(redirectPath, '_blank');
+                    return true;
+                } else {
+                    new Notice(`${t('target_not_found')}: ${redirectPath}`);
+                }
+            } else {
+                new Notice(`${t('target_not_found')}: ${redirectPath}`);
+            }
         }
+        
+        return false;
+    }
+
+    // 在網格視圖中直接顯示筆記
+    async showNoteInGrid(file: TFile) {
 
         // 關閉之前的筆記顯示
         if (this.isShowingNote) {
