@@ -46,6 +46,7 @@ export class GridView extends ItemView {
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
     fileWatcher: FileWatcher; // 檔案監聽器
     recentSources: string[] = []; // 歷史記錄
+    futureSources: string[] = []; // 未來紀錄（前進堆疊）
     minMode: boolean = false; // 最小模式
     showIgnoredFolders: boolean = false; // 顯示忽略資料夾
     showDateDividers: boolean = false; // 顯示日期分隔器
@@ -161,10 +162,9 @@ export class GridView extends ItemView {
         return (this.leaf as any)?.pinned ?? false;
     }
 
-    // 將來源加入歷史記錄（LRU 去重）
-    // 1. 若已有相同紀錄先移除，確保唯一
-    // 2. 插入到陣列開頭，代表最新使用
-    // 3. 超過上限時裁切
+    // 將來源加入歷史記錄
+    // 1. 插入到陣列開頭，代表最新使用
+    // 2. 超過上限時裁切
     public pushHistory(
         mode: string,
         path: string | null,
@@ -182,12 +182,11 @@ export class GridView extends ItemView {
             searchFilesNameOnly,
             searchMediaFiles,
         });
-        const existingIndex = this.recentSources.indexOf(key);
-        if (existingIndex !== -1) {
-            this.recentSources.splice(existingIndex, 1);
-        }
+        
         this.recentSources.unshift(key);
-        const limit = 15;
+        // 一旦有新的歷史被推入，清空 futureSources
+        this.futureSources = [];
+        const limit = 10;
         if (this.recentSources.length > limit) {
             this.recentSources.length = limit;
         }
@@ -1615,7 +1614,10 @@ export class GridView extends ItemView {
                 this.clearSelection();
                 return true;
             } else if (redirectType === 'search') {
-                this.setSource('', '', true, redirectPath);
+                const searchLocationFiles = fileCache?.frontmatter?.searchLocationFiles || false;
+                const searchFilesNameOnly = fileCache?.frontmatter?.searchFilesNameOnly || false;
+                const searchMediaFiles = fileCache?.frontmatter?.searchMediaFiles || false;
+                this.setSource('', '', true, redirectPath, !searchLocationFiles, searchFilesNameOnly, searchMediaFiles);
                 this.clearSelection();
                 return true;
             } else if (redirectType === 'uri') {
@@ -1804,6 +1806,7 @@ export class GridView extends ItemView {
                 showDateDividers: this.showDateDividers,
                 showNoteTags: this.showNoteTags,
                 recentSources: this.recentSources,
+            futureSources: this.futureSources,
             }
         };
     }
@@ -1827,6 +1830,7 @@ export class GridView extends ItemView {
             this.showDateDividers = state.state.showDateDividers ?? this.plugin.settings.dateDividerMode !== 'none';
             this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
             this.recentSources = state.state.recentSources ?? [];
+            this.futureSources = state.state.futureSources ?? [];
             this.render();
         }
     }

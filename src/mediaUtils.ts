@@ -3,9 +3,9 @@ import { App, TFile } from 'obsidian';
 // 尋找筆記中的第一張圖片
 export async function findFirstImageInNote(app: App, content: string) {
     try {
-        const internalStyle = /!?\[\[(.*?\.(?:jpg|jpeg|png|gif|webp))(?:\|.*?)?\]\]/;
-        const markdownStyle = /!\[(.*?)\]\(\s*(\S+?(?:\.(?:jpg|jpeg|png|gif|webp)|format=(?:jpg|jpeg|png|gif|webp))[^\s)]*)\s*(?:\s+["'][^"']*["'])?\s*\)/;
-        const frontmatterUrl = /^[\w\-_]+:\s*(https?:\/\/\S+?(?:\.(?:jpg|jpeg|png|gif|webp)|format=(?:jpg|jpeg|png|gif|webp))[^\s]*)\s*$/;
+        const internalStyle = /!?\[\[(.*?\.(?:jpg|jpeg|png|gif|webp|avif))(?:\|.*?)?\]\]/;
+        const markdownStyle = /!\[(.*?)\]\(\s*(\S+?(?:\.(?:jpg|jpeg|png|gif|webp|avif)|format=(?:jpg|jpeg|png|gif|webp))[^\s)]*)\s*(?:\s+["'][^"']*["'])?\s*\)/;
+        const frontmatterUrl = /^[\w\-_]+:\s*(https?:\/\/\S+?(?:\.(?:jpg|jpeg|png|gif|webp|avif)|format=(?:jpg|jpeg|png|gif|webp))[^\s]*)\s*$/;
 
         const internalMatch = content.match(new RegExp(`(?:${internalStyle.source}|${markdownStyle.source}|${frontmatterUrl.source})`, 'im'));
 

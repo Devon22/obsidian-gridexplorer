@@ -1,12 +1,13 @@
 import { App, Modal, TFolder, TFile, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { t } from '../translations';
-import { showSearchInputModal, showUriInputModal } from './inputModal';
+import { showSearchInputModal, showUriInputModal, SearchOptions } from './inputModal';
 
 interface ShortcutOption {
     type: 'mode' | 'folder' | 'file' | 'search' | 'uri';
     value: string;
     display: string;
+    searchOptions?: SearchOptions;
 }
 
 export class ShortcutSelectionModal extends Modal {
@@ -66,11 +67,19 @@ export class ShortcutSelectionModal extends Modal {
 
         // 點擊搜尋按鈕時打開搜尋輸入模態框
         searchButton.addEventListener('click', () => {
-            showSearchInputModal(this.app, (searchText) => {
+            showSearchInputModal(this.app, (searchText, searchOptions) => {
+                const searchParams = new URLSearchParams();
+                if (searchOptions) {
+                    searchParams.set('allFiles', searchOptions.searchLocationFiles.toString());
+                    searchParams.set('nameOnly', searchOptions.searchFilesNameOnly.toString());
+                    searchParams.set('mediaOnly', searchOptions.searchMediaFiles.toString());
+                }
+                
                 this.onSubmit({
                     type: 'search',
                     value: searchText,
-                    display: `🔎 ${searchText}`
+                    display: `🔎 ${searchText}`,
+                    searchOptions: searchOptions
                 });
                 this.close();
             });

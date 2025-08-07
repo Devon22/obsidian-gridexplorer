@@ -546,7 +546,7 @@
 /* 頂部按鈕區域樣式 Header Buttons */
 .ge-header-buttons {
     display: flex;
-    gap: 8px;
+    gap: 7px;
     padding: 9px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border);
@@ -558,13 +558,18 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 6px 12px;
+    padding: 6px 11px;
     background-color: var(--interactive-normal);
     border-radius: var(--button-radius);
     color: var(--text-normal);
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+}
+
+.ge-header-buttons button:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 .is-tablet .ge-header-buttons button:not(.clickable-icon) {
