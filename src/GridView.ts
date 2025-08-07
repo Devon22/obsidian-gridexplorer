@@ -36,10 +36,10 @@ export class GridView extends ItemView {
     sortType: string; // 排序模式
     folderSortType: string = ''; // 資料夾排序模式
     searchQuery: string = ''; // 搜尋關鍵字
-    searchAllFiles: boolean = true; // 是否搜尋所有筆記
+    searchCurrentLocationOnly: boolean = false; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean = false; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean = false; // 是否搜尋媒體檔案
-    randomNoteIncludeMedia: boolean = false; // 隨機筆記是否包含圖片和影片
+    includeMedia: boolean = false; // 是否包含媒體檔案
     selectedItemIndex: number = -1; // 當前選中的項目索引
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
     gridItems: HTMLElement[] = []; // 存儲所有網格項目的引用
@@ -70,6 +70,9 @@ export class GridView extends ItemView {
         this.cardLayout = this.baseCardLayout;
         this.showDateDividers = this.plugin.settings.dateDividerMode !== 'none';
         this.showNoteTags = this.plugin.settings.showNoteTags;
+        this.searchCurrentLocationOnly = this.plugin.settings.searchCurrentLocationOnly;
+        this.searchFilesNameOnly = this.plugin.settings.searchFilesNameOnly;
+        this.searchMediaFiles = this.plugin.settings.searchMediaFiles;
 
         // 根據設定決定是否註冊檔案變更監聽器
         if (this.plugin.settings.enableFileWatcher) {
@@ -169,7 +172,7 @@ export class GridView extends ItemView {
         mode: string,
         path: string | null,
         searchQuery: string = '',
-        searchAllFiles: boolean = true,
+        searchCurrentLocationOnly: boolean = false,
         searchFilesNameOnly: boolean = false,
         searchMediaFiles: boolean = false,
     ) {
@@ -178,7 +181,7 @@ export class GridView extends ItemView {
             mode,
             path: sanitizedPath,
             searchQuery,
-            searchAllFiles,
+            searchCurrentLocationOnly,
             searchFilesNameOnly,
             searchMediaFiles,
         });
@@ -198,7 +201,7 @@ export class GridView extends ItemView {
         path = '',
         recordHistory = true, // 是否將當前狀態加入歷史記錄
         searchQuery?: string,
-        searchAllFiles?: boolean,
+        searchCurrentLocationOnly?: boolean,
         searchFilesNameOnly?: boolean,
         searchMediaFiles?: boolean
     ) {
@@ -207,7 +210,7 @@ export class GridView extends ItemView {
         if (this.sourceMode === mode &&
             this.sourcePath === path &&
             this.searchQuery === searchQuery &&
-            this.searchAllFiles === searchAllFiles &&
+            this.searchCurrentLocationOnly === searchCurrentLocationOnly &&
             this.searchFilesNameOnly === searchFilesNameOnly &&
             this.searchMediaFiles === searchMediaFiles) {
             return;
@@ -219,14 +222,14 @@ export class GridView extends ItemView {
                 this.sourceMode,
                 this.sourcePath,
                 this.searchQuery,
-                this.searchAllFiles,
+                this.searchCurrentLocationOnly,
                 this.searchFilesNameOnly,
                 this.searchMediaFiles,
             );
         }
 
         // 全域搜尋時切換路徑則清空搜尋
-        if (this.searchQuery !== '' && this.searchAllFiles) {
+        if (this.searchQuery && !this.searchCurrentLocationOnly) {
             this.searchQuery = '';
         }
 
@@ -269,8 +272,8 @@ export class GridView extends ItemView {
         if (searchQuery !== undefined) {
             this.searchQuery = searchQuery;
         }
-        if (searchAllFiles !== undefined) {
-            this.searchAllFiles = searchAllFiles;
+        if (searchCurrentLocationOnly !== undefined) {
+            this.searchCurrentLocationOnly = searchCurrentLocationOnly;
         }
         if (searchFilesNameOnly !== undefined) {
             this.searchFilesNameOnly = searchFilesNameOnly;
@@ -1199,7 +1202,7 @@ export class GridView extends ItemView {
                     if (!this.openShortcutFile(file)) {
                         // 非捷徑就正常開啟檔案
                         const leaf = this.app.workspace.getLeaf();
-                        if (this.searchQuery !== '') {
+                        if (this.searchQuery) {
                             this.app.vault.cachedRead(file).then((content) => {
                                 const searchQuery = this.searchQuery;
                                 const lowerContent = content.toLowerCase();
@@ -1438,7 +1441,7 @@ export class GridView extends ItemView {
                             lastSource.path || '',
                             false,
                             lastSource.searchQuery || '',
-                            lastSource.searchAllFiles ?? true,
+                            lastSource.searchCurrentLocationOnly ?? false,
                             lastSource.searchFilesNameOnly ?? false,
                             lastSource.searchMediaFiles ?? false
                         );
@@ -1558,7 +1561,7 @@ export class GridView extends ItemView {
         // 如果沒有傳入媒體檔案列表，則獲取
         const getMediaFilesPromise = mediaFiles
             ? Promise.resolve(mediaFiles.filter(f => isMediaFile(f)))
-            : getFiles(this, this.randomNoteIncludeMedia).then(allFiles => allFiles.filter(f => isMediaFile(f)));
+            : getFiles(this, this.includeMedia).then(allFiles => allFiles.filter(f => isMediaFile(f)));
 
         getMediaFilesPromise.then(filteredMediaFiles => {
             // 找到當前檔案在媒體檔案列表中的索引
@@ -1614,10 +1617,10 @@ export class GridView extends ItemView {
                 this.clearSelection();
                 return true;
             } else if (redirectType === 'search') {
-                const searchLocationFiles = fileCache?.frontmatter?.searchLocationFiles || false;
+                const searchCurrentLocationOnly = fileCache?.frontmatter?.searchCurrentLocationOnly || false;
                 const searchFilesNameOnly = fileCache?.frontmatter?.searchFilesNameOnly || false;
                 const searchMediaFiles = fileCache?.frontmatter?.searchMediaFiles || false;
-                this.setSource('', '', true, redirectPath, !searchLocationFiles, searchFilesNameOnly, searchMediaFiles);
+                this.setSource('', '', true, redirectPath, searchCurrentLocationOnly, searchFilesNameOnly, searchMediaFiles);
                 this.clearSelection();
                 return true;
             } else if (redirectType === 'uri') {
@@ -1795,9 +1798,10 @@ export class GridView extends ItemView {
                 sortType: this.sortType,
                 folderSortType: this.folderSortType,
                 searchQuery: this.searchQuery,
-                searchAllFiles: this.searchAllFiles,
+                searchCurrentLocationOnly: this.searchCurrentLocationOnly,
+                searchFilesNameOnly: this.searchFilesNameOnly,
                 searchMediaFiles: this.searchMediaFiles,
-                randomNoteIncludeMedia: this.randomNoteIncludeMedia,
+                includeMedia: this.includeMedia,
                 minMode: this.minMode,
                 showIgnoredFolders: this.showIgnoredFolders,
                 baseCardLayout: this.baseCardLayout,
@@ -1806,7 +1810,7 @@ export class GridView extends ItemView {
                 showDateDividers: this.showDateDividers,
                 showNoteTags: this.showNoteTags,
                 recentSources: this.recentSources,
-            futureSources: this.futureSources,
+                futureSources: this.futureSources,
             }
         };
     }
@@ -1819,9 +1823,10 @@ export class GridView extends ItemView {
             this.sortType = state.state.sortType || this.plugin.settings.defaultSortType;
             this.folderSortType = state.state.folderSortType || '';
             this.searchQuery = state.state.searchQuery || '';
-            this.searchAllFiles = state.state.searchAllFiles ?? true;
+            this.searchCurrentLocationOnly = state.state.searchCurrentLocationOnly ?? false;
+            this.searchFilesNameOnly = state.state.searchFilesNameOnly ?? false;
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
-            this.randomNoteIncludeMedia = state.state.randomNoteIncludeMedia ?? false;
+            this.includeMedia = state.state.includeMedia ?? false;
             this.minMode = state.state.minMode ?? false;
             this.showIgnoredFolders = state.state.showIgnoredFolders ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';

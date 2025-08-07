@@ -17,7 +17,8 @@ export class FolderSelectionModal extends Modal {
     selectedIndex: number = -1; // 當前選中的選項索引
     searchInput: HTMLInputElement;
     buttonElement: HTMLElement | undefined;
-    
+    searchOption: HTMLElement | null = null; // 搜尋選項元素
+
     constructor(app: App, plugin: GridExplorerPlugin, activeView?: GridView, buttonElement?: HTMLElement) {
         super(app);
         this.plugin = plugin;
@@ -36,7 +37,7 @@ export class FolderSelectionModal extends Modal {
         }
 
         // 添加搜尋輸入框
-        const searchContainer = contentEl.createEl('div', { 
+        const searchContainer = contentEl.createEl('div', {
             cls: 'ge-folder-search-container'
         });
         this.searchInput = searchContainer.createEl('input', {
@@ -49,7 +50,7 @@ export class FolderSelectionModal extends Modal {
         });
 
         // 創建一個容器來存放所有資料夾選項
-        this.folderOptionsContainer = contentEl.createEl('div', { 
+        this.folderOptionsContainer = contentEl.createEl('div', {
             cls: 'ge-folder-options-container',
             attr: Platform.isMobile ? { tabindex: '0' } : {}
         });
@@ -58,6 +59,7 @@ export class FolderSelectionModal extends Modal {
         this.searchInput.addEventListener('input', () => {
             const searchTerm = this.searchInput.value.toLowerCase();
             this.filterFolderOptions(searchTerm);
+            this.updateSearchOption(this.searchInput.value.trim());
         });
 
         // 鍵盤事件處理
@@ -86,7 +88,7 @@ export class FolderSelectionModal extends Modal {
                 this.folderOptions.push(customOption);
             });
         }
-        
+
         // 建立書籤選項
         if (this.plugin.settings.showBookmarksMode) {
             const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
@@ -117,7 +119,7 @@ export class FolderSelectionModal extends Modal {
             if (searchLeaf) {
                 const searchView = searchLeaf.view;
                 const searchInputEl = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
-                if(searchInputEl) {
+                if (searchInputEl) {
                     if (searchInputEl.value.trim().length > 0) {
                         const searchOption = this.folderOptionsContainer.createEl('div', {
                             cls: 'ge-grid-view-folder-option',
@@ -190,7 +192,7 @@ export class FolderSelectionModal extends Modal {
                 this.folderOptions.push(outgoinglinksOption);
             }
         }
-        
+
         // 建立最近檔案選項
         if (this.plugin.settings.showRecentFilesMode) {
             const recentFilesOption = this.folderOptionsContainer.createEl('div', {
@@ -300,20 +302,20 @@ export class FolderSelectionModal extends Modal {
             .filter(folder => {
                 // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
                 return !isFolderIgnored(
-                    folder, 
-                    this.plugin.settings.ignoredFolders, 
-                    this.plugin.settings.ignoredFolderPatterns, 
+                    folder,
+                    this.plugin.settings.ignoredFolders,
+                    this.plugin.settings.ignoredFolderPatterns,
                     false // 在選擇資料夾時不考慮 showIgnoredFolders 設置
                 );
             })
             .sort((a, b) => a.path.localeCompare(b.path));
-            
+
         // 建立資料夾選項
         folders.forEach(folder => {
             // 計算資料夾層級
             const depth = (folder.path.match(/\//g) || []).length;
             const displayName = folder.path.split('/').pop() || '/';
-            
+
             const folderOption = this.folderOptionsContainer.createEl('div', {
                 cls: 'ge-grid-view-folder-option',
                 attr: {
@@ -321,7 +323,7 @@ export class FolderSelectionModal extends Modal {
                     'data-path': folder.path
                 }
             });
-            
+
             // 產生 ascii tree 前綴
             const prefixSpan = document.createElement('span');
             prefixSpan.className = 'ge-folder-tree-prefix';
@@ -359,12 +361,53 @@ export class FolderSelectionModal extends Modal {
         });
     }
 
+    // 更新搜尋選項
+    updateSearchOption(searchTerm: string) {
+        // 移除現有的搜尋選項
+        if (this.searchOption) {
+            this.searchOption.remove();
+            const index = this.folderOptions.indexOf(this.searchOption);
+            if (index > -1) {
+                this.folderOptions.splice(index, 1);
+            }
+            this.searchOption = null;
+        }
+
+        // 如果有搜尋內容，添加搜尋選項
+        if (searchTerm.length > 0) {
+            this.searchOption = this.folderOptionsContainer.createEl('div', {
+                cls: 'ge-grid-view-folder-option ge-search-option',
+                text: `🔍 ${t('search_for')} "${searchTerm}"`
+            });
+
+            this.searchOption.addEventListener('click', async () => {
+                if (this.activeView) {
+                    await this.activeView.setSource('folder', '/', true, searchTerm);
+                } else {
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('folder', '/', true, searchTerm);
+                    }
+                }
+                this.close();
+            });
+
+            this.searchOption.addEventListener('mouseenter', () => {
+                const index = this.folderOptions.length;
+                this.updateSelection(index);
+            });
+
+            // 將搜尋選項添加到選項列表的最後
+            this.folderOptions.push(this.searchOption);
+        }
+    }
+
     // 處理鍵盤事件
     handleKeyDown(event: KeyboardEvent) {
         const visibleOptions = this.getVisibleOptions();
-        
+
         if (visibleOptions.length === 0) return;
-        
+
         switch (event.key) {
             case 'ArrowDown':
                 event.preventDefault();
@@ -393,28 +436,28 @@ export class FolderSelectionModal extends Modal {
     moveSelection(direction: number, visibleOptions: HTMLElement[]) {
         // 如果沒有選中項或當前選中項不可見，則從頭開始
         let currentVisibleIndex = -1;
-        
+
         if (this.selectedIndex >= 0) {
             const selectedOption = this.folderOptions[this.selectedIndex];
             currentVisibleIndex = visibleOptions.indexOf(selectedOption);
         }
-        
+
         // 計算新的可見索引
         let newVisibleIndex = currentVisibleIndex + direction;
-        
+
         // 循環選擇
         if (newVisibleIndex < 0) {
             newVisibleIndex = visibleOptions.length - 1;
         } else if (newVisibleIndex >= visibleOptions.length) {
             newVisibleIndex = 0;
         }
-        
+
         // 轉換為實際的選項索引
         if (newVisibleIndex >= 0 && newVisibleIndex < visibleOptions.length) {
             const newSelectedOption = visibleOptions[newVisibleIndex];
             const newIndex = this.folderOptions.indexOf(newSelectedOption);
             this.updateSelection(newIndex);
-            
+
             // 確保選中項在視圖中可見
             newSelectedOption.scrollIntoView({ block: 'nearest' });
         }
@@ -426,9 +469,9 @@ export class FolderSelectionModal extends Modal {
         if (this.selectedIndex >= 0 && this.selectedIndex < this.folderOptions.length) {
             this.folderOptions[this.selectedIndex].removeClass('ge-selected-option');
         }
-        
+
         this.selectedIndex = index;
-        
+
         // 設置新的選擇
         if (this.selectedIndex >= 0 && this.selectedIndex < this.folderOptions.length) {
             this.folderOptions[this.selectedIndex].addClass('ge-selected-option');
@@ -437,7 +480,7 @@ export class FolderSelectionModal extends Modal {
 
     // 獲取當前可見的選項
     getVisibleOptions(): HTMLElement[] {
-        return this.folderOptions.filter(option => 
+        return this.folderOptions.filter(option =>
             option.style.display !== 'none'
         );
     }
@@ -445,8 +488,13 @@ export class FolderSelectionModal extends Modal {
     // 篩選資料夾選項
     filterFolderOptions(searchTerm: string) {
         let hasVisibleOptions = false;
-        
+
         this.folderOptions.forEach(option => {
+            // 跳過搜尋選項，它會單獨處理
+            if (option === this.searchOption) {
+                return;
+            }
+
             // 根據搜尋狀態動態調整資料夾顯示文字
             const dataPath = option.getAttribute('data-path');
             if (dataPath) {
@@ -486,10 +534,10 @@ export class FolderSelectionModal extends Modal {
                 option.style.display = 'none';
             }
         });
-        
+
         // 重置選擇，並選中第一個可見選項（如果有）
         this.updateSelection(-1);
-        
+
         if (hasVisibleOptions) {
             const visibleOptions = this.getVisibleOptions();
             if (visibleOptions.length > 0) {
@@ -516,7 +564,7 @@ export class FolderSelectionModal extends Modal {
         // 計算位置
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         // 預設位置：按鈕下方中心對齊
         let left = buttonRect.left + (buttonRect.width / 2) - 150; // 150 是 modal 寬度的一半
         let top = buttonRect.bottom + 8; // 8px 間距

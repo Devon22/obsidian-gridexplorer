@@ -81,7 +81,7 @@ export function renderModePath(gridView: GridView) {
 
     // 顯示目前資料夾及完整路徑
     if (gridView.sourceMode === 'folder' &&
-        (gridView.searchQuery === '' || (gridView.searchQuery && !gridView.searchAllFiles))) {
+        (gridView.searchQuery === '' || (gridView.searchQuery && gridView.searchCurrentLocationOnly))) {
 
         // 分割路徑
         const pathParts = gridView.sourcePath.split('/').filter(part => part.trim() !== '');
@@ -468,7 +468,7 @@ export function renderModePath(gridView: GridView) {
                 });
             }
         }
-    } else if (!(gridView.searchQuery !== '' && gridView.searchAllFiles)) {
+    } else if (!(gridView.searchQuery && !gridView.searchCurrentLocationOnly)) {
         // 顯示目前模式名稱
 
         let modeName = '';
@@ -582,25 +582,25 @@ export function renderModePath(gridView: GridView) {
             case 'all-files':
                 if (gridView.plugin.settings.showMediaFiles && gridView.searchQuery === '') {
                     // "顯示類型"選項
-                    const showTypeName = gridView.randomNoteIncludeMedia ? t('random_note_include_media_files') : t('random_note_notes_only');
+                    const showTypeName = gridView.includeMedia ? t('random_note_include_media_files') : t('random_note_notes_only');
                     const showTypeSpan = modenameContainer.createEl('a', { text: showTypeName, cls: 'ge-sub-option' });
                     showTypeSpan.addEventListener('click', (evt) => {
                         const menu = new Menu();
                         menu.addItem((item) => {
                             item.setTitle(t('random_note_notes_only'))
                                 .setIcon('file-text')
-                                .setChecked(!gridView.randomNoteIncludeMedia)
+                                .setChecked(!gridView.includeMedia)
                                 .onClick(() => {
-                                    gridView.randomNoteIncludeMedia = false;
+                                    gridView.includeMedia = false;
                                     gridView.render();
                                 });
                         });
                         menu.addItem((item) => {
                             item.setTitle(t('random_note_include_media_files'))
                                 .setIcon('file-image')
-                                .setChecked(gridView.randomNoteIncludeMedia)
+                                .setChecked(gridView.includeMedia)
                                 .onClick(() => {
-                                    gridView.randomNoteIncludeMedia = true;
+                                    gridView.includeMedia = true;
                                     gridView.render();
                                 });
                         });
@@ -710,7 +710,7 @@ export function renderModePath(gridView: GridView) {
                 }
                 break;
         }
-    } else if (gridView.searchQuery !== '' && gridView.searchAllFiles) {
+    } else if (gridView.searchQuery && !gridView.searchCurrentLocationOnly) {
         // 顯示全域搜尋名稱
         modenameContainer.createEl('span', {
             text: `🔍 ${t('global_search')}`,

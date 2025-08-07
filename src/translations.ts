@@ -1,8 +1,7 @@
-import { getLanguage } from 'obsidian';
 
 interface Translations {
     'zh-TW': { [key: string]: string };
-    'en': { [key: string]: string }; 
+    'en': { [key: string]: string };
     'zh': { [key: string]: string };
     'ja': { [key: string]: string };
     'ru': { [key: string]: string };
@@ -32,6 +31,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': '沒有反向連結',
         'back': '返回',
         'search': '搜尋',
+        'default_search_option': '預設搜尋選項',
         'search_placeholder': '搜尋關鍵字',
         'search_current_location_only': '僅搜尋目前位置',
         'search_files_name_only': '僅搜尋檔名',
@@ -111,7 +111,7 @@ export const TRANSLATIONS: Translations = {
         'note_summary_field_desc': '指定 frontmatter 中用於筆記摘要的欄位名稱',
         'modified_date_field': '"修改時間"欄位名稱',
         'modified_date_field_desc': '指定 frontmatter 中用於筆記修改時間的欄位名稱 (支援多個欄位名稱，用逗號分隔)',
-        'created_date_field': '"建立時間"欄位名稱',    
+        'created_date_field': '"建立時間"欄位名稱',
         'created_date_field_desc': '指定 frontmatter 中用於筆記建立時間的欄位名稱 (支援多個欄位名稱，用逗號分隔)',
         'grid_item_width': '網格項目寬度',
         'grid_item_width_desc': '設定網格項目的寬度',
@@ -144,7 +144,7 @@ export const TRANSLATIONS: Translations = {
         'intercept_all_tag_clicks_desc': '啟用後會攔截所有標籤點擊事件，並在網格視圖中打開標籤',
         'intercept_breadcrumb_clicks': '攔截筆記導航列點擊事件',
         'intercept_breadcrumb_clicks_desc': '啟用後會攔截筆記導航列點擊事件，並在網格視圖中打開路徑',
-        'reset_to_default' : '重置為預設值',
+        'reset_to_default': '重置為預設值',
         'settings_reset_notice': '設定值已重置為預設值',
         'config_management': '設定檔管理',
         'config_management_desc': '管理設定檔的重置、匯出和匯入',
@@ -186,10 +186,10 @@ export const TRANSLATIONS: Translations = {
         'all': '全部',
         'default': '預設',
         'hidden': '隱藏',
-        
+
         // 隱藏頂部元素
         'hide_header_elements': '隱藏頂部元素',
-        
+
         // 預設開啟位置設定
         'default_open_location': '預設開啟位置',
         'default_open_location_desc': '設定網格視圖預設開啟的位置',
@@ -230,6 +230,7 @@ export const TRANSLATIONS: Translations = {
         'searching': '搜尋中...',
         'no_files': '沒有找到任何檔案',
         'filter_folders': '篩選資料夾...',
+        'search_for': '搜尋',
 
         // 快捷方式選擇對話框
         'create_shortcut': '建立捷徑',
@@ -314,6 +315,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': 'No backlinks',
         'back': 'Back',
         'search': 'Search',
+        'default_search_option': 'Default search option',
         'search_placeholder': 'Search keyword',
         'search_current_location_only': 'Search current location only',
         'search_files_name_only': 'Search files name only',
@@ -393,7 +395,7 @@ export const TRANSLATIONS: Translations = {
         'note_summary_field_desc': 'Set the field name in frontmatter to use for the note summary',
         'modified_date_field': '"Modified date" field name',
         'modified_date_field_desc': 'Set the field name in frontmatter to use for the modified date (support multiple field names, separated by commas)',
-        'created_date_field': '"Created date" field name',    
+        'created_date_field': '"Created date" field name',
         'created_date_field_desc': 'Set the field name in frontmatter to use for the created date (support multiple field names, separated by commas)',
         'grid_item_width': 'Grid item width',
         'grid_item_width_desc': 'Set the width of grid items',
@@ -468,10 +470,10 @@ export const TRANSLATIONS: Translations = {
         'all': 'All',
         'default': 'Default',
         'hidden': 'Hidden',
-        
+
         // Hide header elements setting
         'hide_header_elements': 'Hide header elements',
-        
+
         // Default open location setting
         'default_open_location': 'Default open location',
         'default_open_location_desc': 'Set the default location to open the grid view',
@@ -512,6 +514,7 @@ export const TRANSLATIONS: Translations = {
         'searching': 'Searching...',
         'no_files': 'No files found',
         'filter_folders': 'Filter folders...',
+        'search_for': 'Search for',
 
         // Shortcut Selection Dialog
         'create_shortcut': 'Create Shortcut',
@@ -520,7 +523,7 @@ export const TRANSLATIONS: Translations = {
         'target_not_found': 'Target not found',
         'shortcut_created': 'Shortcut created',
         'failed_to_create_shortcut': 'Failed to create shortcut',
-        
+
         // Folder Note Settings Dialog
         'folder_note_settings': 'Folder Note Settings',
         'folder_sort_type': 'Folder Sort Type',
@@ -596,6 +599,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': '没有反向链接',
         'back': '返回',
         'search': '搜索',
+        'default_search_option': '默认搜索选项',
         'search_placeholder': '搜索关键字',
         'search_current_location_only': '仅搜索当前位置',
         'search_files_name_only': '仅搜索文件名',
@@ -695,7 +699,7 @@ export const TRANSLATIONS: Translations = {
         'image_position': '图片位置',
         'image_position_desc': '设置图片的位置',
         'top': '顶部',
-        'bottom': '底部',    
+        'bottom': '底部',
         'multi_line_title': '标题支持多行显示',
         'multi_line_title_desc': '设置是否允许标题多行显示',
         'show_code_block_in_summary': '摘要中显示CodeBlock',
@@ -748,10 +752,10 @@ export const TRANSLATIONS: Translations = {
         'all': '全部',
         'default': '默认',
         'hidden': '隐藏',
-        
+
         // 隐藏頂部元素
         'hide_header_elements': '隱藏頂部元素',
-        
+
         // 默认打开位置设置
         'default_open_location': '默认打开位置',
         'default_open_location_desc': '设置网格视图默认打开的位置',
@@ -792,6 +796,7 @@ export const TRANSLATIONS: Translations = {
         'searching': '搜索中...',
         'no_files': '没有找到任何文件',
         'filter_folders': '筛选文件夹...',
+        'search_for': '搜索',
 
         // 快捷方式选择对话框
         'create_shortcut': '创建快捷方式',
@@ -800,7 +805,7 @@ export const TRANSLATIONS: Translations = {
         'target_not_found': '目标未找到',
         'shortcut_created': '快捷方式已创建',
         'failed_to_create_shortcut': '创建快捷方式失败',
-        
+
         // 文件夹笔记设置对话框
         'folder_note_settings': '文件夹笔记设置',
         'folder_sort_type': '文件夹排序方式',
@@ -852,7 +857,7 @@ export const TRANSLATIONS: Translations = {
 
         // Quick Access Settings and Commands
 
-                'quick_access_settings_title': '快速访问设置',
+        'quick_access_settings_title': '快速访问设置',
         'quick_access_folder_name': '快速访问文件夹',
         'quick_access_folder_desc': '设置“打开快速访问文件夹”命令使用的文件夹',
         'quick_access_mode_name': '快速访问模式',
@@ -876,6 +881,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': 'バックリンクなし',
         'back': '戻る',
         'search': '検索',
+        'default_search_option': 'デフォルト検索オプション',
         'search_placeholder': 'キーワード検索',
         'search_current_location_only': '現在の場所のみ検索',
         'search_files_name_only': 'ファイル名のみ検索',
@@ -1028,10 +1034,10 @@ export const TRANSLATIONS: Translations = {
         'all': 'すべて',
         'default': 'デフォルト',
         'hidden': '隠す',
-        
+
         // 隠す頂部元素
         'hide_header_elements': '頂部元素を隠す',
-        
+
         // 開く場所設定
         'default_open_location': 'デフォルトの開く場所',
         'default_open_location_desc': 'グリッドビューを開くデフォルトの場所を設定',
@@ -1072,6 +1078,7 @@ export const TRANSLATIONS: Translations = {
         'searching': '検索中...',
         'no_files': 'ファイルが見つかりません',
         'filter_folders': 'フォルダをフィルタリング...',
+        'search_for': '検索',
 
         // ショートカット選択ダイアログ
         'create_shortcut': 'ショートカットを作成',
@@ -1157,6 +1164,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': 'Нет обратных ссылок',
         'back': 'Назад',
         'search': 'Поиск',
+        'default_search_option': 'По умолчанию',
         'search_placeholder': 'Ключевое слово для поиска',
         'search_current_location_only': 'Искать только в текущем расположении',
         'search_files_name_only': 'Искать только в названии файлов',
@@ -1309,10 +1317,10 @@ export const TRANSLATIONS: Translations = {
         'all': 'Все',
         'default': 'По умолчанию',
         'hidden': 'Скрытые',
-        
+
         // Hide header elements setting
         'hide_header_elements': 'Скрыть элементы заголовка',
-        
+
         // Default open location setting
         'default_open_location': 'Место открытия по умолчанию',
         'default_open_location_desc': 'Установите место открытия сеточного вида по умолчанию',
@@ -1353,6 +1361,7 @@ export const TRANSLATIONS: Translations = {
         'searching': 'Поиск...',
         'no_files': 'Файлы не найдены',
         'filter_folders': 'Фильтровать папки...',
+        'search_for': 'Поиск',
 
         //
         'create_shortcut': 'Создать ярлик',
@@ -1437,6 +1446,7 @@ export const TRANSLATIONS: Translations = {
         'no_backlinks': 'Немає зворотних посилань',
         'back': 'Назад',
         'search': 'Пошук',
+        'default_search_option': 'По умолчанию',
         'search_placeholder': 'Ключове слово для пошуку',
         'search_current_location_only': 'Шукати лише в поточному розташуванні',
         'search_files_name_only': 'Шукати лише в назві файлів',
@@ -1589,10 +1599,10 @@ export const TRANSLATIONS: Translations = {
         'all': 'Всі',
         'default': 'По умолчанию',
         'hidden': 'Сховати',
-        
+
         // Hide header elements setting
         'hide_header_elements': 'Скрыть элементы заголовка',
-        
+
         // Default open location setting
         'default_open_location': 'Місце відкриття за замовчуванням',
         'default_open_location_desc': 'Встановіть місце відкриття сіткового вигляду за замовчуванням',
@@ -1633,6 +1643,7 @@ export const TRANSLATIONS: Translations = {
         'searching': 'Пошук...',
         'no_files': 'Файли не знайдено',
         'filter_folders': 'Фільтрувати папки...',
+        'search_for': 'Пошук',
 
         // Shortcut Selection Dialog
         'create_shortcut': 'Створити ярлик',
@@ -1641,7 +1652,7 @@ export const TRANSLATIONS: Translations = {
         'target_not_found': 'Цель не знайдена',
         'shortcut_created': 'Ярлик створений',
         'failed_to_create_shortcut': 'Не вдалося створити ярлик',
-        
+
         // Folder Note Settings Dialog
         'folder_note_settings': 'Налаштування нотатки папки',
         'folder_sort_type': 'Тип сортування папки',
@@ -1692,7 +1703,7 @@ export const TRANSLATIONS: Translations = {
         'display_minimized_desc': 'Показувати цю нотатку у мінімізованому режимі',
 
         // Quick Access Settings and Commands
-                
+
         'quick_access_settings_title': 'Налаштування Швидкого доступу',
         'quick_access_folder_name': 'Папка швидкого доступу',
         'quick_access_folder_desc': 'Встановіть папку, що використовується командою «Відкрити папку швидкого доступу»',

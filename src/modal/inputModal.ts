@@ -2,7 +2,7 @@ import { App, Modal } from 'obsidian';
 import { t } from '../translations';
 
 export interface SearchOptions {
-    searchLocationFiles: boolean;
+    searchCurrentLocationOnly: boolean;
     searchFilesNameOnly: boolean;
     searchMediaFiles: boolean;
 }
@@ -44,7 +44,7 @@ export class InputModal extends Modal {
 
         // 如果是搜尋文字，添加搜尋選項
         let searchOptions: SearchOptions = {
-            searchLocationFiles: false,
+            searchCurrentLocationOnly: false,
             searchFilesNameOnly: false,
             searchMediaFiles: false
         };
@@ -57,14 +57,14 @@ export class InputModal extends Modal {
             const searchScopeCheckbox = searchScopeContainer.createEl('input', {
                 type: 'checkbox',
                 attr: { 
-                    id: 'searchLocationFiles'
+                    id: 'searchCurrentLocationOnly'
                 }
             }) as HTMLInputElement;
-            if (searchOptions.searchLocationFiles) {
+            if (searchOptions.searchCurrentLocationOnly) {
                 searchScopeCheckbox.checked = true;
             }
             const searchScopeLabel = searchScopeContainer.createEl('label', { text: t('search_current_location_only') });
-            searchScopeLabel.setAttribute('for', 'searchLocationFiles');
+            searchScopeLabel.setAttribute('for', 'searchCurrentLocationOnly');
 
             // 只搜尋檔名選項
             const searchNameContainer = searchOptionsContainer.createDiv('ge-search-option');
@@ -97,7 +97,7 @@ export class InputModal extends Modal {
             // 更新搜尋選項
             const updateSearchOptions = () => {
                 searchOptions = {
-                    searchLocationFiles: searchScopeCheckbox.checked,
+                    searchCurrentLocationOnly: searchScopeCheckbox.checked,
                     searchFilesNameOnly: searchNameCheckbox.checked,
                     searchMediaFiles: searchMediaFilesCheckbox.checked
                 };

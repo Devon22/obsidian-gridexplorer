@@ -27,7 +27,7 @@ export class FileWatcher {
             this.app.vault.on('modify', (file) => {
                 if (file instanceof TFile) {
                     if (this.gridView.sourceMode === 'recent-files') {
-                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
+                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.includeMedia)) {
                             this.scheduleRender(5000);
                         }
                     }
@@ -39,14 +39,14 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('create', (file) => {
                 if (file instanceof TFile) {
-                    if(this.gridView.searchQuery !== '' && this.gridView.searchAllFiles) {
+                    if(this.gridView.searchQuery && !this.gridView.searchCurrentLocationOnly) {
                         this.scheduleRender(2000);
                         return;
                     }
                     if(this.gridView.sourceMode === 'random-note') {
                         return;
                     } else if (this.gridView.sourceMode === 'recent-files') {
-                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.randomNoteIncludeMedia)) {
+                        if(isDocumentFile(file) || (isMediaFile(file) && this.gridView.includeMedia)) {
                             this.scheduleRender(2000);
                         }
                     } else if (this.gridView.sourceMode === 'folder') {

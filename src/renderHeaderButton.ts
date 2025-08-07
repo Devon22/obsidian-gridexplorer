@@ -40,7 +40,7 @@ export function renderHeaderButton(gridView: GridView) {
                 mode: gridView.sourceMode,
                 path: gridView.sourcePath,
                 searchQuery: gridView.searchQuery,
-                searchAllFiles: gridView.searchAllFiles,
+                searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
                 searchFilesNameOnly: gridView.searchFilesNameOnly,
                 searchMediaFiles: gridView.searchMediaFiles,
             });
@@ -59,7 +59,7 @@ export function renderHeaderButton(gridView: GridView) {
                 lastSource.path || '',
                 false, // 不記錄到歷史
                 lastSource.searchQuery || '',
-                lastSource.searchAllFiles ?? true,
+                lastSource.searchCurrentLocationOnly ?? false,
                 lastSource.searchFilesNameOnly ?? false,
                 lastSource.searchMediaFiles ?? false
             );
@@ -83,7 +83,7 @@ export function renderHeaderButton(gridView: GridView) {
                 mode: gridView.sourceMode,
                 path: gridView.sourcePath,
                 searchQuery: gridView.searchQuery,
-                searchAllFiles: gridView.searchAllFiles,
+                searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
                 searchFilesNameOnly: gridView.searchFilesNameOnly,
                 searchMediaFiles: gridView.searchMediaFiles,
             });
@@ -102,7 +102,7 @@ export function renderHeaderButton(gridView: GridView) {
                 nextSource.path || '',
                 false, // 不記錄到歷史
                 nextSource.searchQuery || '',
-                nextSource.searchAllFiles ?? true,
+                nextSource.searchCurrentLocationOnly ?? false,
                 nextSource.searchFilesNameOnly ?? false,
                 nextSource.searchMediaFiles ?? false
             );
@@ -180,7 +180,7 @@ export function renderHeaderButton(gridView: GridView) {
 
                     // 處理搜尋顯示文字
                     if (sourceInfo.searchQuery) {
-                        if (sourceInfo.searchAllFiles) {
+                        if (!sourceInfo.searchCurrentLocationOnly) {
                             // 全域搜尋僅顯示搜尋字串
                             displayText = '"' + (sourceInfo.searchQuery || t('search_results')) + '"';
                         } else {
@@ -200,7 +200,7 @@ export function renderHeaderButton(gridView: GridView) {
                                     mode: gridView.sourceMode,
                                     path: gridView.sourcePath,
                                     searchQuery: gridView.searchQuery,
-                                    searchAllFiles: gridView.searchAllFiles,
+                                    searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
                                     searchFilesNameOnly: gridView.searchFilesNameOnly,
                                     searchMediaFiles: gridView.searchMediaFiles,
                                 });
@@ -224,7 +224,7 @@ export function renderHeaderButton(gridView: GridView) {
                                     path,
                                     false, // 不記錄到歷史
                                     sourceInfo.searchQuery || '',
-                                    sourceInfo.searchAllFiles ?? true,
+                                    sourceInfo.searchCurrentLocationOnly ?? false,
                                     sourceInfo.searchFilesNameOnly ?? false,
                                     sourceInfo.searchMediaFiles ?? false
                                 );
@@ -308,7 +308,7 @@ export function renderHeaderButton(gridView: GridView) {
 
                     // 處理搜尋顯示文字
                     if (sourceInfo.searchQuery) {
-                        if (sourceInfo.searchAllFiles) {
+                        if (!sourceInfo.searchCurrentLocationOnly) {
                             displayText = '"' + (sourceInfo.searchQuery || t('search_results')) + '"';
                         } else {
                             displayText += `: \"${sourceInfo.searchQuery}\"`;
@@ -325,7 +325,7 @@ export function renderHeaderButton(gridView: GridView) {
                                     mode: gridView.sourceMode,
                                     path: gridView.sourcePath,
                                     searchQuery: gridView.searchQuery,
-                                    searchAllFiles: gridView.searchAllFiles,
+                                    searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
                                     searchFilesNameOnly: gridView.searchFilesNameOnly,
                                     searchMediaFiles: gridView.searchMediaFiles,
                                 });
@@ -348,7 +348,7 @@ export function renderHeaderButton(gridView: GridView) {
                                     path,
                                     false,
                                     sourceInfo.searchQuery || '',
-                                    sourceInfo.searchAllFiles ?? true,
+                                    sourceInfo.searchCurrentLocationOnly ?? false,
                                     sourceInfo.searchFilesNameOnly ?? false,
                                     sourceInfo.searchMediaFiles ?? false
                                 );
@@ -520,7 +520,7 @@ export function renderHeaderButton(gridView: GridView) {
 
         // 先保存開啟 Modal 時的原始狀態
         const originalSearchQuery = gridView.searchQuery;
-        const originalSearchAllFiles = gridView.searchAllFiles;
+        const originalsearchCurrentLocationOnly = gridView.searchCurrentLocationOnly;
         const originalSearchFilesNameOnly = gridView.searchFilesNameOnly;
         const originalSearchMediaFiles = gridView.searchMediaFiles;
 
@@ -533,7 +533,7 @@ export function renderHeaderButton(gridView: GridView) {
                 gridView.sourceMode,
                 gridView.sourcePath,
                 originalSearchQuery,
-                originalSearchAllFiles,
+                originalsearchCurrentLocationOnly,
                 originalSearchFilesNameOnly,
                 originalSearchMediaFiles,
             );
@@ -765,7 +765,7 @@ async function createShortcut(
         value: string; 
         display: string;
         searchOptions?: {
-            searchLocationFiles: boolean;
+            searchCurrentLocationOnly: boolean;
             searchFilesNameOnly: boolean;
             searchMediaFiles: boolean;
         };
@@ -813,7 +813,7 @@ async function createShortcut(
                 frontmatter.redirect = option.value;
                 // 添加搜尋選項到 frontmatter
                 if (option.searchOptions) {
-                    frontmatter.searchLocationFiles = option.searchOptions.searchLocationFiles;
+                    frontmatter.searchCurrentLocationOnly = option.searchOptions.searchCurrentLocationOnly;
                     frontmatter.searchFilesNameOnly = option.searchOptions.searchFilesNameOnly;
                     frontmatter.searchMediaFiles = option.searchOptions.searchMediaFiles;
                 }

@@ -17,7 +17,7 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
     if (gridView.searchQuery) {
         // 取得 vault 中所有支援的檔案
         let allFiles: TFile[] = [];
-        if (gridView.searchAllFiles) {
+        if (!gridView.searchCurrentLocationOnly) {
             // 全部檔案
             allFiles = gridView.app.vault.getFiles().filter(file => 
                 isDocumentFile(file) || (isMediaFile(file) && gridView.searchMediaFiles)
@@ -196,7 +196,7 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
         );
         
         // 排序檔案
-        if (gridView.searchAllFiles) {
+        if (!gridView.searchCurrentLocationOnly) {
             // 搜尋所有檔案時
             files = sortFiles(files, gridView);
         } else {
@@ -236,7 +236,7 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
         files = ignoredFiles(files, gridView);
     } else {
         // 無搜尋關鍵字的情況
-        files = await getFiles(gridView, gridView.randomNoteIncludeMedia);
+        files = await getFiles(gridView, gridView.includeMedia);
 
         // 忽略檔案
         files = ignoredFiles(files, gridView)

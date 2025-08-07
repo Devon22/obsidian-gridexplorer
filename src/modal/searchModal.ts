@@ -153,7 +153,7 @@ export class SearchModal extends Modal {
             type: 'checkbox',
             cls: 'ge-search-scope-checkbox'
         });
-        searchScopeCheckbox.checked = !this.gridView.searchAllFiles;
+        searchScopeCheckbox.checked = this.gridView.searchCurrentLocationOnly;
         searchScopeContainer.createEl('span', {
             text: t('search_current_location_only'),
             cls: 'ge-search-scope-label'
@@ -198,7 +198,7 @@ export class SearchModal extends Modal {
         searchScopeContainer.addEventListener('click', (e) => {
             if (e.target !== searchScopeCheckbox) {
                 searchScopeCheckbox.checked = !searchScopeCheckbox.checked;
-                this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+                this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
             }
         });
         searchNameContainer.addEventListener('click', (e) => {
@@ -216,7 +216,7 @@ export class SearchModal extends Modal {
 
         // 勾選框變更時更新搜尋範圍
         searchScopeCheckbox.addEventListener('change', () => {
-            this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+            this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
         });
 
         searchMediaFilesCheckbox.addEventListener('change', () => {
@@ -318,7 +318,7 @@ export class SearchModal extends Modal {
 
         // 先保存開啟 Modal 時的原始狀態
         const originalSearchQuery = this.gridView.searchQuery;
-        const originalSearchAllFiles = this.gridView.searchAllFiles;
+        const originalsearchCurrentLocationOnly = this.gridView.searchCurrentLocationOnly;
         const originalSearchFilesNameOnly = this.gridView.searchFilesNameOnly;
         const originalSearchMediaFiles = this.gridView.searchMediaFiles;
 
@@ -329,12 +329,12 @@ export class SearchModal extends Modal {
                 this.gridView.sourceMode,
                 this.gridView.sourcePath,
                 originalSearchQuery,
-                originalSearchAllFiles,
+                originalsearchCurrentLocationOnly,
                 originalSearchFilesNameOnly,
                 originalSearchMediaFiles,
             );
             this.gridView.searchQuery = searchInput.value;
-            this.gridView.searchAllFiles = !searchScopeCheckbox.checked;
+            this.gridView.searchCurrentLocationOnly = searchScopeCheckbox.checked;
             this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
