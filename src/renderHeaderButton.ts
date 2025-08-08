@@ -781,13 +781,15 @@ async function createShortcut(
         } else {
             shortcutName = `${option.display}`;
         }
-        
-        let newPath = `${shortcutName}.md`;
+
+        let newName = `${shortcutName}.md`;
+        let newPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newName : `${gridView.sourcePath}/${newName}`;
         while (gridView.app.vault.getAbstractFileByPath(newPath)) {
             counter++;
             const baseName = option.type === 'uri' ? generateFilenameFromUri(option.value) : option.display;
             shortcutName = `${baseName} ${counter}`;
-            newPath = `${shortcutName}.md`;
+            newName = `${shortcutName}.md`;
+            newPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newName : `${gridView.sourcePath}/${newName}`;
         }
 
         // 創建新檔案

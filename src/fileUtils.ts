@@ -60,11 +60,11 @@ export function isMediaFile(file: TFile): boolean {
     return isImageFile(file) || isVideoFile(file) || isAudioFile(file);
 }
 
-//排序檔案
-export function sortFiles(files: TFile[], gridView: GridView): TFile[] {
+//排序檔案（支援可選覆寫排序類型）
+export function sortFiles(files: TFile[], gridView: GridView, overrideSortType?: string): TFile[] {
     const app = gridView.app;
     const settings = gridView.plugin.settings;
-    const sortType = gridView.folderSortType ? gridView.folderSortType : gridView.sortType;
+    const sortType = overrideSortType ?? gridView.sortType;
 
     // 檢查排序類型是否為非日期相關
     const isNonDateSort = ['name-asc', 'name-desc', 'random'].includes(sortType);
@@ -487,12 +487,8 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             }
             return false;
         });
-        //臨時的排序類型
-        const sortType = gridView.sortType;
-        gridView.sortType = 'mtime-desc';
-        const sortedFiles = sortFiles(recentFiles, gridView);
-        gridView.sortType = sortType;
-        return sortedFiles;
+        // 直接使用覆寫排序參數
+        return sortFiles(recentFiles, gridView, 'mtime-desc');
     } else if (sourceMode === 'random-note') {
         // 隨機筆記模式，從所有筆記中隨機選取
         const randomFiles = app.vault.getFiles().filter(file => {

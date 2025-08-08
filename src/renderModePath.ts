@@ -50,10 +50,11 @@ export function renderModePath(gridView: GridView) {
                     item
                         .setTitle(option.label)
                         .setIcon(option.icon)
-                        .setChecked((gridView.folderSortType || gridView.sortType) === option.value)
+                        .setChecked(gridView.sortType === option.value)
                         .onClick(() => {
+                            // 使用者選擇的排序：更新 base 與 actual
+                            gridView.baseSortType = option.value;
                             gridView.sortType = option.value;
-                            gridView.folderSortType = '';
                             gridView.app.workspace.requestSaveLayout();
                             gridView.render();
                         });

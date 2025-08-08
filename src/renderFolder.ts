@@ -153,7 +153,9 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 點擊圖示時開啟同名筆記
                     noteIcon.addEventListener('click', (e) => {
                         e.stopPropagation(); // 防止觸發資料夾的點擊事件
-                        gridView.app.workspace.getLeaf().openFile(noteFile);
+                        if (!gridView.openShortcutFile(noteFile)) {
+                            gridView.app.workspace.getLeaf().openFile(noteFile);
+                        }
                     });
 
                     // 根據同名筆記設置背景色
@@ -212,7 +214,11 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 .setTitle(t('open_folder_note'))
                                 .setIcon('panel-left-open')
                                 .onClick(() => {
-                                    gridView.app.workspace.getLeaf().openFile(noteFile);
+                                    if (noteFile instanceof TFile) {
+                                        if (!gridView.openShortcutFile(noteFile)) {
+                                            gridView.app.workspace.getLeaf().openFile(noteFile);
+                                        }
+                                    }
                                 });
                         });
                         //編輯資料夾筆記設定

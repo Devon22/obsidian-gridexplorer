@@ -209,17 +209,11 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
                     return indexA - indexB;
                 });
             } else if (gridView.sourceMode === 'recent-files') {
-                // 臨時的排序類型
-                const sortType = gridView.sortType;
-                gridView.sortType = 'mtime-desc';
-                files = sortFiles(files, gridView);
-                gridView.sortType = sortType;
+                // 直接覆寫排序類型為 mtime-desc
+                files = sortFiles(files, gridView, 'mtime-desc');
             } else if (gridView.sourceMode === 'random-note') {
-                // 臨時的排序類型
-                const sortType = gridView.sortType;
-                gridView.sortType = 'random';
-                files = sortFiles(files, gridView);
-                gridView.sortType = sortType;
+                // 直接覆寫排序類型為 random
+                files = sortFiles(files, gridView, 'random');
             } else if (gridView.sourceMode.startsWith('custom-')) {
                 // 保持原始順序
                 files.sort((a, b) => {

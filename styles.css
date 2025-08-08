@@ -1552,7 +1552,7 @@ a.ge-current-folder:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     padding: 10px 8px;
     position: relative;
-    max-height: 400px;
+    max-height: 450px;
     overflow-y: auto;
     min-width: 250px;
     max-width: 300px;
@@ -1598,7 +1598,7 @@ a.ge-current-folder:hover {
 }
 
 .ge-popup-content .ge-folder-options-container {
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
 }
 
