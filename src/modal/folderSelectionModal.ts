@@ -422,7 +422,9 @@ export class FolderSelectionModal extends Modal {
                 if (this.selectedIndex >= 0) {
                     const selectedOption = this.folderOptions[this.selectedIndex];
                     if (selectedOption && selectedOption.style.display !== 'none') {
-                        selectedOption.click();
+                        requestAnimationFrame(() => {
+                            selectedOption.click();
+                        });
                     }
                 }
                 break;

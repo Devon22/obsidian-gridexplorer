@@ -63,6 +63,8 @@ export const TRANSLATIONS: Translations = {
 
         // 視圖標題
         'grid_view_title': '網格視圖',
+        'modes': '模式',
+        'custom_modes': '自訂模式',
         'bookmarks_mode': '書籤',
         'folder_mode': '資料夾',
         'search_results': '搜尋結果',
@@ -209,8 +211,11 @@ export const TRANSLATIONS: Translations = {
         // 選擇資料夾對話框
         'select_folders': '選擇資料夾',
         'select_folders_to_ignore': '選擇要忽略的資料夾',
+        'explorer': '瀏覽器',
+        'open_explorer': '開啟瀏覽器',
         'open_grid_view': '開啟網格視圖',
         'open_in_grid_view': '在網格視圖開啟',
+        'show_note_in_grid_view': '在網格視圖顯示筆記',
         'open_note_in_grid_view': '在網格視圖開啟當前筆記',
         'open_backlinks_in_grid_view': '在網格視圖開啟反向連結',
         'open_outgoinglinks_in_grid_view': '在網格視圖開啟外部連結',
@@ -347,6 +352,8 @@ export const TRANSLATIONS: Translations = {
 
         // View Titles
         'grid_view_title': 'Grid view',
+        'modes': 'Modes',
+        'custom_modes': 'Custom Modes',
         'bookmarks_mode': 'Bookmarks',
         'folder_mode': 'Folder',
         'search_results': 'Search results',
@@ -493,8 +500,11 @@ export const TRANSLATIONS: Translations = {
         // Select Folder Dialog
         'select_folders': 'Select folder',
         'select_folders_to_ignore': 'Select folders to ignore',
+        'explorer': 'Explorer',
+        'open_explorer': 'Open Explorer',
         'open_grid_view': 'Open grid view',
         'open_in_grid_view': 'Open in grid view',
+        'show_note_in_grid_view': 'Show note in grid view',
         'open_note_in_grid_view': 'Open note in grid view',
         'open_backlinks_in_grid_view': 'Open backlinks in grid view',
         'open_outgoinglinks_in_grid_view': 'Open outgoing links in grid view',
@@ -629,6 +639,8 @@ export const TRANSLATIONS: Translations = {
 
         // 视图标题
         'grid_view_title': '网格视图',
+        'modes': '模式',
+        'custom_modes': '自定义模式',
         'bookmarks_mode': '书签',
         'folder_mode': '文件夹',
         'search_results': '搜索结果',
@@ -775,8 +787,11 @@ export const TRANSLATIONS: Translations = {
         // 选择文件夹对话框
         'select_folders': '选择文件夹',
         'select_folders_to_ignore': '选择要忽略的文件夹',
+        'explorer': '浏览器',
+        'open_explorer': '打开浏览器',
         'open_grid_view': '打开网格视图',
         'open_in_grid_view': '在网格视图中打开',
+        'show_note_in_grid_view': '在网格视图显示笔记',
         'open_note_in_grid_view': '在网格视图打开当前笔记',
         'open_backlinks_in_grid_view': '在网格视图打开反向链接',
         'open_outgoinglinks_in_grid_view': '在网格视图打开外部链接',
@@ -911,6 +926,8 @@ export const TRANSLATIONS: Translations = {
 
         // ビュータイトル
         'grid_view_title': 'グリッドビュー',
+        'modes': 'モード',
+        'custom_modes': 'カスタムモード',
         'bookmarks_mode': 'ブックマーク',
         'folder_mode': 'フォルダ',
         'search_results': '検索結果',
@@ -1057,8 +1074,11 @@ export const TRANSLATIONS: Translations = {
         // フォルダ選択ダイアログ
         'select_folders': 'フォルダを選択',
         'select_folders_to_ignore': '無視するフォルダを選択',
+        'explorer': 'ブラウザー',
+        'open_explorer': 'ブラウザーを開く',
         'open_grid_view': 'グリッドビューを開く',
         'open_in_grid_view': 'グリッドビューで開く',
+        'show_note_in_grid_view': 'グリッドビューで表示',
         'open_note_in_grid_view': 'グリッドビューで現在のノートを開く',
         'open_backlinks_in_grid_view': 'グリッドビューでバックリンクを開く',
         'open_outgoinglinks_in_grid_view': 'グリッドビューで外部リンクを開く',
@@ -1194,6 +1214,8 @@ export const TRANSLATIONS: Translations = {
 
         // View Titles
         'grid_view_title': 'Сеточный вид',
+        'modes': 'Режимы',
+        'custom_modes': 'Пользовательские режимы',
         'bookmarks_mode': 'Закладки',
         'folder_mode': 'Папка',
         'search_results': 'Результаты поиска',
@@ -1340,8 +1362,11 @@ export const TRANSLATIONS: Translations = {
         // Select Folder Dialog
         'select_folders': 'Выбрать папку',
         'select_folders_to_ignore': 'Выбрать папки для игнорирования',
+        'explorer': 'Браузер',
+        'open_explorer': 'Открыть браузер',
         'open_grid_view': 'Открыть сеточный вид',
         'open_in_grid_view': 'Открыть в сеточном виде',
+        'show_note_in_grid_view': 'Открыть в сеточном виде',
         'open_note_in_grid_view': 'Открыть заметку в сеточном виде',
         'open_backlinks_in_grid_view': 'Открыть обратные ссылки в сеточном виде',
         'open_outgoinglinks_in_grid_view': 'Открыть исходящие ссылки в сеточном виде',
@@ -1476,6 +1501,8 @@ export const TRANSLATIONS: Translations = {
 
         // View Titles
         'grid_view_title': 'Сітковий вигляд',
+        'modes': 'Режими',
+        'custom_modes': 'Користувацькі режими',
         'bookmarks_mode': 'Закладки',
         'folder_mode': 'Папка',
         'search_results': 'Результати пошуку',
@@ -1622,8 +1649,11 @@ export const TRANSLATIONS: Translations = {
         // Select Folder Dialog
         'select_folders': 'Вибрати папку',
         'select_folders_to_ignore': 'Вибрати папки для ігнорування',
+        'explorer': 'Браузер',
+        'open_explorer': 'Відкрити браузер',
         'open_grid_view': 'Відкрити сітковий вигляд',
         'open_in_grid_view': 'Відкрити в сітковому вигляді',
+        'show_note_in_grid_view': 'Відображати нотатку в сітковому вигляді',
         'open_note_in_grid_view': 'Відкрити нотатку в сітковому вигляді',
         'open_backlinks_in_grid_view': 'Відкрити зворотні посилання в сітковому вигляді',
         'open_outgoinglinks_in_grid_view': 'Відкрити вихідні посилання в сітковому вигляді',

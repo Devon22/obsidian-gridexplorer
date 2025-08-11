@@ -293,6 +293,14 @@ export class GridView extends ItemView {
         // 通知 Obsidian 保存視圖狀態
         this.app.workspace.requestSaveLayout();
 
+        // 發送自訂事件，通知 ExplorerView 目前來源已變更
+        try {
+            (this.app.workspace as any).trigger?.('ge-grid-source-changed', {
+                mode: this.sourceMode,
+                path: this.sourcePath,
+            });
+        } catch {}
+
         await this.render();
     }
 
@@ -1140,25 +1148,19 @@ export class GridView extends ItemView {
             const index = this.gridItems.indexOf(fileEl);
             if (index < 0) return;
 
-            // 處理多選邏輯
+            
+
             if (event.ctrlKey || event.metaKey) {
-                if (this.selectedItems.size > 1) {
-                    // 如果已有選中2個以上的狀態，則繼續選中
-                    this.selectItem(index, true);
-                    this.hasKeyboardFocus = true;
-                } else {
-                    // 沒有選中狀態則開啟新分頁
-                    if (isMediaFile(file)) {
-                        // 開啟媒體檔案
-                        if (isAudioFile(file)) {
-                            FloatingAudioPlayer.open(this.app, file);
-                        } else {
-                            this.openMediaFile(file, files);
-                        }
+                if (isMediaFile(file)) {
+                    // 開啟媒體檔案
+                    if (isAudioFile(file)) {
+                        FloatingAudioPlayer.open(this.app, file);
                     } else {
-                        // 開啟文件檔案到新分頁
-                        this.app.workspace.getLeaf(true).openFile(file);
+                        this.openMediaFile(file, files);
                     }
+                } else {
+                    // 開啟文件檔案到新分頁
+                    this.app.workspace.getLeaf(true).openFile(file);
                 }
                 event.preventDefault();
                 return;
@@ -1168,8 +1170,13 @@ export class GridView extends ItemView {
                 this.hasKeyboardFocus = true;
                 event.preventDefault();
                 return;
-            } else if (event.altKey || this.plugin.settings.showNoteInGrid) {
+            } else if (event.altKey) {
                 // Alt 鍵或設定為預設時：網格視圖中直接顯示筆記
+                this.selectItem(index, true);
+                this.hasKeyboardFocus = true;
+                event.preventDefault();
+                return;
+            } else if (this.plugin.settings.showNoteInGrid) {
                 this.selectItem(index);
                 this.hasKeyboardFocus = true;
 

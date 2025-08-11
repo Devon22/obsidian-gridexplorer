@@ -1,5 +1,6 @@
 import { Menu, setIcon, TFile, Notice } from 'obsidian';
 import { GridView } from './GridView';
+import { EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showSearchModal } from './modal/searchModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
@@ -643,7 +644,29 @@ export function renderHeaderButton(gridView: GridView) {
                 gridView.render();
             });
     });
+    
     menu.addSeparator();
+
+    // 開啟瀏覽器
+    menu.addItem((item) => {
+        item
+            .setTitle(t('open_explorer'))
+            .setIcon('folder-tree')
+            .onClick(() => {
+                const existingLeaves = gridView.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
+                if (existingLeaves.length > 0) {
+                    gridView.app.workspace.revealLeaf(existingLeaves[0]);
+                    return;
+                }
+                let leaf = gridView.app.workspace.getLeftLeaf(false);
+                if (!leaf) leaf = gridView.app.workspace.getLeftLeaf(true);
+                if (!leaf) leaf = gridView.app.workspace.getLeaf('tab');
+                leaf.setViewState({ type: EXPLORER_VIEW_TYPE, active: true });
+                gridView.app.workspace.revealLeaf(leaf);
+            });
+    });
+
+    // 顯示設定選項
     menu.addItem((item) => {
         item
             .setTitle(t('open_settings'))

@@ -265,7 +265,10 @@ export class FolderNoteSettingsModal extends Modal {
 
             // 強制更新 metadata cache
             this.app.metadataCache.getFileCache(file);
-            
+
+            // 立刻通知 ExplorerView 更新（自訂事件）
+            this.app.workspace.trigger('grid-explorer:folder-note-updated', this.folder.path);
+
             // 等待一小段時間以確保 metadata cache 已更新
             setTimeout(() => {
                 // 重新渲染所有 grid-view 視圖
@@ -274,6 +277,8 @@ export class FolderNoteSettingsModal extends Modal {
                         leaf.view.render();
                     }
                 });
+                // 再次通知（保險）
+                this.app.workspace.trigger('grid-explorer:folder-note-updated', this.folder.path);
             }, 200);
         } catch (error) {
             console.error('無法儲存資料夾筆記', error);

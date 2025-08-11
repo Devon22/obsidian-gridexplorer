@@ -10,8 +10,8 @@
 .ge-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-width, 300px), 1fr));
-    gap: 12px;
-    padding: 12px !important;
+    gap: 10px;
+    padding: 10px !important;
     align-items: start;
     align-content: start;
     background: var(--background-secondary) !important;
@@ -337,8 +337,6 @@
     transform: scale(1.05);
 }
 
-/* --------------------------------------------------------------------------- */
-
 /* 資料夾項目 Folder Item */
 .ge-grid-item.ge-folder-item {
     background-color: var(--background-primary-alt);
@@ -607,7 +605,7 @@
 /* 模式名稱區域 */
 .ge-modename-content {
     flex: 1;
-    padding: 7px 12px;
+    padding: 7px 10px;
     font-size: var(--font-ui-medium);
     display: flex;
     align-items: center;
@@ -1799,6 +1797,8 @@ a.ge-current-folder:hover {
     color: var(--text-normal);
 }
 
+/* --------------------------------------------------------------------------- */
+
 .ge-note-content > p:nth-child(2) {
     margin-block-start: 0;
 }
@@ -1981,4 +1981,210 @@ a.ge-current-folder:hover {
 .modal .ge-input-field-container {
     margin-bottom: 16px;
     display: block;
+}
+
+/* --------------------------------------------------------------------------- */
+/* Explorer View */
+
+.ge-explorer-view-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.ge-explorer-folder-node {
+    width: 100%;
+}
+
+.ge-explorer-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    margin-bottom: 3px;
+}
+
+.ge-explorer-folder-header:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.ge-explorer-folder-header.ge-dragover { 
+    background-color: var(--background-modifier-hover); 
+}
+
+.ge-explorer-folder-header.is-active,
+.ge-explorer-mode-item.is-active {
+    background-color: var(--background-modifier-hover) !important;
+}
+
+.ge-explorer-folder-header.is-active .ge-explorer-folder-name,
+.ge-explorer-mode-item.is-active .ge-explorer-folder-name {
+    color: var(--text-accent);
+}
+
+.ge-explorer-mode-item {
+    /* 讓模式/自訂模式的子項在樹狀中看起來是深度 1 */
+    padding-left: 28px;
+}
+
+.ge-explorer-folder-toggle {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+/* 無可見子資料夾：隱藏切換圖示但保留佔位，避免跳位；同時停用點擊 */
+.ge-explorer-folder-toggle.ge-explorer-toggle-empty {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.ge-explorer-folder-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+}
+
+/* 若未插入任何 SVG（例如使用前綴文字 icon），隱藏佔位避免多餘空白 */
+.ge-explorer-folder-icon:empty {
+    display: none;
+}
+
+.ge-explorer-folder-name {
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ge-explorer-folder-children {
+    margin-left: 0; /* 由 header paddingLeft 控制縮排 */
+}
+
+.ge-explorer-folder-children.is-collapsed {
+    display: none;
+}
+
+/* --------------------------------------------------------------------------- */
+/* 統一三個根節點（自訂模式/模式/Folder）的上下間距與外觀 */
+/* 頂層根節點 header：統一外距與圓角（自訂模式/模式/Folder） */
+.ge-explorer-view-container > .ge-explorer-folder-node > .ge-explorer-folder-header {
+    margin: 6px 8px; /* 一致的左右/上下間距 */
+    border-radius: var(--radius-s);
+}
+
+/* Folder Tree View 顏色：與 grid 色票一致（使用 header 作為著色目標） */
+.ge-explorer-folder-header.ge-folder-color-red {
+    background-color: rgba(var(--color-red-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-orange {
+    background-color: rgba(var(--color-orange-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-yellow {
+    background-color: rgba(var(--color-yellow-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-green {
+    background-color: rgba(var(--color-green-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-cyan {
+    background-color: rgba(var(--color-cyan-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-blue {
+    background-color: rgba(var(--color-blue-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-purple {
+    background-color: rgba(var(--color-purple-rgb), 0.2);
+}
+.ge-explorer-folder-header.ge-folder-color-pink {
+    background-color: rgba(var(--color-pink-rgb), 0.2);
+}
+
+/* Hover 狀態下，提升有色標頭的可見度 */
+.ge-explorer-folder-header.ge-folder-color-red:hover {
+    background-color: rgba(var(--color-red-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-orange:hover {
+    background-color: rgba(var(--color-orange-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-yellow:hover {
+    background-color: rgba(var(--color-yellow-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-green:hover {
+    background-color: rgba(var(--color-green-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-cyan:hover {
+    background-color: rgba(var(--color-cyan-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-blue:hover {
+    background-color: rgba(var(--color-blue-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-purple:hover {
+    background-color: rgba(var(--color-purple-rgb), 0.3);
+}
+.ge-explorer-folder-header.ge-folder-color-pink:hover {
+    background-color: rgba(var(--color-pink-rgb), 0.3);
+}
+
+/* --------------------------------------------------------------------------- */
+/* ExplorerView Search Input */
+.ge-explorer-search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 1px 10px;
+    border-radius: var(--input-radius);
+}
+
+.ge-explorer-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 28px;
+    padding: 4px 28px 4px 8px; /* 右側預留清除鍵空間 */
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
+}
+
+.ge-explorer-search-input::placeholder {
+    color: var(--text-faint);
+}
+
+.ge-explorer-search-clear {
+    position: absolute;
+    right: 5px;
+    width: 28px;
+    height: 28px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-s);
+}
+
+.ge-explorer-search-clear.show {
+    display: inline-flex;
+}
+
+.ge-explorer-search-clear:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* 搜尋選項聚焦態（由鍵盤 ArrowDown 導覽時的可見回饋） */
+.ge-explorer-search-option:focus,
+.ge-explorer-search-option:focus-visible {
+    outline: none;
+    background-color: var(--background-modifier-hover);
+    box-shadow: 0 0 0 2px var(--interactive-accent);
 }

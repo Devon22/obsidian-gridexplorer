@@ -1,5 +1,6 @@
 import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
+import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { updateCustomDocumentExtensions } from './fileUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
@@ -20,6 +21,12 @@ export default class GridExplorerPlugin extends Plugin {
             (leaf) => new GridView(leaf, this)
         );
 
+        // 註冊資料夾樹狀視圖
+        this.registerView(
+            EXPLORER_VIEW_TYPE,
+            (leaf) => new ExplorerView(leaf, this)
+        );
+
         // 註冊設定頁面
         this.addSettingTab(new GridExplorerSettingTab(this.app, this));
 
@@ -29,6 +36,27 @@ export default class GridExplorerPlugin extends Plugin {
             name: t('open_grid_view'),
             callback: () => {
                 showFolderSelectionModal(this.app, this);
+            }
+        });
+
+        // 開啟瀏覽器視圖指令
+        this.addCommand({
+            id: 'open-explorer-view',
+            name: t('open_explorer') || 'Open Explorer',
+            callback: async () => {
+                // 若已存在 ExplorerView，直接聚焦現有的 leaf
+                const existingLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
+                if (existingLeaves.length > 0) {
+                    this.app.workspace.revealLeaf(existingLeaves[0]);
+                    return;
+                }
+
+                // 否則在左側側欄建立新的 leaf（不足時回退到新分頁）
+                let leaf = this.app.workspace.getLeftLeaf(false);
+                if (!leaf) leaf = this.app.workspace.getLeftLeaf(true);
+                if (!leaf) leaf = this.app.workspace.getLeaf('tab');
+                await leaf.setViewState({ type: EXPLORER_VIEW_TYPE, active: true });
+                this.app.workspace.revealLeaf(leaf);
             }
         });
 
@@ -159,6 +187,24 @@ export default class GridExplorerPlugin extends Plugin {
                         item.setIcon('grid');
                         item.setSection?.("open");
                         const ogSubmenu: Menu = (item as any).setSubmenu();
+                        ogSubmenu.addItem((item) => {
+                            item
+                                .setTitle(t('show_note_in_grid_view'))
+                                .setIcon('file-text')
+                                .onClick(async () => {
+                                    if (file.extension !== 'md') {
+                                        return;
+                                    }
+                                    const activeView = this.app.workspace.getActiveViewOfType(GridView);
+                                    const view = activeView ?? await this.activateView();
+                                    if (view instanceof GridView) {
+                                        if (!view.openShortcutFile(file)) {
+                                            view.showNoteInGrid(file);
+                                        }
+                                    }
+                                });
+                        });
+                        ogSubmenu.addSeparator();
                         ogSubmenu.addItem((item) => {
                             item
                                 .setTitle(t('open_note_in_grid_view'))
@@ -721,14 +767,21 @@ export default class GridExplorerPlugin extends Plugin {
     async saveSettings(update = true) {
         await this.saveData(this.settings);
         updateCustomDocumentExtensions(this.settings);
-        
-        // 當設定變更時，更新所有開啟的 GridView 實例
+
         if (update) {
-            const leaves = this.app.workspace.getLeavesOfType('grid-view');
-            leaves.forEach(leaf => {
+            // 更新所有開啟的 GridView 實例
+            const gridLeaves = this.app.workspace.getLeavesOfType('grid-view');
+            gridLeaves.forEach(leaf => {
                 if (leaf.view instanceof GridView) {
-                    // 重新渲染視圖以套用新設定
                     leaf.view.render();
+                }
+            });
+
+            // 也刷新所有 ExplorerView（確保模式清單與設定開關同步）
+            const explorerLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
+            explorerLeaves.forEach(leaf => {
+                if (leaf.view instanceof ExplorerView) {
+                    (leaf.view as ExplorerView).refresh();
                 }
             });
         }
