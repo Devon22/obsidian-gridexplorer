@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent, Platform } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
@@ -341,19 +341,43 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .addButton(button => {
                 button.setButtonText(t('export'))
                     .setTooltip(t('export'))
-                    .onClick(() => {
+                    .onClick(async () => {
                         if (this.plugin.settings.customModes.length === 0) {
                             new Notice(t('no_custom_modes_to_export'));
                             return;
                         }
+
                         const data = JSON.stringify(this.plugin.settings.customModes, null, 2);
-                        const blob = new Blob([data], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'gridexplorer-custom-modes.json';
-                        a.click();
-                        URL.revokeObjectURL(url);
+                        
+                        if (!Platform.isDesktop) {
+                            // 行動裝置：使用 Obsidian 的檔案 API
+                            try {
+                                const fileName = 'gridexplorer-custom-modes.json';
+                                let filePath = fileName;
+                                let counter = 1;
+                                
+                                // 檢查檔案是否已存在，如果存在則添加數字後綴
+                                while (this.app.vault.getAbstractFileByPath(filePath)) {
+                                    filePath = `gridexplorer-custom-modes-${counter}.json`;
+                                    counter++;
+                                }
+                                
+                                await this.app.vault.create(filePath, data);
+                                new Notice(t('export_success_vault').replace('{filename}', filePath));
+                            } catch (error) {
+                                console.error('GridExplorer: Failed to export using Obsidian API on mobile', error);
+                                new Notice(t('export_error'));
+                            }
+                        } else {
+                            // 桌面版：使用傳統的瀏覽器下載方法
+                            const blob = new Blob([data], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'gridexplorer-custom-modes.json';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
                     });
             })
             .addButton(button => {
@@ -798,7 +822,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-    
+
         // 網格項目樣式設定標題
         containerEl.createEl('h3', { text: t('grid_item_style_settings'), attr: { style: 'margin-top: 40px;' } });
 
@@ -1008,7 +1032,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        
+
         // 搜尋設定區域
         containerEl.createEl('h3', { text: t('default_search_option'), attr: { style: 'margin-top: 40px;' } });
 
@@ -1048,7 +1072,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-        
+
         // 資料夾筆記設定區域
         containerEl.createEl('h3', { text: t('folder_note_settings'), attr: { style: 'margin-top: 40px;' } });
 
@@ -1222,15 +1246,38 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .addButton(button => button
                 .setButtonText(t('export'))
                 .setTooltip(t('export'))
-                .onClick(() => {
+                .onClick(async () => {
                     const data = JSON.stringify(this.plugin.settings, null, 2);
-                    const blob = new Blob([data], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'gridexplorer-settings.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
+
+                    if (!Platform.isDesktop) {
+                        // 行動裝置：使用 Obsidian 的檔案 API 匯出
+                        try {
+                            const fileName = 'gridexplorer-settings.json';
+                            let filePath = fileName;
+                            let counter = 1;
+
+                            // 若檔名已存在，依序加上流水號避免覆蓋
+                            while (this.app.vault.getAbstractFileByPath(filePath)) {
+                                filePath = `gridexplorer-settings-${counter}.json`;
+                                counter++;
+                            }
+
+                            await this.app.vault.create(filePath, data);
+                            new Notice(t('export_success_vault').replace('{filename}', filePath));
+                        } catch (error) {
+                            console.error('GridExplorer: Failed to export settings using Obsidian API on mobile', error);
+                            new Notice(t('export_error'));
+                        }
+                    } else {
+                        // 桌面版：使用傳統的瀏覽器下載方法
+                        const blob = new Blob([data], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'gridexplorer-settings.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
                 }))
             // Import settings from JSON file
             .addButton(button => button

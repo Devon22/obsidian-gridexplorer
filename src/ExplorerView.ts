@@ -189,6 +189,9 @@ export class ExplorerView extends ItemView {
             window.clearTimeout(this.renderTimer);
             this.renderTimer = null;
         }
+        // 清理搜尋框引用
+        this.searchInputEl = null;
+        this.searchContainerEl = null;
     }
 
     // 對外提供重新渲染的介面（供設定變更時呼叫）
@@ -219,6 +222,10 @@ export class ExplorerView extends ItemView {
         workspace.revealLeaf(leaf);
     }
 
+    // 搜尋框的引用，避免重複創建
+    private searchInputEl: HTMLInputElement | null = null;
+    private searchContainerEl: HTMLElement | null = null;
+
     /**
      * 主要的渲染方法，重新繪製整個樹狀圖
      * 包含模式群組和資料夾群組
@@ -229,50 +236,95 @@ export class ExplorerView extends ItemView {
         // 儲存當前的捲動位置，避免重繪後跳回頂部造成使用者困擾
         const prevScrollTop = contentEl.scrollTop;
 
-        // 清空容器內容，準備重新渲染
-        contentEl.empty();
+        // 如果搜尋框還不存在，創建它
+        if (!this.searchContainerEl || !this.searchContainerEl.isConnected) {
+            this.createSearchContainer(contentEl);
+        }
 
+        // 清空除了搜尋框以外的內容
+        const children = Array.from(contentEl.children);
+        children.forEach(child => {
+            if (child !== this.searchContainerEl) {
+                child.remove();
+            }
+        });
+
+        // 獲取當前 GridView 的狀態資訊
+        const { currentMode, currentPath, showIgnoredFolders } = this.getCurrentGridState();
+
+        // 渲染搜尋選項（如果有搜尋字串）
+        this.renderSearchOption(contentEl);
+
+        // 渲染模式群組（自訂模式和內建模式）
+        this.renderModeGroups(contentEl, currentMode);
+
+        // 渲染資料夾群組（檔案系統樹狀結構）
+        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredFolders);
+
+        // 在重新渲染後，根據旗標回到搜尋框並將游標移到最後
+        if (this.keepSearchFocus && this.searchInputEl) {
+            setTimeout(() => {
+                if (this.searchInputEl) {
+                    this.searchInputEl.focus();
+                    try {
+                        const len = this.searchInputEl.value.length;
+                        this.searchInputEl.setSelectionRange(len, len);
+                    } catch { }
+                }
+            }, 0);
+            this.keepSearchFocus = false;
+        }
+
+        // 還原之前的捲動位置，保持使用者的瀏覽位置
+        this.restoreScrollPosition(contentEl, prevScrollTop);
+    }
+
+    /**
+     * 創建搜尋容器（只創建一次，避免重複渲染影響鍵盤）
+     */
+    private createSearchContainer(contentEl: HTMLElement) {
         // 建立頂部搜尋輸入區塊（參考 NAV-SEARCH-STYLES.md）
-        const searchContainer = contentEl.createDiv({ cls: 'ge-explorer-search-container' });
-        const inputEl = searchContainer.createEl('input', { type: 'text' }) as HTMLInputElement;
-        inputEl.addClass('ge-explorer-search-input');
-        inputEl.placeholder = t ? (t('search') || 'Search') : 'Search';
-        inputEl.value = this.searchQuery;
+        this.searchContainerEl = contentEl.createDiv({ cls: 'ge-explorer-search-container' });
+        this.searchInputEl = this.searchContainerEl.createEl('input', { type: 'text' }) as HTMLInputElement;
+        this.searchInputEl.addClass('ge-explorer-search-input');
+        this.searchInputEl.placeholder = t ? (t('search') || 'Search') : 'Search';
+        this.searchInputEl.value = this.searchQuery;
 
-        const clearBtn = searchContainer.createEl('button', { cls: 'ge-explorer-search-clear clickable-icon' });
+        const clearBtn = this.searchContainerEl.createEl('button', { cls: 'ge-explorer-search-clear clickable-icon' });
         setIcon(clearBtn, 'x');
         if (this.searchQuery.trim()) clearBtn.addClass('show');
 
-        // 供鍵盤導覽轉移焦點之用
-        let searchOptionEl: HTMLDivElement | null = null;
-
         // IME 組字事件：開始/結束
-        inputEl.addEventListener('compositionstart', () => {
+        this.searchInputEl.addEventListener('compositionstart', () => {
             this.isComposing = true;
         });
-        inputEl.addEventListener('compositionend', () => {
+        this.searchInputEl.addEventListener('compositionend', () => {
             this.isComposing = false;
-            this.searchQuery = inputEl.value;
+            this.searchQuery = this.searchInputEl!.value;
             clearBtn.toggleClass('show', !!this.searchQuery.trim());
+            // 現在可以即時更新，因為搜尋框不會被重新創建
             this.keepSearchFocus = true;
             this.scheduleRender();
         });
 
-        inputEl.addEventListener('input', () => {
-            this.searchQuery = inputEl.value;
+        this.searchInputEl.addEventListener('input', () => {
+            this.searchQuery = this.searchInputEl!.value;
             clearBtn.toggleClass('show', !!this.searchQuery.trim());
             // 組字中不觸發重繪，避免打斷中文輸入
             if (!this.isComposing) {
+                // 現在可以即時更新，因為搜尋框不會被重新創建
                 this.keepSearchFocus = true;
                 this.scheduleRender();
             }
         });
 
-        inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
+        this.searchInputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
             // 組字中交由 IME 處理，避免攔截 Esc 等鍵
             if (this.isComposing) return;
+
             if (evt.key === 'ArrowDown') {
                 // 轉移焦點到「搜尋選項」
+                const searchOptionEl = contentEl.querySelector('.ge-explorer-search-option') as HTMLElement;
                 if (searchOptionEl) {
                     evt.preventDefault();
                     searchOptionEl.focus();
@@ -281,26 +333,27 @@ export class ExplorerView extends ItemView {
             }
             if (evt.key === 'Escape') {
                 this.searchQuery = '';
-                inputEl.value = '';
+                this.searchInputEl!.value = '';
                 clearBtn.removeClass('show');
                 this.scheduleRender();
                 // 保持焦點在輸入框，便於連續操作
-                setTimeout(() => inputEl.focus(), 0);
+                setTimeout(() => this.searchInputEl?.focus(), 0);
             }
         });
 
         clearBtn.addEventListener('click', () => {
             this.searchQuery = '';
-            inputEl.value = '';
+            this.searchInputEl!.value = '';
             clearBtn.removeClass('show');
             this.scheduleRender();
-            setTimeout(() => inputEl.focus(), 0);
+            setTimeout(() => this.searchInputEl?.focus(), 0);
         });
+    }
 
-        // 獲取當前 GridView 的狀態資訊
-        const { currentMode, currentPath, showIgnoredFolders } = this.getCurrentGridState();
-
-        // 在有搜尋字串時，於最上方顯示一個搜尋選項（功能與 FolderSelectionModal 相同）
+    /**
+     * 渲染搜尋選項（如果有搜尋字串）
+     */
+    private renderSearchOption(contentEl: HTMLElement) {
         const trimmed = this.searchQuery.trim();
         if (trimmed.length > 0) {
             const searchItem = contentEl.createDiv({
@@ -309,7 +362,6 @@ export class ExplorerView extends ItemView {
             // 讓搜尋選項可被鍵盤聚焦與操作
             searchItem.setAttr('tabindex', '0');
             searchItem.setAttr('role', 'button');
-            searchOptionEl = searchItem;
             const searchIcon = searchItem.createSpan({ cls: 'ge-explorer-folder-icon' });
             setIcon(searchIcon, 'search');
             const searchName = searchItem.createSpan({ cls: 'ge-explorer-folder-name' });
@@ -325,38 +377,18 @@ export class ExplorerView extends ItemView {
                     await this.openFolderSearch(trimmed);
                 } else if (evt.key === 'ArrowUp') {
                     evt.preventDefault();
-                    inputEl.focus();
+                    this.searchInputEl?.focus();
                 } else if (evt.key === 'Escape') {
                     evt.preventDefault();
                     this.searchQuery = '';
-                    inputEl.value = '';
-                    clearBtn.removeClass('show');
+                    if (this.searchInputEl) this.searchInputEl.value = '';
+                    const clearBtn = this.searchContainerEl?.querySelector('.ge-explorer-search-clear');
+                    clearBtn?.removeClass('show');
                     this.scheduleRender();
-                    setTimeout(() => inputEl.focus(), 0);
+                    setTimeout(() => this.searchInputEl?.focus(), 0);
                 }
             });
         }
-
-        // 渲染模式群組（自訂模式和內建模式）
-        this.renderModeGroups(contentEl, currentMode);
-
-        // 渲染資料夾群組（檔案系統樹狀結構）
-        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredFolders);
-
-        // 在重新渲染後，根據旗標回到搜尋框並將游標移到最後
-        if (this.keepSearchFocus) {
-            setTimeout(() => {
-                inputEl.focus();
-                try {
-                    const len = inputEl.value.length;
-                    inputEl.setSelectionRange(len, len);
-                } catch {}
-            }, 0);
-            this.keepSearchFocus = false;
-        }
-
-        // 還原之前的捲動位置，保持使用者的瀏覽位置
-        this.restoreScrollPosition(contentEl, prevScrollTop);
     }
 
     /**
