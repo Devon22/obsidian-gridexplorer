@@ -62,7 +62,7 @@ export class FolderRenameModal extends Modal {
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 重新渲染視圖
             setTimeout(() => {
-                if (!this.plugin.settings.showFolder) {
+                if (this.plugin.settings.folderDisplayStyle !== 'show') {
                     this.gridView.setSource('folder', newPath || '/');
                 } else {
                     this.gridView.render();

@@ -111,6 +111,17 @@ export class ExplorerView extends ItemView {
         } else {
             this.searchQuery = '';
         }
+
+        // 如果搜尋輸入框已存在，同步更新其值
+        if (this.searchInputEl) {
+            this.searchInputEl.value = this.searchQuery;
+            // 同步更新清除按鈕的顯示狀態
+            const clearBtn = this.searchContainerEl?.querySelector('.ge-explorer-search-clear');
+            if (clearBtn) {
+                clearBtn.toggleClass('show', !!this.searchQuery.trim());
+            }
+        }
+
         this.scheduleRender();
     }
 
@@ -305,6 +316,8 @@ export class ExplorerView extends ItemView {
             // 現在可以即時更新，因為搜尋框不會被重新創建
             this.keepSearchFocus = true;
             this.scheduleRender();
+            // 通知 Obsidian 保存視圖狀態
+            this.app.workspace.requestSaveLayout();
         });
 
         this.searchInputEl.addEventListener('input', () => {
@@ -315,6 +328,8 @@ export class ExplorerView extends ItemView {
                 // 現在可以即時更新，因為搜尋框不會被重新創建
                 this.keepSearchFocus = true;
                 this.scheduleRender();
+                // 通知 Obsidian 保存視圖狀態
+                this.app.workspace.requestSaveLayout();
             }
         });
 
@@ -336,6 +351,8 @@ export class ExplorerView extends ItemView {
                 this.searchInputEl!.value = '';
                 clearBtn.removeClass('show');
                 this.scheduleRender();
+                // 通知 Obsidian 保存視圖狀態
+                this.app.workspace.requestSaveLayout();
                 // 保持焦點在輸入框，便於連續操作
                 setTimeout(() => this.searchInputEl?.focus(), 0);
             }
@@ -346,6 +363,8 @@ export class ExplorerView extends ItemView {
             this.searchInputEl!.value = '';
             clearBtn.removeClass('show');
             this.scheduleRender();
+            // 通知 Obsidian 保存視圖狀態
+            this.app.workspace.requestSaveLayout();
             setTimeout(() => this.searchInputEl?.focus(), 0);
         });
     }
@@ -385,6 +404,8 @@ export class ExplorerView extends ItemView {
                     const clearBtn = this.searchContainerEl?.querySelector('.ge-explorer-search-clear');
                     clearBtn?.removeClass('show');
                     this.scheduleRender();
+                    // 通知 Obsidian 保存視圖狀態
+                    this.app.workspace.requestSaveLayout();
                     setTimeout(() => this.searchInputEl?.focus(), 0);
                 }
             });

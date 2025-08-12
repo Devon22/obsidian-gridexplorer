@@ -41,7 +41,7 @@ export class showFolderMoveModal extends SuggestModal<string> {
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 給檔案系統一點時間處理，然後重新整理視圖
             setTimeout(() => {
-                if (!this.plugin.settings.showFolder) {
+                if (this.plugin.settings.folderDisplayStyle !== 'show') {
                     this.gridView.setSource('folder', newPath || '/');
                 } else {
                     this.gridView.render();

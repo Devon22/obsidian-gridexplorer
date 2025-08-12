@@ -165,7 +165,8 @@ export class FileWatcher {
     // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪
     private scheduleRender = (delay: number = 200): void => {
         // 若分頁被釘選或正在顯示筆記，暫停重新渲染
-        if (this.gridView.isPinned() || this.gridView.isShowingNote) {
+        if ((this.gridView.isPinned() && this.gridView.sourceMode === 'backlinks') || 
+            this.gridView.isShowingNote) {
             return;
         }
         if(this.gridView.sourceMode === 'recent-files' && this.gridView.containerEl.offsetParent === null) {

@@ -127,7 +127,7 @@ export function renderModePath(gridView: GridView) {
             let pathEl;
 
             if (isLast) {
-                if (path.path === '/' && gridView.plugin.settings.showFolder) {
+                if (path.path === '/' && gridView.plugin.settings.folderDisplayStyle === 'show') {
                     // 當顯示資料夾開啟且是根目錄時，使用 span 元素
                     pathEl = modenameContainer.createEl('span', {
                         text: `${customFolderIcon} ${path.name}`.trim(),
@@ -166,8 +166,7 @@ export function renderModePath(gridView: GridView) {
                         event.preventDefault();
                         event.stopPropagation();
 
-                        if (!gridView.plugin.settings.showFolder) {
-                            // 與右鍵相同的選單 (子資料夾與層級導航)
+                        if (gridView.plugin.settings.folderDisplayStyle === 'menu') {
                             const menu = new Menu();
 
                             // 1. 當前資料夾
@@ -290,16 +289,17 @@ export function renderModePath(gridView: GridView) {
                     const menu = new Menu();
 
                     // 為當前資料夾加入子資料夾清單
-                    // 如果 showFolder = true，則只有根目錄加入子資料夾清單
-                    // 如果 showFolder = false，則當前資料夾（含根目錄）都加入子資料夾清單
+                    // 'show': 只有根目錄加入子資料夾清單
+                    // 'menu': 當前資料夾（含根目錄）都加入子資料夾清單
+                    // 'hide': 不顯示任何資料夾選單
                     let current: TFolder | null = null;
-                    if (!gridView.plugin.settings.showFolder) {
+                    if (gridView.plugin.settings.folderDisplayStyle === 'menu') {
                         // 顯示當前資料夾的子資料夾
                         current = folder instanceof TFolder ? folder : null;
                         if (gridView.sourcePath === '/') {
                             current = gridView.app.vault.getRoot();
                         }
-                    } else {
+                    } else if (gridView.plugin.settings.folderDisplayStyle === 'show') {
                         // 只顯示根目錄的子資料夾
                         if (gridView.sourcePath === '/') {
                             current = gridView.app.vault.getRoot();
@@ -308,6 +308,7 @@ export function renderModePath(gridView: GridView) {
                             current = null;
                         }
                     }
+                    // 'hide' 模式下 current 保持為 null，不顯示任何資料夾
 
                     if (current) {
                         const subFolders = current.children
@@ -390,7 +391,7 @@ export function renderModePath(gridView: GridView) {
                         }
                     }
 
-                    if (!gridView.plugin.settings.showFolder && gridView.sourcePath !== '/') {
+                    if (gridView.plugin.settings.folderDisplayStyle !== 'show' && gridView.sourcePath !== '/') {
                         menu.addSeparator();
                         if (folder) {
                             if (!gridView.plugin.settings.ignoredFolders.includes(folder.path)) {

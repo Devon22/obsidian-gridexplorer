@@ -14,7 +14,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
         if (currentFolder instanceof TFolder) {
 
             // 為網格容器添加拖曳目標功能（當前資料夾）
-            if(Platform.isDesktop) {
+            if (Platform.isDesktop) {
                 container.addEventListener('dragover', (event) => {
                     // 如果拖曳目標是資料夾項目，則不處理
                     if ((event.target as HTMLElement).closest('.ge-folder-item')) {
@@ -27,7 +27,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 顯示可放置的視覺提示
                     container.addClass('ge-dragover');
                 }, true); // 使用捕獲階段
-                
+
                 container.addEventListener('dragleave', (event) => {
                     // 如果移入的是子元素，則不處理
                     if (container.contains(event.relatedTarget as Node)) {
@@ -36,29 +36,29 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 移除視覺提示
                     container.removeClass('ge-dragover');
                 });
-                
+
                 container.addEventListener('drop', async (event) => {
                     // 如果拖曳目標是資料夾項目，則不處理
                     if ((event.target as HTMLElement).closest('.ge-folder-item')) {
                         return;
                     }
-                    
+
                     // 防止預設行為
                     event.preventDefault();
                     // 移除視覺提示
                     container.removeClass('ge-dragover');
-                    
+
                     // 獲取拖曳的檔案路徑列表
                     const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
                     if (filesDataString) {
                         try {
                             // 解析檔案路徑列表
                             const filePaths = JSON.parse(filesDataString);
-                            
+
                             // 獲取當前資料夾路徑
                             const folderPath = currentFolder.path;
                             if (!folderPath) return;
-                            
+
                             // 移動檔案
                             for (const path of filePaths) {
                                 const file = gridView.app.vault.getAbstractFileByPath(path);
@@ -86,12 +86,12 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 如果沒有檔案路徑列表，則使用檔案路徑
                     const filePath = (event as any).dataTransfer?.getData('text/plain');
                     if (!filePath) return;
-                    
+
                     const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                    
+
                     // 獲取檔案和資料夾物件
                     const file = gridView.app.vault.getAbstractFileByPath(cleanedFilePath);
-                    
+
                     if (file instanceof TFile) {
                         try {
                             // 計算新的檔案路徑
@@ -108,20 +108,23 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 });
             }
 
-            // 如果顯示資料夾關閉，則不顯示資料夾
-            if(!gridView.plugin.settings.showFolder) return;
+            // 根據資料夾顯示模式決定是否顯示資料夾
+            // 'show': 直接顯示資料夾
+            // 'menu': 資料夾會在選單中顯示，這裡不直接顯示
+            // 'hide': 完全不顯示資料夾
+            if (gridView.plugin.settings.folderDisplayStyle !== 'show') return;
 
             // 顯示子資料夾
             const subfolders = currentFolder.children
                 .filter(child => {
                     // 如果不是資料夾，則不顯示
                     if (!(child instanceof TFolder)) return false;
-                    
+
                     // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
                     return !isFolderIgnored(
-                        child, 
-                        gridView.plugin.settings.ignoredFolders, 
-                        gridView.plugin.settings.ignoredFolderPatterns, 
+                        child,
+                        gridView.plugin.settings.ignoredFolders,
+                        gridView.plugin.settings.ignoredFolderPatterns,
                         gridView.showIgnoredFolders
                     );
                 })
@@ -129,27 +132,27 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
             for (const folder of subfolders) {
                 const folderEl = container.createDiv('ge-grid-item ge-folder-item');
                 gridView.gridItems.push(folderEl); // 添加到網格項目數組
-                
+
                 // 設置資料夾路徑屬性，用於拖曳功能
                 folderEl.dataset.folderPath = folder.path;
-                
+
                 const contentArea = folderEl.createDiv('ge-content-area');
                 const titleContainer = contentArea.createDiv('ge-title-container');
                 const customFolderIcon = gridView.plugin.settings.customFolderIcon;
                 titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
-                setTooltip(folderEl, folder.name,{ placement: gridView.cardLayout === 'vertical' ? 'bottom' : 'right' });
-                
+                setTooltip(folderEl, folder.name, { placement: gridView.cardLayout === 'vertical' ? 'bottom' : 'right' });
+
                 // 檢查同名筆記是否存在
                 const notePath = `${folder.path}/${folder.name}.md`;
                 const noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
-                
+
                 if (noteFile instanceof TFile) {
                     // 使用 span 代替 button，只顯示圖示
                     const noteIcon = titleContainer.createEl('span', {
                         cls: 'ge-foldernote-button'
                     });
                     setIcon(noteIcon, 'panel-left-open');
-                    
+
                     // 點擊圖示時開啟同名筆記
                     noteIcon.addEventListener('click', (e) => {
                         e.stopPropagation(); // 防止觸發資料夾的點擊事件
@@ -173,9 +176,9 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                             title.textContent = `${iconValue} ${folder.name}`;
                         }
                     }
-                    
+
                 }
-                
+
                 // 點擊時進入子資料夾
                 folderEl.addEventListener('click', (event) => {
                     if (event.ctrlKey || event.metaKey) {
@@ -192,7 +195,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 folderEl.addEventListener('contextmenu', (event) => {
                     event.preventDefault();
                     const menu = new Menu();
-                    
+
                     //在新網格視圖開啟
                     menu.addItem((item) => {
                         item
@@ -320,7 +323,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     menu.showAtMouseEvent(event);
                 });
             }
-            
+
             // 資料夾渲染完插入 break（僅當有資料夾）
             if (subfolders.length > 0) {
                 container.createDiv('ge-break');
@@ -329,7 +332,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
     }
 
     // 為資料夾項目添加拖曳目標功能
-    if(Platform.isDesktop) {
+    if (Platform.isDesktop) {
         const folderItems = gridView.containerEl.querySelectorAll('.ge-folder-item');
         folderItems.forEach(folderItem => {
             folderItem.addEventListener('dragover', (event) => {
@@ -340,33 +343,33 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 // 顯示可放置的視覺提示
                 folderItem.addClass('ge-dragover');
             });
-            
+
             folderItem.addEventListener('dragleave', () => {
                 // 移除視覺提示
                 folderItem.removeClass('ge-dragover');
             });
-            
+
             folderItem.addEventListener('drop', async (event) => {
                 // 防止預設行為
                 event.preventDefault();
                 // 移除視覺提示
                 folderItem.removeClass('ge-dragover');
-                
+
                 // 獲取拖曳的檔案路徑列表
                 const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
                 if (filesDataString) {
                     try {
                         // 解析檔案路徑列表
                         const filePaths = JSON.parse(filesDataString);
-                        
+
                         // 獲取目標資料夾路徑
                         const folderPath = (folderItem as any).dataset.folderPath;
                         if (!folderPath) return;
-                        
+
                         // 獲取資料夾物件
                         const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
                         if (!(folder instanceof TFolder)) return;
-                        
+
                         // 移動檔案
                         for (const path of filePaths) {
                             const file = gridView.app.vault.getAbstractFileByPath(path);
@@ -392,17 +395,17 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 // 如果沒有檔案路徑列表，則使用檔案路徑
                 const filePath = (event as any).dataTransfer?.getData('text/plain');
                 if (!filePath) return;
-                
+
                 const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                
+
                 // 獲取目標資料夾路徑
                 const folderPath = (folderItem as any).dataset.folderPath;
                 if (!folderPath) return;
-                
+
                 // 獲取檔案和資料夾物件
                 const file = gridView.app.vault.getAbstractFileByPath(cleanedFilePath);
                 const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
-                
+
                 if (file instanceof TFile && folder instanceof TFolder) {
                     try {
                         // 計算新的檔案路徑
