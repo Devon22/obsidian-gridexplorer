@@ -648,6 +648,7 @@ export class ExplorerView extends ItemView {
         }
         const view = await this.plugin.activateView();
         if (view instanceof GridView) {
+            await view.clearSelection();
             await view.setSource('', '', true, searchTerm);
         }
     }

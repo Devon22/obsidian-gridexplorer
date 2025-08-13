@@ -564,8 +564,39 @@ export class GridView extends ItemView {
 
                                         // 如果 fields 不為空，則使用它來顯示摘要
                                         if (fields) {
-                                            // 將 fields 以逗號分隔成陣列，並過濾掉空值
-                                            const fieldList = fields.split(',').map(f => f.trim()).filter(Boolean);
+                                            // 以逗號拆分，但忽略 {{ ... }} 內的逗號
+                                            const fieldList: string[] = (() => {
+                                                const parts: string[] = [];
+                                                let buf = '';
+                                                let depth = 0; // 在 {{...}} 內時 depth > 0
+                                                for (let i = 0; i < fields.length; i++) {
+                                                    const ch = fields[i];
+                                                    const next = fields[i + 1];
+                                                    // 偵測 '{{'
+                                                    if (ch === '{' && next === '{') {
+                                                        depth++;
+                                                        buf += '{{';
+                                                        i++;
+                                                        continue;
+                                                    }
+                                                    // 偵測 '}}'
+                                                    if (ch === '}' && next === '}') {
+                                                        if (depth > 0) depth--;
+                                                        buf += '}}';
+                                                        i++;
+                                                        continue;
+                                                    }
+                                                    // 只有在不在 {{...}} 內時，逗號才作為分隔符
+                                                    if (ch === ',' && depth === 0) {
+                                                        if (buf.trim()) parts.push(buf.trim());
+                                                        buf = '';
+                                                        continue;
+                                                    }
+                                                    buf += ch;
+                                                }
+                                                if (buf.trim()) parts.push(buf.trim());
+                                                return parts;
+                                            })();
                                             const fieldValues: string[] = [];
 
                                             // 收集所有欄位值，並處理別名（"原始欄位|別名"）
@@ -598,15 +629,19 @@ export class GridView extends ItemView {
                                                 }
 
                                                 if (metadata?.[fieldKey] !== undefined && metadata?.[fieldKey] !== '' && metadata?.[fieldKey] !== null) {
+                                                    
+                                                    let value = metadata[fieldKey];
+
                                                     // 如果是數字，則加入千位分隔符號
                                                     if (typeof metadata[fieldKey] === 'number') {
-                                                        metadata[fieldKey] = metadata[fieldKey].toLocaleString();
+                                                        value = metadata[fieldKey].toLocaleString();
                                                     }
                                                     // 如果是陣列，則轉換為字串
                                                     if (Array.isArray(metadata[fieldKey])) {
-                                                        metadata[fieldKey] = metadata[fieldKey].join(', ');
+                                                        value = metadata[fieldKey].join(', ');
                                                     }
-                                                    let outputValue: string | number | null = metadata[fieldKey];
+                                                    
+                                                    let outputValue: string | number | null = value;
                                                     if (calcExpr) {
                                                         try {
                                                             const fn = new Function('value', 'metadata', 'app', 'dv', `return (${calcExpr});`);
@@ -614,7 +649,7 @@ export class GridView extends ItemView {
                                                             // 獲取 Dataview API
                                                             const dvApi = this.app.plugins.plugins.dataview?.api;
 
-                                                            outputValue = fn(metadata[fieldKey], metadata, this.app, dvApi);
+                                                            outputValue = fn(value, metadata, this.app, dvApi);
                                                         } catch (error) {
                                                             console.error('GridExplorer: evaluate displayName error', error);
                                                         }
