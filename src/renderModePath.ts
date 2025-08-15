@@ -466,7 +466,9 @@ export function renderModePath(gridView: GridView) {
                         }
                     }
 
-                    menu.showAtMouseEvent(event);
+                    if (gridView.sourcePath !== '/') {
+                        menu.showAtMouseEvent(event);
+                    }
                 });
             }
         }

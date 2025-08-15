@@ -2070,6 +2070,43 @@ a.ge-current-folder:hover {
     display: none;
 }
 
+/* ExplorerView - Mobile spacing & touch targets */
+.is-mobile .ge-explorer-folder-header,
+.is-mobile .ge-explorer-mode-item {
+  padding: 8px 10px;      /* ↑ from 4px 6px */
+  gap: 10px;              /* ↑ from 6px */
+  min-height: 36px;       /* 提升最小點擊高度，可視需要調整到 40–44px */
+    border-radius: var(--radius-s);
+}
+
+/* 頂層根節點 header 的外距在手機放大一點，避免項目太擠 */
+.is-mobile .ge-explorer-view-container > .ge-explorer-folder-node > .ge-explorer-folder-header {
+  margin: 8px 10px;       /* ↑ from 6px 8px */
+}
+
+/* 讓切換箭頭與圖示在手機更好點 */
+.is-mobile .ge-explorer-folder-toggle,
+.is-mobile .ge-explorer-folder-icon {
+  width: 20px;            /* ↑ from 16px */
+  height: 20px;           /* ↑ from 16px */
+}
+
+/* 模式子項的縮排在手機視覺可略加（可選） */
+.is-mobile .ge-explorer-mode-item {
+  padding-left: 32px;     /* ↑ from 28px */
+}
+
+/* 列與列之間多一點空隙（可選，避免過度擁擠） */
+.is-mobile .ge-explorer-folder-header {
+  margin-bottom: 5px;     /* ↑ from 3px */
+}
+
+/* 降低手機點擊的藍色高亮痕跡（可選） */
+.is-mobile .ge-explorer-folder-header,
+.is-mobile .ge-explorer-mode-item {
+    -webkit-tap-highlight-color: transparent;
+}
+
 /* --------------------------------------------------------------------------- */
 /* 統一三個根節點（自訂模式/模式/Folder）的上下間距與外觀 */
 /* 頂層根節點 header：統一外距與圓角（自訂模式/模式/Folder） */
@@ -2188,3 +2225,82 @@ a.ge-current-folder:hover {
     background-color: var(--background-modifier-hover);
     box-shadow: 0 0 0 2px var(--interactive-accent);
 }
+
+/* --------------------------------------------------------------------------- */
+/* ExplorerView Stash Group */
+.ge-explorer-stash-dropzone {
+    padding-left: 28px; /* 與 .ge-explorer-mode-item 一致的縮排 */
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    margin: 4px 0px 4px -1px;
+    color: var(--text-muted);
+}
+
+.ge-explorer-stash-dropzone:hover,
+.ge-explorer-stash-dropzone.ge-dragover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+    color: var(--text-normal);
+}
+
+/* 整個暫存區作為拖曳區塊時的高亮（避免版面位移，使用 inset box-shadow） */
+.ge-explorer-stash-node.ge-dragover {
+    background-color: var(--background-modifier-hover);
+    box-shadow: inset 0 0 0 1px var(--interactive-accent);
+    border-radius: var(--radius-s);
+}
+
+/* 在整區拖曳高亮時，隱藏空暫存 dropzone 的邊框/背景，避免覆蓋底部邊線效果 */
+.ge-explorer-stash-node.ge-dragover .ge-explorer-stash-dropzone {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* dropzone 僅作為展示，不攔截事件（避免影響整區拖曳與點擊） */
+.ge-explorer-stash-dropzone {
+    pointer-events: none;
+}
+
+.ge-explorer-stash-item {
+    padding-left: 28px; /* 與 .ge-explorer-mode-item 一致的縮排 */
+    position: relative; /* 供插入指示線定位 */
+}
+
+/* 暫存區內部排序時的 hover 樣式 */
+.ge-explorer-stash-item.ge-dragover {
+    background-color: var(--background-modifier-hover);
+    outline: 1px dashed var(--interactive-accent);
+}
+
+/* 暫存區拖曳排序：插入指示線（上方） */
+.ge-explorer-stash-item.ge-stash-insert-before::before {
+    content: "";
+    position: absolute;
+    left: 20px; /* 與內容縮排對齊，略小於 28px 以避開圖示 */
+    right: 8px;
+    top: -1px;
+    height: 0;
+    border-top: 2px solid var(--interactive-accent);
+    pointer-events: none;
+}
+
+/* 暫存區拖曳排序：插入指示線（下方） */
+.ge-explorer-stash-item.ge-stash-insert-after::after {
+    content: "";
+    position: absolute;
+    left: 20px;
+    right: 8px;
+    bottom: -1px;
+    height: 0;
+    border-bottom: 2px solid var(--interactive-accent);
+    pointer-events: none;
+}
+
+/* 讓 stash item 的圖示可沿用 grid 的色票類別 */
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-img { color: var(--color-blue); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-video { color: var(--color-red); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-audio { color: var(--color-purple); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-pdf { color: var(--color-orange); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-canvas { color: var(--color-green); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-base { color: var(--color-cyan); }

@@ -1,13 +1,16 @@
-import { ItemView, WorkspaceLeaf, TFolder, TFile, Menu, setIcon, EventRef, Platform, normalizePath } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFolder, TFile, Menu, setIcon, EventRef, Platform, normalizePath, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { CustomModeModal } from './modal/customModeModal';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
-import { isFolderIgnored } from './fileUtils';
+import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile } from './fileUtils';
+import { FloatingAudioPlayer } from './floatingAudioPlayer';
+import { MediaModal } from './modal/mediaModal';
 import { t } from './translations';
 
+// 探索器視圖類型常數
 export const EXPLORER_VIEW_TYPE = 'explorer-view';
 
 export class ExplorerView extends ItemView {
@@ -34,17 +37,22 @@ export class ExplorerView extends ItemView {
     private keepSearchFocus: boolean = false;
     // 追蹤輸入法組字狀態，避免組字中重繪打斷輸入
     private isComposing: boolean = false;
+    private searchInputEl: HTMLInputElement | null = null;
+    private searchContainerEl: HTMLElement | null = null;
 
-    // 內建模式的 emoji 對應表，用於在樹狀圖中顯示圖示
+    // Stash functionality
+    private stashFilePaths: string[] = [];
+
+    // Built-in mode icons
     private readonly BUILTIN_MODE_EMOJIS: Record<string, string> = {
-        'bookmarks': '📑',      // 書籤模式
-        'search': '🔍',         // 搜尋模式
-        'backlinks': '🔗',      // 反向連結模式
-        'outgoinglinks': '🔗',  // 外向連結模式
-        'recent-files': '📅',   // 最近檔案模式
-        'all-files': '📔',      // 所有檔案模式
-        'random-note': '🎲',    // 隨機筆記模式
-        'tasks': '☑️',          // 任務模式
+        'bookmarks': '📑',
+        'search': '🔍',
+        'backlinks': '🔗',
+        'outgoinglinks': '🔗',
+        'recent-files': '📅',
+        'all-files': '📔',
+        'random-note': '🎲',
+        'tasks': '☑️',
     };
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
@@ -53,163 +61,194 @@ export class ExplorerView extends ItemView {
         this.containerEl.addClass('ge-explorer-view-container');
     }
 
-    /**
-     * 排程延遲渲染，避免短時間內多次觸發重繪
-     * 使用防抖技術，100ms 內的多次呼叫只會執行最後一次
-     */
+    // 延遲渲染，避免頻繁更新
     private scheduleRender() {
-        // 如果已有計時器在執行，先清除它
         if (this.renderTimer !== null) {
             window.clearTimeout(this.renderTimer);
         }
 
-        // 設定新的計時器，100ms 後執行渲染
         this.renderTimer = window.setTimeout(() => {
             this.renderTimer = null;
-            // 安全檢查：確保視圖容器仍然存在且連接到 DOM
             if (this.containerEl?.isConnected) {
                 this.render();
             }
         }, 100);
     }
 
+    // 獲取視圖類型
     getViewType(): string {
         return EXPLORER_VIEW_TYPE;
     }
 
+    // 獲取顯示名稱
     getDisplayText(): string {
         return t('explorer') || 'Explorer';
     }
 
+    // 獲取圖示
     getIcon(): string {
         return 'folder-tree';
     }
 
-    // 保存視圖狀態：記住展開的資料夾
+    // 保存視圖狀態
     getState(): Record<string, unknown> {
-        const base = super.getState();
         return {
-            ...base,
+            ...super.getState(),
             expandedPaths: Array.from(this.expandedPaths),
             searchQuery: this.searchQuery,
-        } as Record<string, unknown>;
+            stashFilePaths: Array.from(this.stashFilePaths),
+        };
     }
 
-    // 還原視圖狀態：恢復展開的資料夾
+    // 恢復視圖狀態
     async setState(state: any, result?: any): Promise<void> {
         await super.setState(state, result);
-        if (state && Array.isArray(state.expandedPaths)) {
+
+        this.restoreExpandedPaths(state);
+        this.restoreSearchQuery(state);
+        this.restoreStashFiles(state);
+        this.syncSearchInput();
+        this.scheduleRender();
+    }
+
+    // 恢復展開路徑狀態
+    private restoreExpandedPaths(state: any) {
+        if (state?.expandedPaths && Array.isArray(state.expandedPaths)) {
             this.expandedPaths = new Set(
                 state.expandedPaths.filter((p: unknown) => typeof p === 'string')
             );
         } else {
             this.expandedPaths.clear();
         }
-        // 恢復搜尋字串
-        if (state && typeof state.searchQuery === 'string') {
-            this.searchQuery = state.searchQuery;
-        } else {
-            this.searchQuery = '';
-        }
-
-        // 如果搜尋輸入框已存在，同步更新其值
-        if (this.searchInputEl) {
-            this.searchInputEl.value = this.searchQuery;
-            // 同步更新清除按鈕的顯示狀態
-            const clearBtn = this.searchContainerEl?.querySelector('.ge-explorer-search-clear');
-            if (clearBtn) {
-                clearBtn.toggleClass('show', !!this.searchQuery.trim());
-            }
-        }
-
-        this.scheduleRender();
     }
 
+    // 恢復搜尋查詢
+    private restoreSearchQuery(state: any) {
+        this.searchQuery = (state?.searchQuery && typeof state.searchQuery === 'string')
+            ? state.searchQuery
+            : '';
+    }
+
+    // 恢復暫存檔案列表
+    private restoreStashFiles(state: any) {
+        if (state?.stashFilePaths && Array.isArray(state.stashFilePaths)) {
+            const validPaths = state.stashFilePaths
+                .filter((p: unknown) => typeof p === 'string' && p)
+                .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
+            this.stashFilePaths = Array.from(new Set(validPaths));
+        } else {
+            this.stashFilePaths = [];
+        }
+    }
+
+    // 同步搜尋輸入框狀態
+    private syncSearchInput() {
+        if (this.searchInputEl) {
+            this.searchInputEl.value = this.searchQuery;
+            const clearBtn = this.searchContainerEl?.querySelector('.ge-explorer-search-clear');
+            clearBtn?.toggleClass('show', !!this.searchQuery.trim());
+        }
+    }
+
+    // 視圖開啟時初始化
     async onOpen(): Promise<void> {
         this.render();
         this.registerEventListeners();
     }
 
-    /**
-     * 註冊所有需要的事件監聽器
-     * 當檔案系統或 GridView 狀態變更時，自動更新樹狀圖
-     */
+    // 註冊事件監聽器
     private registerEventListeners() {
-        const { vault, workspace } = this.app;
+        const { vault } = this.app;
         const schedule = () => this.scheduleRender();
 
-        // 檔案系統事件監聽
         this.eventRefs.push(
-            // 檔案/資料夾建立時重新渲染
             vault.on('create', schedule),
-
-            // 檔案/資料夾刪除時，清理展開狀態並重新渲染
-            vault.on('delete', (file: any) => {
-                const path = file?.path as string | undefined;
-                if (path) this.removeExpandedPrefix(path);
-                schedule();
-            }),
-
-            // 檔案/資料夾重新命名時，更新展開狀態的路徑並重新渲染
-            vault.on('rename', (file: any, oldPath: string) => {
-                const newPath = (file?.path as string) || '';
-                if (oldPath && newPath) this.renameExpandedPrefix(oldPath, newPath);
-                schedule();
-            })
+            vault.on('delete', (file: any) => this.handleFileDelete(file, schedule)),
+            vault.on('rename', (file: any, oldPath: string) => this.handleFileRename(file, oldPath, schedule))
         );
 
-        // GridView 來源變更事件監聽
-        // 當 GridView 切換到不同模式或路徑時，更新樹狀圖的高亮顯示
         this.registerCustomEvent('ge-grid-source-changed', (payload: any) => {
             this.lastMode = payload?.mode ?? this.lastMode;
             this.lastPath = payload?.path ?? this.lastPath;
             schedule();
         });
 
-        // 資料夾同名筆記設定變更事件監聽
-        // 當資料夾筆記的設定（如顏色、圖示）變更時重新渲染
         this.registerCustomEvent('grid-explorer:folder-note-updated', schedule);
     }
 
-    /**
-     * 註冊自訂事件監聽器
-     * 由於自訂事件可能不存在，需要安全地處理註冊過程
-     * @param eventName 事件名稱
-     * @param callback 回調函數
-     */
+    // 處理檔案刪除事件
+    private handleFileDelete(file: any, schedule: () => void) {
+        const path = file?.path as string | undefined;
+        if (path) {
+            this.removeExpandedPrefix(path);
+            if (file instanceof TFile) {
+                this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
+                this.app.workspace.requestSaveLayout();
+            }
+        }
+        schedule();
+    }
+
+    // 處理檔案重新命名事件
+    private handleFileRename(file: any, oldPath: string, schedule: () => void) {
+        const newPath = file?.path as string || '';
+        if (oldPath && newPath) {
+            this.renameExpandedPrefix(oldPath, newPath);
+            if (file instanceof TFile) {
+                this.stashFilePaths = this.stashFilePaths.map(p => p === oldPath ? newPath : p);
+                this.app.workspace.requestSaveLayout();
+            }
+        }
+        schedule();
+    }
+
+    // 註冊自定義事件
     private registerCustomEvent(eventName: string, callback: (...args: any[]) => void) {
         try {
-            // 嘗試註冊事件，某些事件可能在特定版本中不存在
             const ref = (this.app.workspace as any).on?.(eventName, callback);
             if (ref) this.eventRefs.push(ref);
         } catch (error) {
-            // 如果註冊失敗，記錄警告但不中斷程式執行
-            console.warn(`無法註冊事件 ${eventName}:`, error);
+            console.warn(`Failed to register event ${eventName}:`, error);
         }
     }
 
+    // 視圖關閉時清理資源
     async onClose(): Promise<void> {
-        // 移除事件監聽並清理計時器
+        this.cleanupEventListeners();
+        this.cleanupTimer();
+        this.cleanupSearchElements();
+    }
+
+    // 清理事件監聽器
+    private cleanupEventListeners() {
         const { vault, workspace } = this.app;
         for (const ref of this.eventRefs) {
             try { vault.offref(ref); } catch { }
             try { workspace.offref(ref); } catch { }
         }
         this.eventRefs = [];
+    }
+
+    // 清理計時器
+    private cleanupTimer() {
         if (this.renderTimer !== null) {
             window.clearTimeout(this.renderTimer);
             this.renderTimer = null;
         }
-        // 清理搜尋框引用
+    }
+
+    // 清理搜尋元素引用
+    private cleanupSearchElements() {
         this.searchInputEl = null;
         this.searchContainerEl = null;
     }
 
-    // 對外提供重新渲染的介面（供設定變更時呼叫）
+    // 刷新視圖
     public refresh() {
         this.scheduleRender();
     }
 
+    // 在新視圖中開啟資料夾
     private openFolderInNewView(folderPath: string) {
         const { workspace } = this.app;
         let leaf: any = null;
@@ -233,46 +272,67 @@ export class ExplorerView extends ItemView {
         workspace.revealLeaf(leaf);
     }
 
-    // 搜尋框的引用，避免重複創建
-    private searchInputEl: HTMLInputElement | null = null;
-    private searchContainerEl: HTMLElement | null = null;
+    // 在新視圖中開啟模式
+    private openModeInNewView(mode: string) {
+        const { workspace } = this.app;
+        let leaf: any = null;
+        switch (this.plugin.settings.defaultOpenLocation) {
+            case 'left':
+                leaf = workspace.getLeftLeaf(false);
+                break;
+            case 'right':
+                leaf = workspace.getRightLeaf(false);
+                break;
+            case 'tab':
+            default:
+                leaf = workspace.getLeaf('tab');
+                break;
+        }
+        if (!leaf) leaf = workspace.getLeaf('tab');
+        leaf.setViewState({ type: 'grid-view', active: true });
+        if (leaf.view instanceof GridView) {
+            leaf.view.setSource(mode);
+        }
+        workspace.revealLeaf(leaf);
+    }
 
-    /**
-     * 主要的渲染方法，重新繪製整個樹狀圖
-     * 包含模式群組和資料夾群組
-     */
+    // 主要渲染方法
     private render() {
         const { contentEl } = this;
-
-        // 儲存當前的捲動位置，避免重繪後跳回頂部造成使用者困擾
         const prevScrollTop = contentEl.scrollTop;
 
-        // 如果搜尋框還不存在，創建它
+        this.ensureSearchContainer(contentEl);
+        this.clearContentExceptSearch(contentEl);
+
+        const { currentMode, currentPath, showIgnoredFolders } = this.getCurrentGridState();
+
+        this.renderSearchOption(contentEl);
+        this.renderStashGroup(contentEl);
+        this.renderModeGroups(contentEl, currentMode);
+        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredFolders);
+
+        this.handleSearchFocus();
+        this.restoreScrollPosition(contentEl, prevScrollTop);
+    }
+
+    // 確保搜尋容器存在
+    private ensureSearchContainer(contentEl: HTMLElement) {
         if (!this.searchContainerEl || !this.searchContainerEl.isConnected) {
             this.createSearchContainer(contentEl);
         }
+    }
 
-        // 清空除了搜尋框以外的內容
-        const children = Array.from(contentEl.children);
-        children.forEach(child => {
+    // 清除除搜尋容器外的所有內容
+    private clearContentExceptSearch(contentEl: HTMLElement) {
+        Array.from(contentEl.children).forEach(child => {
             if (child !== this.searchContainerEl) {
                 child.remove();
             }
         });
+    }
 
-        // 獲取當前 GridView 的狀態資訊
-        const { currentMode, currentPath, showIgnoredFolders } = this.getCurrentGridState();
-
-        // 渲染搜尋選項（如果有搜尋字串）
-        this.renderSearchOption(contentEl);
-
-        // 渲染模式群組（自訂模式和內建模式）
-        this.renderModeGroups(contentEl, currentMode);
-
-        // 渲染資料夾群組（檔案系統樹狀結構）
-        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredFolders);
-
-        // 在重新渲染後，根據旗標回到搜尋框並將游標移到最後
+    // 處理搜尋框焦點
+    private handleSearchFocus() {
         if (this.keepSearchFocus && this.searchInputEl) {
             setTimeout(() => {
                 if (this.searchInputEl) {
@@ -285,88 +345,86 @@ export class ExplorerView extends ItemView {
             }, 0);
             this.keepSearchFocus = false;
         }
-
-        // 還原之前的捲動位置，保持使用者的瀏覽位置
-        this.restoreScrollPosition(contentEl, prevScrollTop);
     }
 
-    /**
-     * 創建搜尋容器（只創建一次，避免重複渲染影響鍵盤）
-     */
+    // 創建搜尋容器
     private createSearchContainer(contentEl: HTMLElement) {
-        // 建立頂部搜尋輸入區塊（參考 NAV-SEARCH-STYLES.md）
         this.searchContainerEl = contentEl.createDiv({ cls: 'ge-explorer-search-container' });
         this.searchInputEl = this.searchContainerEl.createEl('input', { type: 'text' }) as HTMLInputElement;
         this.searchInputEl.addClass('ge-explorer-search-input');
-        this.searchInputEl.placeholder = t ? (t('search') || 'Search') : 'Search';
+        this.searchInputEl.placeholder = t?.('search') || 'Search';
         this.searchInputEl.value = this.searchQuery;
 
         const clearBtn = this.searchContainerEl.createEl('button', { cls: 'ge-explorer-search-clear clickable-icon' });
         setIcon(clearBtn, 'x');
         if (this.searchQuery.trim()) clearBtn.addClass('show');
 
-        // IME 組字事件：開始/結束
+        this.setupSearchEventListeners(clearBtn, contentEl);
+    }
+
+    // 設置搜尋事件監聽器
+    private setupSearchEventListeners(clearBtn: HTMLElement, contentEl: HTMLElement) {
+        if (!this.searchInputEl) return;
+
         this.searchInputEl.addEventListener('compositionstart', () => {
             this.isComposing = true;
         });
+
         this.searchInputEl.addEventListener('compositionend', () => {
             this.isComposing = false;
-            this.searchQuery = this.searchInputEl!.value;
-            clearBtn.toggleClass('show', !!this.searchQuery.trim());
-            // 現在可以即時更新，因為搜尋框不會被重新創建
-            this.keepSearchFocus = true;
-            this.scheduleRender();
-            // 通知 Obsidian 保存視圖狀態
-            this.app.workspace.requestSaveLayout();
+            this.updateSearchQuery(clearBtn);
         });
 
         this.searchInputEl.addEventListener('input', () => {
-            this.searchQuery = this.searchInputEl!.value;
-            clearBtn.toggleClass('show', !!this.searchQuery.trim());
-            // 組字中不觸發重繪，避免打斷中文輸入
-            if (!this.isComposing) {
-                // 現在可以即時更新，因為搜尋框不會被重新創建
-                this.keepSearchFocus = true;
-                this.scheduleRender();
-                // 通知 Obsidian 保存視圖狀態
-                this.app.workspace.requestSaveLayout();
-            }
+            this.updateSearchQuery(clearBtn);
         });
 
         this.searchInputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
-            // 組字中交由 IME 處理，避免攔截 Esc 等鍵
-            if (this.isComposing) return;
-
-            if (evt.key === 'ArrowDown') {
-                // 轉移焦點到「搜尋選項」
-                const searchOptionEl = contentEl.querySelector('.ge-explorer-search-option') as HTMLElement;
-                if (searchOptionEl) {
-                    evt.preventDefault();
-                    searchOptionEl.focus();
-                }
-                return;
-            }
-            if (evt.key === 'Escape') {
-                this.searchQuery = '';
-                this.searchInputEl!.value = '';
-                clearBtn.removeClass('show');
-                this.scheduleRender();
-                // 通知 Obsidian 保存視圖狀態
-                this.app.workspace.requestSaveLayout();
-                // 保持焦點在輸入框，便於連續操作
-                setTimeout(() => this.searchInputEl?.focus(), 0);
-            }
+            this.handleSearchKeydown(evt, clearBtn, contentEl);
         });
 
         clearBtn.addEventListener('click', () => {
-            this.searchQuery = '';
-            this.searchInputEl!.value = '';
-            clearBtn.removeClass('show');
-            this.scheduleRender();
-            // 通知 Obsidian 保存視圖狀態
-            this.app.workspace.requestSaveLayout();
-            setTimeout(() => this.searchInputEl?.focus(), 0);
+            this.clearSearch(clearBtn);
         });
+    }
+
+    // 更新搜尋查詢
+    private updateSearchQuery(clearBtn: HTMLElement) {
+        if (!this.searchInputEl) return;
+
+        this.searchQuery = this.searchInputEl.value;
+        clearBtn.toggleClass('show', !!this.searchQuery.trim());
+
+        if (!this.isComposing) {
+            this.keepSearchFocus = true;
+            this.scheduleRender();
+            this.app.workspace.requestSaveLayout();
+        }
+    }
+
+    // 處理搜尋框按鍵事件
+    private handleSearchKeydown(evt: KeyboardEvent, clearBtn: HTMLElement, contentEl: HTMLElement) {
+        if (this.isComposing) return;
+
+        if (evt.key === 'ArrowDown') {
+            const searchOptionEl = contentEl.querySelector('.ge-explorer-search-option') as HTMLElement;
+            if (searchOptionEl) {
+                evt.preventDefault();
+                searchOptionEl.focus();
+            }
+        } else if (evt.key === 'Escape') {
+            this.clearSearch(clearBtn);
+        }
+    }
+
+    // 清除搜尋
+    private clearSearch(clearBtn: HTMLElement) {
+        this.searchQuery = '';
+        if (this.searchInputEl) this.searchInputEl.value = '';
+        clearBtn.removeClass('show');
+        this.scheduleRender();
+        this.app.workspace.requestSaveLayout();
+        setTimeout(() => this.searchInputEl?.focus(), 0);
     }
 
     /**
@@ -435,19 +493,19 @@ export class ExplorerView extends ItemView {
         };
     }
 
-    // 是否處於篩選狀態
+    // 檢查是否正在過濾
     private isFiltering(): boolean {
         return !!this.searchQuery?.trim();
     }
 
-    // 便利方法：大小寫不敏感包含比對
+    // 檢查文字是否符合查詢
     private matchesQuery(text?: string): boolean {
-        const q = (this.searchQuery || '').trim().toLowerCase();
-        if (!q) return true;
-        return (text || '').toLowerCase().includes(q);
+        const query = this.searchQuery?.trim().toLowerCase();
+        if (!query) return true;
+        return (text || '').toLowerCase().includes(query);
     }
 
-    // 判斷資料夾或其子孫是否符合搜尋條件（同時考慮忽略規則）
+    // 檢查資料夾是否應該顯示
     private shouldShowFolder(folder: TFolder): boolean {
         if (!this.isFiltering()) return true;
         if (this.matchesQuery(folder.name)) return true;
@@ -463,77 +521,87 @@ export class ExplorerView extends ItemView {
         return childFolders.some((child) => this.shouldShowFolder(child));
     }
 
-    /**
-     * 渲染模式群組區塊（自訂模式和內建模式）
-     * @param contentEl 父容器元素
-     * @param currentMode 當前選中的模式，用於高亮顯示
-     */
+    // 檢查是否有可見的頂層資料夾
+    private hasVisibleTopLevelFolders(showIgnoredFolders: boolean): boolean {
+        const root = this.app.vault.getRoot();
+        const settings = this.plugin.settings;
+
+        const topLevelFolders = root.children
+            .filter((f): f is TFolder => f instanceof TFolder)
+            .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+
+        return topLevelFolders.some((f) => this.shouldShowFolder(f));
+    }
+
+    // 渲染模式群組
     private renderModeGroups(contentEl: HTMLElement, currentMode: string) {
         const settings = this.plugin.settings;
 
-        // === 自訂模式群組 ===
-        // 過濾出已啟用的自訂模式
+        const customItems = this.getCustomModeItems(settings);
+        this.renderModesGroup(contentEl, '__modes__custom', t?.('custom_modes') || 'Custom Modes', 'puzzle', customItems);
+
+        const builtinItems = this.getBuiltinModeItems(settings);
+        this.renderModesGroup(contentEl, '__modes__builtin', t?.('modes') || 'Modes', 'shapes', builtinItems);
+    }
+
+    // 獲取自定義模式項目
+    private getCustomModeItems(settings: any) {
         const customModes = (settings?.customModes ?? []).filter((cm: any) => cm?.enabled !== false);
 
-        // 將自訂模式轉換為渲染項目
-        const customItems = customModes
+        return customModes
             .filter((cm: any) => {
                 if (!this.isFiltering()) return true;
                 const baseLabel = cm.displayName || cm.internalName || 'Custom';
-                // 只比對顯示名稱，不比對 internalName
                 return this.matchesQuery(baseLabel);
             })
             .map((cm: any) => {
                 const baseLabel = cm.displayName || cm.internalName || 'Custom';
                 const internalName = cm.internalName || `custom-${baseLabel}`;
-                const textIcon = cm.icon ? `${cm.icon} ` : ''; // 文字圖示前綴
+                const textIcon = cm.icon ? `${cm.icon} ` : '';
                 return {
                     key: internalName,
                     label: `${textIcon}${baseLabel}`,
-                    icon: '', // 自訂模式不使用 setIcon，而是用文字前綴
+                    icon: '',
                     onClick: () => this.openMode(internalName)
                 };
             });
+    }
 
-        // 渲染自訂模式群組
-        this.renderModesGroup(contentEl, '__modes__custom', t ? t('custom_modes') : 'Custom Modes', 'puzzle', customItems);
-
-        // === 內建模式群組 ===
-        // 獲取已啟用的內建模式
+    // 獲取內建模式項目
+    private getBuiltinModeItems(settings: any) {
         const builtInModes = this.getEnabledBuiltInModes(settings);
 
-        // 將內建模式轉換為渲染項目，添加 emoji 前綴
-        const builtinItems = builtInModes
+        return builtInModes
             .filter(m => !this.isFiltering() || this.matchesQuery(m.label) || this.matchesQuery(m.key))
             .map(m => {
                 const emoji = this.BUILTIN_MODE_EMOJIS[m.key] || '';
                 const label = emoji ? `${emoji} ${m.label}` : m.label;
                 return { key: m.key, label, icon: '', onClick: () => this.openMode(m.key) };
             });
-
-        // 渲染內建模式群組
-        this.renderModesGroup(contentEl, '__modes__builtin', t ? t('modes') : 'Modes', 'shapes', builtinItems);
     }
 
+    // 獲取已啟用的內建模式
     private getEnabledBuiltInModes(settings: any) {
         const builtInCandidates = [
-            { key: 'bookmarks', label: t ? t('bookmarks_mode') : 'Bookmarks', icon: 'bookmark', enabled: !!settings?.showBookmarksMode },
-            { key: 'search', label: t ? t('search_results') : 'Search', icon: 'search', enabled: !!settings?.showSearchMode },
-            { key: 'backlinks', label: t ? t('backlinks_mode') : 'Backlinks', icon: 'links-coming-in', enabled: !!settings?.showBacklinksMode },
-            { key: 'outgoinglinks', label: t ? t('outgoinglinks_mode') : 'Outgoing Links', icon: 'links-going-out', enabled: !!settings?.showOutgoinglinksMode },
-            { key: 'all-files', label: t ? t('all_files_mode') : 'All Files', icon: 'book-text', enabled: !!settings?.showAllFilesMode },
-            { key: 'recent-files', label: t ? t('recent_files_mode') : 'Recent Files', icon: 'calendar-days', enabled: !!settings?.showRecentFilesMode },
-            { key: 'random-note', label: t ? t('random_note_mode') : 'Random Note', icon: 'dice', enabled: !!settings?.showRandomNoteMode },
-            { key: 'tasks', label: t ? t('tasks_mode') : 'Tasks', icon: 'square-check-big', enabled: !!settings?.showTasksMode },
+            { key: 'bookmarks', label: t?.('bookmarks_mode') || 'Bookmarks', icon: 'bookmark', enabled: !!settings?.showBookmarksMode },
+            { key: 'search', label: t?.('search_results') || 'Search', icon: 'search', enabled: !!settings?.showSearchMode },
+            { key: 'backlinks', label: t?.('backlinks_mode') || 'Backlinks', icon: 'links-coming-in', enabled: !!settings?.showBacklinksMode },
+            { key: 'outgoinglinks', label: t?.('outgoinglinks_mode') || 'Outgoing Links', icon: 'links-going-out', enabled: !!settings?.showOutgoinglinksMode },
+            { key: 'all-files', label: t?.('all_files_mode') || 'All Files', icon: 'book-text', enabled: !!settings?.showAllFilesMode },
+            { key: 'recent-files', label: t?.('recent_files_mode') || 'Recent Files', icon: 'calendar-days', enabled: !!settings?.showRecentFilesMode },
+            { key: 'random-note', label: t?.('random_note_mode') || 'Random Note', icon: 'dice', enabled: !!settings?.showRandomNoteMode },
+            { key: 'tasks', label: t?.('tasks_mode') || 'Tasks', icon: 'square-check-big', enabled: !!settings?.showTasksMode },
         ];
         return builtInCandidates.filter(m => m.enabled).map(({ key, label, icon }) => ({ key, label, icon }));
     }
 
+    // 開啟指定模式
     private async openMode(mode: string) {
         const view = await this.plugin.activateView();
         if (view instanceof GridView) await view.setSource(mode);
     }
 
+    // 恢復滾動位置
     private restoreScrollPosition(contentEl: HTMLElement, prevScrollTop: number) {
         contentEl.scrollTop = prevScrollTop;
         requestAnimationFrame(() => {
@@ -541,6 +609,7 @@ export class ExplorerView extends ItemView {
         });
     }
 
+    // 渲染模式群組
     private renderModesGroup(contentEl: HTMLElement, groupKey: string, title: string, iconName: string, items: Array<{ key?: string; label: string; icon: string; onClick: () => void }>) {
         if (items.length === 0) return;
 
@@ -570,61 +639,95 @@ export class ExplorerView extends ItemView {
         this.renderModeItems(children, items, groupKey);
     }
 
+    // 渲染模式項目
     private renderModeItems(children: HTMLElement, items: Array<{ key?: string; label: string; icon: string; onClick: () => void }>, groupKey: string) {
         const { currentMode } = this.getCurrentGridState();
 
         items.forEach(({ key, label, icon, onClick }) => {
             const itemEl = children.createDiv({ cls: 'ge-explorer-folder-header ge-explorer-mode-item' });
-            const itemIcon = itemEl.createSpan({ cls: 'ge-explorer-folder-icon' });
 
-            // 自訂模式群組不使用 setIcon，讓文字前綴 icon 生效
-            if (groupKey !== '__modes__custom' && icon) {
-                setIcon(itemIcon, icon);
-            }
+            this.setupModeItemIcon(itemEl, icon, groupKey);
+            this.setupModeItemLabel(itemEl, label);
+            this.highlightActiveModeItem(itemEl, key, currentMode);
+            this.setupModeItemClick(itemEl, key, currentMode, onClick);
 
-            const itemName = itemEl.createSpan({ cls: 'ge-explorer-folder-name' });
-            itemName.textContent = label;
-
-            // 高亮目前模式（非 folder 模式）
-            if (key && currentMode === key && currentMode !== 'folder') {
-                itemEl.addClass('is-active');
-            }
-
-            itemEl.addEventListener('click', (evt) => {
-                evt.stopPropagation();
-                // 若已是當前模式，避免重複開啟
-                if (key && currentMode === key && currentMode !== 'folder') {
-                    return;
-                }
-                onClick();
-            });
-
-            // 自訂模式：加入右鍵選單，提供開啟自訂模式設定的功能
             if (groupKey === '__modes__custom' && key) {
-                itemEl.addEventListener('contextmenu', (evt) => {
-                    evt.preventDefault();
-                    evt.stopPropagation();
-                    const menu = new Menu();
-                    menu.addItem((item) => {
-                        item.setTitle(t('edit_custom_mode'))
-                            .setIcon('settings')
-                            .onClick(() => {
-                                const modeIndex = this.plugin.settings.customModes.findIndex((m: any) => m.internalName === key);
-                                if (modeIndex === -1) return;
-                                new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result: any) => {
-                                    this.plugin.settings.customModes[modeIndex] = result;
-                                    this.plugin.saveSettings();
-                                    this.scheduleRender();
-                                }).open();
-                            });
-                    });
-                    menu.showAtMouseEvent(evt as MouseEvent);
-                });
+                this.setupCustomModeContextMenu(itemEl, key);
             }
         });
     }
 
+    // 設置模式項目圖示
+    private setupModeItemIcon(itemEl: HTMLElement, icon: string, groupKey: string) {
+        const itemIcon = itemEl.createSpan({ cls: 'ge-explorer-folder-icon' });
+        if (groupKey !== '__modes__custom' && icon) {
+            setIcon(itemIcon, icon);
+        }
+    }
+
+    // 設置模式項目標籤
+    private setupModeItemLabel(itemEl: HTMLElement, label: string) {
+        const itemName = itemEl.createSpan({ cls: 'ge-explorer-folder-name' });
+        itemName.textContent = label;
+    }
+
+    // 高亮活躍的模式項目
+    private highlightActiveModeItem(itemEl: HTMLElement, key: string | undefined, currentMode: string) {
+        if (key && currentMode === key && currentMode !== 'folder') {
+            itemEl.addClass('is-active');
+        }
+    }
+
+    // 設置模式項目點擊事件
+    private setupModeItemClick(itemEl: HTMLElement, key: string | undefined, currentMode: string, onClick: () => void) {
+        itemEl.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+
+            if ((evt.ctrlKey || evt.metaKey) && key) {
+                this.openModeInNewView(key);
+                return;
+            }
+
+            if (key && currentMode === key && currentMode !== 'folder') {
+                return;
+            }
+            onClick();
+        });
+    }
+
+    // 設置自定義模式右鍵選單
+    private setupCustomModeContextMenu(itemEl: HTMLElement, key: string) {
+        itemEl.addEventListener('contextmenu', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            const menu = new Menu();
+            menu.addItem((item) => {
+                item.setTitle(t?.('edit_custom_mode') || 'Edit Custom Mode')
+                    .setIcon('settings')
+                    .onClick(() => {
+                        const modeIndex = this.plugin.settings.customModes.findIndex((m: any) => m.internalName === key);
+                        if (modeIndex === -1) return;
+                        new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result: any) => {
+                            this.plugin.settings.customModes[modeIndex] = result;
+                            this.plugin.saveSettings();
+                            this.scheduleRender();
+                        }).open();
+                    });
+            });
+            menu.showAtMouseEvent(evt as MouseEvent);
+        });
+    }
+
+    // 渲染資料夾群組
     private renderFoldersGroup(contentEl: HTMLElement, currentMode: string, currentPath: string, showIgnoredFolders: boolean) {
+        // 如果正在搜尋，檢查是否有符合的資料夾
+        if (this.isFiltering()) {
+            const hasVisibleFolders = this.hasVisibleTopLevelFolders(showIgnoredFolders);
+            if (!hasVisibleFolders) {
+                return;
+            }
+        }
+
         const foldersGroupKey = '__folders__root';
         const foldersNode = contentEl.createDiv({ cls: 'ge-explorer-folder-node' });
 
@@ -637,15 +740,14 @@ export class ExplorerView extends ItemView {
         this.renderTopLevelFolders(foldersChildren, showIgnoredFolders);
     }
 
-    /**
-     * 以目前搜尋字串切換到 Folder 模式並套用搜尋（與 FolderSelectionModal 的行為一致）
-     */
+    // 開啟資料夾搜尋
     private async openFolderSearch(searchTerm: string): Promise<void> {
         const activeView = this.app.workspace.getActiveViewOfType(GridView);
         if (activeView) {
             await activeView.setSource('folder', '/', true, searchTerm);
             return;
         }
+
         const view = await this.plugin.activateView();
         if (view instanceof GridView) {
             await view.clearSelection();
@@ -653,6 +755,7 @@ export class ExplorerView extends ItemView {
         }
     }
 
+    // 創建資料夾群組標頭
     private createFoldersGroupHeader(foldersNode: HTMLElement, foldersGroupKey: string, currentMode: string, currentPath: string) {
         const foldersHeader = foldersNode.createDiv({ cls: 'ge-explorer-folder-header' });
         const foldersToggle = foldersHeader.createSpan({ cls: 'ge-explorer-folder-toggle' });
@@ -688,8 +791,23 @@ export class ExplorerView extends ItemView {
                 setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
                 foldersChildren.toggleClass('is-collapsed', !newExpanded);
             } else {
-                // 點選 Folder 根選項：如果已經是選取狀態則不做任何動作
-                if (foldersHeader.hasClass('is-active')) {
+                // Ctrl/Meta + 點擊：在新的 GridView 分頁中開啟
+                if (evt.ctrlKey || evt.metaKey) {
+                    this.openFolderInNewView(rootPath);
+                    return;
+                }
+
+                const isActive = foldersHeader.hasClass('is-active');
+
+                // 如果已是選取狀態，處理展開/收合邏輯
+                if (isActive) {
+                    const currentExpanded = this.isExpanded(foldersGroupKey);
+                    const newExpanded = !currentExpanded;
+
+                    // 切換展開狀態
+                    setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
+                    foldersChildren.toggleClass('is-collapsed', !newExpanded);
+                    this.setExpanded(foldersGroupKey, newExpanded);
                     return;
                 }
 
@@ -703,17 +821,21 @@ export class ExplorerView extends ItemView {
         return { foldersHeader, foldersChildren };
     }
 
+    // 展開當前資料夾路徑
     private expandCurrentFolderPath(currentMode: string, currentPath: string) {
         if (currentMode === 'folder' && currentPath) {
             const parts = currentPath.split('/').filter(Boolean);
             let acc = '';
-            for (const part of parts) {
+            // 只展開父路徑，不展開當前資料夾本身
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
                 acc = acc ? `${acc}/${part}` : part;
                 this.setExpanded(acc, true);
             }
         }
     }
 
+    // 渲染頂層資料夾
     private renderTopLevelFolders(foldersChildren: HTMLElement, showIgnoredFolders: boolean) {
         const root = this.app.vault.getRoot();
         const settings = this.plugin.settings;
@@ -759,6 +881,7 @@ export class ExplorerView extends ItemView {
         this.renderChildFolders(folder, childrenContainer, depth);
     }
 
+    // 創建資料夾標頭
     private createFolderHeader(nodeEl: HTMLElement, folder: TFolder, expanded: boolean, depth: number) {
         const header = nodeEl.createDiv({ cls: 'ge-explorer-folder-header' });
         header.style.paddingLeft = `${Math.max(0, depth) * 14}px`;
@@ -775,6 +898,7 @@ export class ExplorerView extends ItemView {
         return header;
     }
 
+    // 設置資料夾圖示
     private setupFolderIcon(folder: TFolder, name: HTMLElement, toggle: HTMLElement, expanded: boolean) {
         // 根據同名筆記設置背景色與圖示
         const iconFromFrontmatter = this.getFolderIconFromFrontmatter(folder, name);
@@ -791,6 +915,7 @@ export class ExplorerView extends ItemView {
         this.setupToggleIcon(folder, toggle, expanded);
     }
 
+    // 從 frontmatter 獲取資料夾圖示
     private getFolderIconFromFrontmatter(folder: TFolder, name: HTMLElement): boolean {
         try {
             const notePath = `${folder.path}/${folder.name}.md`;
@@ -813,6 +938,7 @@ export class ExplorerView extends ItemView {
         return false;
     }
 
+    // 設置切換圖示
     private setupToggleIcon(folder: TFolder, toggle: HTMLElement, expanded: boolean) {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
@@ -831,6 +957,7 @@ export class ExplorerView extends ItemView {
         }
     }
 
+    // 高亮活躍資料夾
     private highlightActiveFolder(folder: TFolder, header: HTMLElement) {
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
         if (activeGrid?.sourceMode === 'folder' && activeGrid?.sourcePath === folder.path) {
@@ -838,12 +965,14 @@ export class ExplorerView extends ItemView {
         }
     }
 
+    // 創建資料夾子容器
     private createFolderChildren(nodeEl: HTMLElement, expanded: boolean) {
         const childrenContainer = nodeEl.createDiv({ cls: 'ge-explorer-folder-children' });
         if (!expanded) childrenContainer.addClass('is-collapsed');
         return childrenContainer;
     }
 
+    // 設置資料夾互動事件
     private setupFolderInteractions(header: HTMLElement, folder: TFolder, expanded: boolean, childrenContainer: HTMLElement) {
         header.addEventListener('click', (evt) => this.handleFolderClick(evt, folder, header, childrenContainer));
         header.addEventListener('contextmenu', (evt) => this.handleFolderContextMenu(evt, folder));
@@ -877,6 +1006,7 @@ export class ExplorerView extends ItemView {
      * @param toggle 切換箭頭元素
      * @param childrenContainer 子資料夾容器元素
      */
+    // 處理切換箭頭點擊
     private handleToggleClick(folder: TFolder, toggle: HTMLElement, childrenContainer: HTMLElement) {
         // 如果資料夾沒有可見的子資料夾，顯示空白切換圖示
         if (!this.hasVisibleChildren(folder)) {
@@ -902,13 +1032,14 @@ export class ExplorerView extends ItemView {
 
     /**
      * 處理資料夾名稱的點擊事件
-     * 複雜的邏輯：可能展開/收合，也可能開啟 GridView
+     * 簡化邏輯：只有已選取狀態下再次點擊才展開/收合，否則直接進入資料夾
      * @param evt 滑鼠點擊事件
      * @param folder 被點擊的資料夾
      * @param header 資料夾標頭元素
      * @param toggle 切換箭頭元素
      * @param childrenContainer 子資料夾容器元素
      */
+    // 處理資料夾名稱點擊
     private handleFolderNameClick(evt: MouseEvent, folder: TFolder, header: HTMLElement, toggle: HTMLElement, childrenContainer: HTMLElement) {
         // Ctrl/Meta + 點擊：在新的 GridView 分頁中開啟
         if (evt.ctrlKey || evt.metaKey) {
@@ -917,45 +1048,471 @@ export class ExplorerView extends ItemView {
         }
 
         const hasChildren = this.hasVisibleChildren(folder);
-        // 從實際狀態獲取當前展開狀態（避免使用可能過時的參數）
-        const currentExpanded = this.isExpanded(folder.path);
+        const isActive = header.hasClass('is-active');
 
-        // 特殊情況：無子資料夾且已是選取節點，不做任何動作
-        if (!hasChildren && header.hasClass('is-active')) {
+        // 如果已是選取狀態，處理展開/收合邏輯
+        if (isActive && hasChildren) {
+            const currentExpanded = this.isExpanded(folder.path);
+            const newExpanded = !currentExpanded;
+
+            // 切換展開狀態
+            setIcon(toggle, newExpanded ? 'chevron-down' : 'chevron-right');
+            childrenContainer.toggleClass('is-collapsed', !newExpanded);
+            this.setExpanded(folder.path, newExpanded);
             return;
         }
 
-        // 如果有子資料夾，處理展開/收合邏輯
-        if (hasChildren) {
-            if (!currentExpanded) {
-                // 情況1：未展開 -> 展開子目錄
-                setIcon(toggle, 'chevron-down');
-                childrenContainer.toggleClass('is-collapsed', false);
-                this.setExpanded(folder.path, true);
-
-                // 如果已是選取節點，只展開不開啟 GridView
-                if (header.hasClass('is-active')) {
-                    return;
-                }
-            } else if (header.hasClass('is-active')) {
-                // 情況2：已展開且為選取節點 -> 收合子目錄，不開啟 GridView
-                setIcon(toggle, 'chevron-right');
-                childrenContainer.toggleClass('is-collapsed', true);
-                this.setExpanded(folder.path, false);
-                return;
-            }
-            // 情況3：已展開但非選取節點 -> 繼續執行開啟 GridView
+        // 如果已是選取狀態但無子資料夾，不做任何動作
+        if (isActive && !hasChildren) {
+            return;
         }
 
-        // 開啟該資料夾的 GridView
+        // 其他情況：直接開啟該資料夾的 GridView
         this.openFolderInGrid(folder.path);
     }
 
-    /**
-     * 檢查資料夾是否包含可見的子資料夾
-     * @param folder 資料夾
-     * @returns 如果有可見的子資料夾，返回 true；否則返回 false
-     */
+    // 渲染暫存區群組
+    private renderStashGroup(contentEl: HTMLElement) {
+        // 如果正在搜尋且沒有符合的暫存檔案，就不顯示暫存區群組
+        if (this.isFiltering()) {
+            const visibleFiles = this.getVisibleStashFiles();
+            if (visibleFiles.length === 0) {
+                return;
+            }
+        }
+
+        const groupKey = '__stash__';
+        const { nodeEl, header, children } = this.createStashGroupStructure(contentEl, groupKey);
+
+        this.setupStashGroupInteractions(header, nodeEl, groupKey, children);
+        this.cleanupStashFiles();
+        this.renderStashItems(children);
+    }
+
+    // 創建暫存區群組結構
+    private createStashGroupStructure(contentEl: HTMLElement, groupKey: string) {
+        const nodeEl = contentEl.createDiv({ cls: 'ge-explorer-folder-node ge-explorer-stash-node' });
+        const header = nodeEl.createDiv({ cls: 'ge-explorer-folder-header' });
+        const toggle = header.createSpan({ cls: 'ge-explorer-folder-toggle' });
+        const expanded = this.isExpanded(groupKey);
+
+        setIcon(toggle, expanded ? 'chevron-down' : 'chevron-right');
+
+        const icon = header.createSpan({ cls: 'ge-explorer-folder-icon' });
+        setIcon(icon, 'inbox');
+        const name = header.createSpan({ cls: 'ge-explorer-folder-name' });
+        name.textContent = t('stash');
+
+        const children = nodeEl.createDiv({ cls: 'ge-explorer-folder-children' });
+        if (!expanded) children.addClass('is-collapsed');
+
+        return { nodeEl, header, children, toggle };
+    }
+
+    // 設置暫存區群組互動
+    private setupStashGroupInteractions(header: HTMLElement, nodeEl: HTMLElement, groupKey: string, children: HTMLElement) {
+        const toggle = header.querySelector('.ge-explorer-folder-toggle') as HTMLElement;
+
+        header.addEventListener('click', () => {
+            const newExpanded = !this.isExpanded(groupKey);
+            this.setExpanded(groupKey, newExpanded);
+            setIcon(toggle, newExpanded ? 'chevron-down' : 'chevron-right');
+            children.toggleClass('is-collapsed', !newExpanded);
+        });
+
+        header.addEventListener('contextmenu', (evt) => {
+            evt.preventDefault();
+            const menu = new Menu();
+            menu.addItem((item) => {
+                item.setTitle(t('clear'))
+                    .setIcon('trash')
+                    .onClick(() => this.clearStash());
+            });
+            // 新增：將目前暫存區的檔案連結存成新的 Markdown 檔
+            menu.addItem((item) => {
+                item.setTitle(t('save_stash_as_markdown'))
+                    .setIcon('file-plus')
+                    .onClick(() => this.saveStashAsMarkdown());
+            });
+            menu.showAtMouseEvent(evt as MouseEvent);
+        });
+
+        this.setupStashDropTarget(nodeEl);
+    }
+
+    // 設置暫存區拖放目標
+    private setupStashDropTarget(nodeEl: HTMLElement) {
+        if (!Platform.isDesktop) return;
+        nodeEl.addEventListener('dragover', (e: DragEvent) => {
+            if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            nodeEl.addClass('ge-dragover');
+        });
+
+        nodeEl.addEventListener('dragleave', () => nodeEl.removeClass('ge-dragover'));
+
+        nodeEl.addEventListener('drop', async (e: DragEvent) => {
+            if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
+            e.preventDefault();
+            nodeEl.removeClass('ge-dragover');
+            await this.handleStashDrop(e);
+        });
+    }
+
+    // 清理無效的暫存檔案
+    private cleanupStashFiles() {
+        this.stashFilePaths = this.stashFilePaths.filter((p) =>
+            this.app.vault.getAbstractFileByPath(p) instanceof TFile
+        );
+    }
+
+    // 渲染暫存項目
+    private renderStashItems(children: HTMLElement) {
+        // if (this.stashFilePaths.length === 0) {
+            this.renderStashDropzone(children);
+            //return;
+        //}
+
+        const visibleFiles = this.getVisibleStashFiles();
+        visibleFiles.forEach(file => this.renderStashItem(children, file, visibleFiles));
+    }
+
+    // 渲染暫存拖放區
+    private renderStashDropzone(children: HTMLElement) {
+        const dropzone = children.createDiv({ cls: 'ge-explorer-folder-header ge-explorer-mode-item ge-explorer-stash-dropzone' });
+        const dzIcon = dropzone.createSpan({ cls: 'ge-explorer-folder-icon' });
+        setIcon(dzIcon, 'plus');
+        const dzName = dropzone.createSpan({ cls: 'ge-explorer-folder-name' });
+        dzName.textContent = t?.('drop_files_here') || 'Drop files here to stash';
+
+        // 讓 dropzone 可點擊以選擇檔案加入
+        // CSS 對 .ge-explorer-stash-dropzone 設了 pointer-events: none; 這裡強制開啟
+        (dropzone as HTMLElement).style.pointerEvents = 'auto';
+        (dropzone as HTMLElement).style.cursor = 'pointer';
+        dropzone.setAttr('role', 'button');
+        dropzone.setAttr('tabindex', '0');
+        dropzone.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            this.openFileSuggestionForStash();
+        });
+    }
+
+    // 打開檔案模糊搜尋並加入暫存區
+    private openFileSuggestionForStash() {
+        const self = this;
+        class FileSuggest extends FuzzySuggestModal<TFile> {
+            getItems(): TFile[] {
+                return self.app.vault.getMarkdownFiles();
+            }
+            getItemText(file: TFile): string {
+                return file.path;
+            }
+            onChooseItem(file: TFile): void {
+                self.addToStash([file.path]);
+            }
+        }
+        new FileSuggest(this.app).open();
+    }
+
+    // 將目前暫存區的檔案連結存成新的 Markdown 檔並開啟
+    private async saveStashAsMarkdown() {
+        // 收集目前暫存區的所有檔案（忽略無效項）
+        const files = this.stashFilePaths
+            .map(p => this.app.vault.getAbstractFileByPath(p))
+            .filter((f): f is TFile => f instanceof TFile);
+
+        if (files.length === 0) {
+            return; // 沒有內容就不建立
+        }
+
+        // 產生內容（以路徑為連結）
+        const lines = files.map(f => {
+            const ext = f.extension.toLowerCase();
+            if (isImageFile(f)) {
+                // 圖片檔要加上副檔名，且前面加上 !
+                return `- ![[${f.path}]]`;
+            }
+            if (ext === 'md') {
+                // Markdown 檔的連結不帶 .md 副檔名
+                const withoutExt = f.path.replace(/\.md$/i, '');
+                return `- [[${withoutExt}]]`;
+            }
+            // 其他檔案維持原樣
+            return `- [[${f.path}]]`;
+        });
+        const content = lines.join('\n') + '\n';
+
+        // 產生檔名：Stash YYYY-MM-DD HHmm.md
+        const d = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const fileName = `Stash ${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}.md`;
+
+        // 確保唯一檔名（於 Vault 根目錄）
+        let baseName = fileName.replace(/\.md$/i, '');
+        let candidate = `${baseName}.md`;
+        let idx = 2;
+        while (this.app.vault.getAbstractFileByPath(candidate)) {
+            candidate = `${baseName} (${idx}).md`;
+            idx++;
+        }
+
+        // 建立檔案並開啟
+        const file = await this.app.vault.create(candidate, content);
+        await this.app.workspace.getLeaf().openFile(file);
+    }
+
+    // 獲取可見的暫存檔案
+    private getVisibleStashFiles(): TFile[] {
+        const allFiles = this.stashFilePaths
+            .map(p => this.app.vault.getAbstractFileByPath(p))
+            .filter((f): f is TFile => f instanceof TFile);
+
+        return this.isFiltering()
+            ? allFiles.filter(f => this.matchesQuery(f.basename))
+            : allFiles;
+    }
+
+    // 渲染暫存項目
+    private renderStashItem(children: HTMLElement, file: TFile, visibleFiles: TFile[]) {
+        const itemEl = children.createDiv({ cls: 'ge-explorer-folder-header ge-explorer-mode-item ge-explorer-stash-item' });
+
+        this.setupStashItemIcon(itemEl, file);
+        this.setupStashItemLabel(itemEl, file);
+        this.setupStashItemClick(itemEl, file, visibleFiles);
+        this.setupStashItemContextMenu(itemEl, file);
+        this.setupStashItemDrag(itemEl, file);
+        this.setupStashItemDrop(itemEl, file);
+    }
+
+    // 設置暫存項目圖示
+    private setupStashItemIcon(itemEl: HTMLElement, file: TFile) {
+        const itemIcon = itemEl.createSpan({ cls: 'ge-explorer-folder-icon' });
+        const ext = file.extension.toLowerCase();
+
+        if (isImageFile(file)) {
+            setIcon(itemIcon, 'image');
+            itemIcon.addClass('ge-img');
+        } else if (isVideoFile(file)) {
+            setIcon(itemIcon, 'play-circle');
+            itemIcon.addClass('ge-video');
+        } else if (isAudioFile(file)) {
+            setIcon(itemIcon, 'music');
+            itemIcon.addClass('ge-audio');
+        } else if (ext === 'pdf') {
+            setIcon(itemIcon, 'paperclip');
+            itemIcon.addClass('ge-pdf');
+        } else if (ext === 'canvas') {
+            setIcon(itemIcon, 'layout-dashboard');
+            itemIcon.addClass('ge-canvas');
+        } else if (ext === 'base') {
+            setIcon(itemIcon, 'layout-list');
+            itemIcon.addClass('ge-base');
+        } else if (ext === 'md' || ext === 'txt') {
+            setIcon(itemIcon, 'file-text');
+        } else {
+            setIcon(itemIcon, 'file');
+        }
+    }
+
+    // 設置暫存項目標籤
+    private setupStashItemLabel(itemEl: HTMLElement, file: TFile) {
+        const itemName = itemEl.createSpan({ cls: 'ge-explorer-folder-name' });
+        itemName.textContent = file.basename;
+    }
+
+    // 設置暫存項目點擊事件
+    private setupStashItemClick(itemEl: HTMLElement, file: TFile, visibleFiles: TFile[]) {
+        itemEl.addEventListener('click', async (evt) => {
+            evt.stopPropagation();
+
+            if (isAudioFile(file)) {
+                FloatingAudioPlayer.open(this.app, file);
+                return;
+            }
+
+            if (isImageFile(file) || isVideoFile(file)) {
+                const mediaFiles = visibleFiles.filter((f) => isImageFile(f) || isVideoFile(f));
+                new MediaModal(this.app, file, mediaFiles).open();
+                return;
+            }
+
+            // 先判斷是否為捷徑檔（frontmatter 內有 type 與非空 redirect）
+            const fileCache = this.app.metadataCache.getFileCache(file);
+            const fm = fileCache?.frontmatter;
+            const isShortcut = !!(fm && fm.type && typeof fm.redirect === 'string' && fm.redirect.trim() !== '');
+
+            if (!isShortcut) {
+                // 非捷徑：直接開啟檔案，避免不必要的 activateView
+                this.app.workspace.getLeaf().openFile(file);
+                return;
+            }
+
+            // 捷徑檔：啟用 GridView 並嘗試以捷徑邏輯開啟
+            const view = await this.plugin.activateView();
+            if (view instanceof GridView) {
+                if (!(view as any).openShortcutFile || !(view as any).openShortcutFile(file)) {
+                    this.app.workspace.getLeaf().openFile(file);
+                }
+            } else {
+                this.app.workspace.getLeaf().openFile(file);
+            }
+        });
+    }
+
+    // 設置暫存項目右鍵選單
+    private setupStashItemContextMenu(itemEl: HTMLElement, file: TFile) {
+        itemEl.addEventListener('contextmenu', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            const menu = new Menu();
+            this.app.workspace.trigger('file-menu', menu, file);
+            menu.addSeparator();
+            menu.addItem((mi) => {
+                mi.setTitle(t?.('remove') || 'Remove')
+                    .setIcon('x')
+                    .onClick(() => this.removeFromStash(file.path));
+            });
+            menu.showAtMouseEvent(evt as MouseEvent);
+        });
+    }
+
+    // 設置暫存項目拖拽
+    private setupStashItemDrag(itemEl: HTMLElement, file: TFile) {
+        if (!Platform.isDesktop) return;
+        itemEl.setAttr('draggable', 'true');
+        itemEl.addEventListener('dragstart', (event: DragEvent) => {
+            if (!event.dataTransfer) return;
+
+            const isMedia = isImageFile(file) || isVideoFile(file) || isAudioFile(file);
+            const mdLink = isMedia ? `![[${file.path}]]` : `[[${file.path}]]`;
+
+            event.dataTransfer.setData('text/plain', mdLink);
+            event.dataTransfer.setData('application/obsidian-grid-explorer-files', JSON.stringify([file.path]));
+            event.dataTransfer.setData('application/obsidian-ge-stash', file.path);
+            event.dataTransfer.effectAllowed = 'all';
+
+            this.createDragPreview(event, file.basename);
+        });
+    }
+
+    // 創建拖拽預覽
+    private createDragPreview(event: DragEvent, basename: string) {
+        const dragImage = document.createElement('div');
+        dragImage.className = 'ge-custom-drag-preview';
+        dragImage.textContent = basename;
+        document.body.appendChild(dragImage);
+        event.dataTransfer?.setDragImage(dragImage, 20, 20);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
+    }
+
+    // 設置暫存項目拖放
+    private setupStashItemDrop(itemEl: HTMLElement, file: TFile) {
+        if (!Platform.isDesktop) return;
+        itemEl.addEventListener('dragover', (event: DragEvent) => {
+            const types = event.dataTransfer?.types || [];
+            if (Array.from(types).includes('application/obsidian-ge-stash')) {
+                event.preventDefault();
+                const rect = itemEl.getBoundingClientRect();
+                const before = (event.clientY - rect.top) < rect.height / 2;
+                itemEl.toggleClass('ge-stash-insert-before', before);
+                itemEl.toggleClass('ge-stash-insert-after', !before);
+            }
+        });
+
+        itemEl.addEventListener('dragleave', () => {
+            itemEl.removeClass('ge-stash-insert-before');
+            itemEl.removeClass('ge-stash-insert-after');
+        });
+
+        itemEl.addEventListener('drop', (event: DragEvent) => {
+            const sourcePath = event.dataTransfer?.getData('application/obsidian-ge-stash');
+            if (!sourcePath || sourcePath === file.path) return;
+
+            event.preventDefault();
+            itemEl.removeClass('ge-stash-insert-before');
+            itemEl.removeClass('ge-stash-insert-after');
+
+            this.reorderStashItem(sourcePath, file.path, event, itemEl);
+        });
+    }
+
+    // 重新排序暫存項目
+    private reorderStashItem(sourcePath: string, targetPath: string, event: DragEvent, itemEl: HTMLElement) {
+        const srcIndex = this.stashFilePaths.indexOf(sourcePath);
+        const destIndex = this.stashFilePaths.indexOf(targetPath);
+        if (srcIndex === -1 || destIndex === -1) return;
+
+        const rect = itemEl.getBoundingClientRect();
+        const before = (event.clientY - rect.top) < rect.height / 2;
+        let insertIndex = before ? destIndex : destIndex + 1;
+
+        const newList = [...this.stashFilePaths];
+        newList.splice(srcIndex, 1);
+        if (srcIndex < insertIndex) insertIndex -= 1;
+
+        insertIndex = Math.max(0, Math.min(insertIndex, newList.length));
+        newList.splice(insertIndex, 0, sourcePath);
+
+        this.stashFilePaths = newList;
+        this.app.workspace.requestSaveLayout();
+        this.scheduleRender();
+    }
+
+    // 處理暫存區拖放
+    private async handleStashDrop(event: DragEvent) {
+        try {
+            const dt = event.dataTransfer;
+            if (!dt) return;
+
+            // 自訂多檔案格式
+            const filesDataString = dt.getData('application/obsidian-grid-explorer-files');
+            if (filesDataString) {
+                const filePaths: string[] = JSON.parse(filesDataString);
+                this.addToStash(filePaths);
+                return;
+            }
+
+            // 單一文字路徑（可能是 wikilink）
+            const text = dt.getData('text/plain');
+            if (text) {
+                const cleaned = text.replace(/!*\[\[(.*?)\]\]/, '$1');
+                this.addToStash([cleaned]);
+            }
+        } catch (error) {
+            console.error('處理暫存區拖放時發生錯誤:', error);
+        }
+    }
+
+    // 添加到暫存區
+    private addToStash(paths: string[]) {
+        const uniq = new Set(this.stashFilePaths);
+        for (const raw of paths) {
+            const p = typeof raw === 'string' ? raw : '';
+            if (!p) continue;
+            const file = this.app.vault.getAbstractFileByPath(p);
+            if (file instanceof TFile) uniq.add(p);
+        }
+        this.stashFilePaths = Array.from(uniq);
+        this.app.workspace.requestSaveLayout();
+        this.scheduleRender();
+    }
+
+    // 從暫存區移除
+    private removeFromStash(path: string) {
+        this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
+        this.app.workspace.requestSaveLayout();
+        this.scheduleRender();
+    }
+
+    // 清空暫存區
+    private clearStash() {
+        this.stashFilePaths = [];
+        this.app.workspace.requestSaveLayout();
+        this.scheduleRender();
+    }
+
+    // 檢查資料夾是否有可見子項目
     private hasVisibleChildren(folder: TFolder): boolean {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
@@ -966,10 +1523,7 @@ export class ExplorerView extends ItemView {
             .some((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
     }
 
-    /**
-     * 開啟該資料夾的 GridView
-     * @param folderPath 資料夾路徑
-     */
+    // 在網格視圖中開啟資料夾
     private async openFolderInGrid(folderPath: string) {
         const view = await this.plugin.activateView();
         if (view instanceof GridView) {
@@ -995,6 +1549,7 @@ export class ExplorerView extends ItemView {
      * @param menu 右鍵選單
      * @param folder 資料夾
      */
+    // 添加右鍵選單項目
     private addContextMenuItems(menu: Menu, folder: TFolder) {
         // 在新網格視圖開啟
         menu.addItem((item) => {
@@ -1014,6 +1569,7 @@ export class ExplorerView extends ItemView {
      * @param menu 右鍵選單
      * @param folder 資料夾
      */
+    // 添加資料夾筆記選單項目
     private addFolderNoteMenuItems(menu: Menu, folder: TFolder) {
         const notePath = `${folder.path}/${folder.name}.md`;
         const noteFile = this.app.vault.getAbstractFileByPath(notePath);
@@ -1031,6 +1587,7 @@ export class ExplorerView extends ItemView {
      * @param folder 資料夾
      * @param noteFile 資料夾筆記文件
      */
+    // 添加已存在資料夾筆記的選單項目
     private addExistingFolderNoteItems(menu: Menu, folder: TFolder, noteFile: TFile) {
         // 打開資料夾筆記
         menu.addItem((item) => {
@@ -1075,6 +1632,7 @@ export class ExplorerView extends ItemView {
      * @param menu 右鍵選單
      * @param folder 資料夾
      */
+    // 添加創建資料夾筆記的選單項目
     private addCreateFolderNoteItem(menu: Menu, folder: TFolder) {
         menu.addItem((item) => {
             item.setTitle(t('create_folder_note'))
@@ -1093,6 +1651,7 @@ export class ExplorerView extends ItemView {
      * @param menu 右鍵選單
      * @param folder 資料夾
      */
+    // 添加資料夾管理選單項目
     private addFolderManagementMenuItems(menu: Menu, folder: TFolder) {
         // 忽略/取消忽略資料夾
         const isIgnored = this.plugin.settings.ignoredFolders.includes(folder.path);
@@ -1150,6 +1709,7 @@ export class ExplorerView extends ItemView {
      * @param childrenContainer 子資料夾容器
      * @param depth 递归深度
      */
+    // 渲染子資料夾
     private renderChildFolders(folder: TFolder, childrenContainer: HTMLElement, depth: number) {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
@@ -1176,6 +1736,7 @@ export class ExplorerView extends ItemView {
      * @param path 資料夾路徑
      * @returns 是否展開
      */
+    // 檢查路徑是否已展開
     private isExpanded(path: string): boolean {
         return this.expandedPaths.has(path);
     }
@@ -1186,6 +1747,7 @@ export class ExplorerView extends ItemView {
      * @param path 資料夾路徑
      * @param value 是否展開
      */
+    // 設置路徑展開狀態
     private setExpanded(path: string, value: boolean) {
         // 記錄變更前的狀態
         const before = this.expandedPaths.has(path);
@@ -1207,7 +1769,7 @@ export class ExplorerView extends ItemView {
         }
     }
 
-    // 將 header 設為可接受拖放檔案的目標
+    // 設置拖放目標
     private attachDropTarget(headerEl: HTMLElement, folderPath: string) {
         if (!Platform.isDesktop) return;
 
@@ -1218,19 +1780,32 @@ export class ExplorerView extends ItemView {
         headerEl.addEventListener('drop', this.handleDrop.bind(this, folderPath));
     }
 
+    // 處理拖拽懸停
     private handleDragOver(event: DragEvent) {
         event.preventDefault();
         event.dataTransfer!.dropEffect = 'move';
         (event.target as HTMLElement).addClass('ge-dragover');
     }
 
+    // 處理拖拽離開
     private handleDragLeave(event: DragEvent) {
         (event.target as HTMLElement).removeClass('ge-dragover');
     }
 
-    private async handleDrop(folderPath: string, event: DragEvent) {
-        event.preventDefault();
-        (event.target as HTMLElement).removeClass('ge-dragover');
+    // 處理拖放事件
+    private async handleDrop(folderPath: string, evt: Event) {
+        const event = evt as DragEvent;
+        // 某些情況下事件非 DragEvent，需防禦處理
+        if (typeof (event as any).preventDefault === 'function') {
+            event.preventDefault();
+        }
+        const targetEl = (event.target as HTMLElement | null);
+        if (targetEl && typeof (targetEl as any).removeClass === 'function') {
+            targetEl.removeClass('ge-dragover');
+        }
+
+        // 無有效 dataTransfer 則忽略
+        if (!event.dataTransfer) return;
 
         // 嘗試處理多檔案拖放
         if (await this.handleMultiFileDrop(event, folderPath)) return;
@@ -1239,6 +1814,7 @@ export class ExplorerView extends ItemView {
         await this.handleSingleFileDrop(event, folderPath);
     }
 
+    // 處理多檔案拖放
     private async handleMultiFileDrop(event: DragEvent, folderPath: string): Promise<boolean> {
         const filesDataString = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
         if (!filesDataString) return false;
@@ -1258,6 +1834,7 @@ export class ExplorerView extends ItemView {
         }
     }
 
+    // 處理單一檔案拖放
     private async handleSingleFileDrop(event: DragEvent, folderPath: string) {
         const filePath = event.dataTransfer?.getData('text/plain');
         if (!filePath) return;
@@ -1267,6 +1844,7 @@ export class ExplorerView extends ItemView {
         await this.moveFileToFolder(cleanedFilePath, folderPath);
     }
 
+    // 移動檔案到資料夾
     private async moveFileToFolder(filePath: string, folderPath: string) {
         const file = this.app.vault.getAbstractFileByPath(filePath);
         if (!(file instanceof TFile)) return;
