@@ -1,6 +1,7 @@
-import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip } from 'obsidian';
+import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu } from 'obsidian';
 import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
+import { extractObsidianPathsFromDT } from './dragUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
@@ -48,38 +49,53 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 移除視覺提示
                     container.removeClass('ge-dragover');
 
-                    // 獲取拖曳的檔案路徑列表
-                    const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                    if (filesDataString) {
+
+                    // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
+                    const dt = (event as DragEvent).dataTransfer;
+                    if (dt) {
                         try {
-                            // 解析檔案路徑列表
-                            const filePaths = JSON.parse(filesDataString);
+                            const obsidianPaths = await extractObsidianPathsFromDT(dt);
+                            if (obsidianPaths.length) {
+                                for (const p of obsidianPaths) {
+                                    let resolved: TFile | null = null;
 
-                            // 獲取當前資料夾路徑
-                            const folderPath = currentFolder.path;
-                            if (!folderPath) return;
+                                    // 1) 直接以路徑查找
+                                    const direct = gridView.app.vault.getAbstractFileByPath(p);
+                                    if (direct instanceof TFile) {
+                                        resolved = direct;
+                                    }
 
-                            // 移動檔案
-                            for (const path of filePaths) {
-                                const file = gridView.app.vault.getAbstractFileByPath(path);
-                                if (file instanceof TFile) {
-                                    try {
-                                        // 計算新的檔案路徑
-                                        const newPath = normalizePath(`${folderPath}/${file.name}`);
-                                        // 如果來源路徑和目標路徑相同，則跳過
-                                        if (path === newPath) {
-                                            continue;
+                                    // 2) 若沒有副檔名，嘗試補 .md
+                                    if (!resolved && !p.includes('.')) {
+                                        const tryMd = normalizePath(`${p}.md`);
+                                        const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
+                                        if (f2 instanceof TFile) resolved = f2;
+                                    }
+
+                                    // 3) 使用 Obsidian 的連結解析（支援不含副檔名與子資料夾）
+                                    if (!resolved) {
+                                        const srcPath = currentFolder.path || '/';
+                                        const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
+                                        if (dest instanceof TFile) resolved = dest;
+                                    }
+
+                                    if (resolved instanceof TFile) {
+                                        try {
+                                            const newPath = normalizePath(`${currentFolder.path}/${resolved.name}`);
+                                            if (resolved.path !== newPath) {
+                                                await gridView.app.fileManager.renameFile(resolved, newPath);
+                                            }
+                                        } catch (error) {
+                                            console.error(`An error occurred while moving the file ${p}:`, error);
                                         }
-                                        // 移動檔案
-                                        await gridView.app.fileManager.renameFile(file, newPath);
-                                    } catch (error) {
-                                        console.error(`An error occurred while moving the file ${file.path}:`, error);
+                                    } else {
+                                        console.warn('[GridExplorer] Unable to resolve dragged obsidian file (container drop):', p);
                                     }
                                 }
+                                return;
                             }
-                            return;
-                        } catch (error) {
-                            console.error('Error parsing dragged files data:', error);
+                        } catch (e) {
+                            console.error('Error handling obsidian:// URIs (container drop):', e);
                         }
                     }
 
@@ -355,40 +371,57 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 // 移除視覺提示
                 folderItem.removeClass('ge-dragover');
 
-                // 獲取拖曳的檔案路徑列表
-                const filesDataString = (event as any).dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                if (filesDataString) {
+                // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
+                const dt = (event as DragEvent).dataTransfer;
+                if (dt) {
                     try {
-                        // 解析檔案路徑列表
-                        const filePaths = JSON.parse(filesDataString);
+                        const obsidianPaths = await extractObsidianPathsFromDT(dt);
+                        if (obsidianPaths.length) {
+                            const folderPath = (folderItem as any).dataset.folderPath;
+                            if (!folderPath) return;
+                            const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
+                            if (!(folder instanceof TFolder)) return;
 
-                        // 獲取目標資料夾路徑
-                        const folderPath = (folderItem as any).dataset.folderPath;
-                        if (!folderPath) return;
+                            for (const p of obsidianPaths) {
+                                let resolved: TFile | null = null;
 
-                        // 獲取資料夾物件
-                        const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
-                        if (!(folder instanceof TFolder)) return;
+                                // 1) 直接以路徑查找
+                                const direct = gridView.app.vault.getAbstractFileByPath(p);
+                                if (direct instanceof TFile) {
+                                    resolved = direct;
+                                }
 
-                        // 移動檔案
-                        for (const path of filePaths) {
-                            const file = gridView.app.vault.getAbstractFileByPath(path);
-                            if (file instanceof TFile) {
-                                try {
-                                    // 計算新的檔案路徑
-                                    const newPath = normalizePath(`${folderPath}/${file.name}`);
-                                    // 移動檔案
-                                    await gridView.app.fileManager.renameFile(file, newPath);
-                                } catch (error) {
-                                    console.error(`An error occurred while moving the file ${file.path}:`, error);
+                                // 2) 若沒有副檔名，嘗試補 .md
+                                if (!resolved && !p.includes('.') ) {
+                                    const tryMd = normalizePath(`${p}.md`);
+                                    const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
+                                    if (f2 instanceof TFile) resolved = f2;
+                                }
+
+                                // 3) 使用 Obsidian 的連結解析（支援不含副檔名與子資料夾）
+                                if (!resolved) {
+                                    const srcPath = (folderItem as any).dataset.folderPath || '/';
+                                    const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
+                                    if (dest instanceof TFile) resolved = dest;
+                                }
+
+                                if (resolved instanceof TFile) {
+                                    try {
+                                        const newPath = normalizePath(`${folderPath}/${resolved.name}`);
+                                        if (resolved.path !== newPath) {
+                                            await gridView.app.fileManager.renameFile(resolved, newPath);
+                                        }
+                                    } catch (error) {
+                                        console.error(`An error occurred while moving the file ${p}:`, error);
+                                    }
+                                } else {
+                                    console.warn('[GridExplorer] Unable to resolve dragged obsidian file:', p);
                                 }
                             }
+                            return;
                         }
-
-                        return;
-
-                    } catch (error) {
-                        console.error('Error parsing dragged files data:', error);
+                    } catch (e) {
+                        console.error('Error handling obsidian:// URIs:', e);
                     }
                 }
 

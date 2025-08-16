@@ -522,7 +522,8 @@ export default class GridExplorerPlugin extends Plugin {
                 canvasView.gridExplorerDropHandler = true;
 
                 const canvasEl = canvasView.containerEl;
-
+                if (!canvasEl) return;
+                
                 const dragoverHandler = (evt: DragEvent) => {
                     // 只處理來自 Grid Explorer 的檔案拖曳，以顯示正確的游標
                     if (evt.dataTransfer?.types.includes('application/obsidian-grid-explorer-files')) {
@@ -541,27 +542,22 @@ export default class GridExplorerPlugin extends Plugin {
                     evt.preventDefault();
                     evt.stopPropagation();
 
-                    let filePath: string | undefined;
-
+                    // 嘗試解析多檔路徑
                     const data = evt.dataTransfer.getData('application/obsidian-grid-explorer-files');
+                    let filePaths: string[] = [];
                     try {
-                        const paths = JSON.parse(data);
-                        // 目前我們只支援單一檔案拖放
-                        if (Array.isArray(paths) && paths.length === 1) {
-                            filePath = paths[0];
+                        const parsed = JSON.parse(data);
+                        if (Array.isArray(parsed)) {
+                            filePaths = parsed.filter((p: any) => typeof p === 'string');
+                        } else if (typeof parsed === 'string') {
+                            filePaths = [parsed];
                         }
                     } catch (e) {
                         console.error("GridExplorer: Failed to parse drop data from GridExplorer.", e);
                     }
 
                     // 如果無法取得檔案路徑，則中止操作
-                    if (!filePath) {
-                        return;
-                    }
-
-                    const tfile = this.app.vault.getAbstractFileByPath(filePath);
-                    if (!(tfile instanceof TFile)) {
-                        console.warn('GridExplorer: Dropped item is not a TFile or could not be found.', filePath);
+                    if (filePaths.length === 0) {
                         return;
                     }
 
@@ -571,15 +567,31 @@ export default class GridExplorerPlugin extends Plugin {
                     }
 
                     const pos = canvas.posFromEvt(evt);
+                    let currentPos = { ...pos } as { x: number; y: number };
 
-                    const newNode = canvas.createFileNode({
-                        file: tfile,
-                        pos: pos,
-                        size: { width: 400, height: 400 }, // 預設大小
-                        focus: true, // 建立後自動對焦
-                    });
+                    // 逐一建立節點，若多檔則位置做些微偏移
+                    for (let i = 0; i < filePaths.length; i++) {
+                        const filePath = filePaths[i];
+                        const tfile = this.app.vault.getAbstractFileByPath(filePath);
+                        if (!(tfile instanceof TFile)) {
+                            console.warn('GridExplorer: Dropped item is not a TFile or could not be found.', filePath);
+                            continue;
+                        }
 
-                    canvas.addNode(newNode);
+                        const newNode = canvas.createFileNode({
+                            file: tfile,
+                            pos: currentPos,
+                            size: { width: 400, height: 400 }, // 預設大小
+                            focus: filePaths.length === 1 || i === filePaths.length - 1, // 單檔或最後一個檔案才自動對焦
+                        });
+                        canvas.addNode(newNode);
+
+                        // 如果有多個檔案，下一個節點位置向右下偏移
+                        if (filePaths.length > 1) {
+                            currentPos = { x: currentPos.x + 50, y: currentPos.y + 50 };
+                        }
+                    }
+
                     await canvas.requestSave();
                 };
 

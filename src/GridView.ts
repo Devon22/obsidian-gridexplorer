@@ -900,6 +900,7 @@ export class GridView extends ItemView {
                                 // 直接顯示圖片
                                 const img = imageArea.createEl('img');
                                 img.src = this.app.vault.getResourcePath(file);
+                                img.draggable = false;
                                 imageArea.setAttribute('data-loaded', 'true');
                             } else if (isVideoFile(file)) {
                                 // 根據設定決定是否顯示影片縮圖
@@ -918,6 +919,7 @@ export class GridView extends ItemView {
                                 if (imageUrl) {
                                     const img = imageArea.createEl('img');
                                     img.src = imageUrl;
+                                    img.draggable = false;
                                     imageArea.setAttribute('data-loaded', 'true');
                                 } else {
                                     // 如果沒有圖片，移除圖片區域
@@ -1328,33 +1330,42 @@ export class GridView extends ItemView {
                 const selectedFiles = this.getSelectedFiles();
                 let drag_filename = '';
 
-                // 添加拖曳資料
+                // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
+                const vaultName = this.app.vault.getName();
+                
                 if (selectedFiles.length > 1) {
-                    // 如果多個檔案被選中，使用 files-menu
-                    const fileList = selectedFiles.map(f => {
-                        const isMedia = isMediaFile(f);
-                        return isMedia ? `![[${f.path}]]` : `[[${f.path}]]`;
-                    }).join('\n');
-                    event.dataTransfer?.setData('text/plain', fileList);
+                    // 多檔案：建立多個 obsidian://open URI
+                    const obsidianUris = selectedFiles.map(f => 
+                        `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(f.path)}`
+                    );
+                    
+                    // 設定 text/uri-list
+                    event.dataTransfer?.setData('text/uri-list', obsidianUris.join('\n'));
+                    console.log(obsidianUris.join('\n'));
 
-                    // 添加檔案路徑列表
-                    event.dataTransfer?.setData('application/obsidian-grid-explorer-files',
-                        JSON.stringify(selectedFiles.map(f => f.path)));
+                    // 設定 text/plain
+                    const mdList = selectedFiles
+                        .map(f => isMediaFile(f) ? `![[${f.path}]]` : `[[${f.path}]]`)
+                        .join('\n');
+                    event.dataTransfer?.setData('text/plain', mdList);
+
+                    // 兼容舊版：提供 markdown 連結與舊自定義 MIME，供 main.ts 使用
+                    event.dataTransfer?.setData('application/obsidian-grid-explorer-files', JSON.stringify(selectedFiles.map(f => f.path)));
 
                     drag_filename = `${selectedFiles.length} ${t('files')}`;
                 } else {
-                    // 如果只有單個檔案被選中，使用檔案路徑
-                    const isMedia = isMediaFile(file);
-                    const mdLink = isMedia
-                        ? `![[${file.path}]]` // 媒體檔案使用 ![[]] 格式
-                        : `[[${file.path}]]`;  // 一般檔案使用 [[]] 格式
+                    // 單檔案：建立單一 obsidian://open URI
+                    const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
+                    
+                    // 設定為 text/uri-list
+                    event.dataTransfer?.setData('text/uri-list', obsidianUri);
 
-                    // 添加拖曳資料
+                    // 設定 text/plain
+                    const mdLink = isMediaFile(file) ? `![[${file.path}]]` : `[[${file.path}]]`;
                     event.dataTransfer?.setData('text/plain', mdLink);
 
-                    // 添加檔案路徑列表
-                    event.dataTransfer?.setData('application/obsidian-grid-explorer-files',
-                        JSON.stringify([file.path]));
+                    // 兼容舊版：提供 markdown 連結與舊自定義 MIME，供 main.ts 使用
+                    event.dataTransfer?.setData('application/obsidian-grid-explorer-files', JSON.stringify([file.path]));
 
                     drag_filename = file.basename;
                 }

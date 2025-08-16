@@ -6,6 +6,8 @@ import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
+import { parseObsidianOpenUris, extractObsidianPathsFromDT } from './dragUtils';
+
 
 export function renderModePath(gridView: GridView) {
 
@@ -240,15 +242,37 @@ export function renderModePath(gridView: GridView) {
                             const folder = gridView.app.vault.getAbstractFileByPath(path.path);
                             if (!(folder instanceof TFolder)) return;
 
-                            const filesData = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
-                            if (filesData) {
+                            // 處理 obsidian:// URI 格式（單檔/多檔）
+                            const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
+                            if (obsidianPaths.length > 0) {
                                 try {
-                                    const filePaths = JSON.parse(filesData);
-                                    for (const filePath of filePaths) {
-                                        const file = gridView.app.vault.getAbstractFileByPath(filePath);
-                                        if (file instanceof TFile) {
-                                            const newPath = normalizePath(`${path.path}/${file.name}`);
-                                            await gridView.app.fileManager.renameFile(file, newPath);
+                                    for (const filePath of obsidianPaths) {
+                                        let resolved: TFile | null = null;
+
+                                        // 1) 直接以路徑查找
+                                        const direct = gridView.app.vault.getAbstractFileByPath(filePath);
+                                        if (direct instanceof TFile) {
+                                            resolved = direct;
+                                        }
+
+                                        // 2) 若沒有副檔名，嘗試補 .md
+                                        if (!resolved && !filePath.includes('.')) {
+                                            const tryMd = normalizePath(`${filePath}.md`);
+                                            const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
+                                            if (f2 instanceof TFile) resolved = f2;
+                                        }
+
+                                        // 3) 使用 Obsidian 的連結解析
+                                        if (!resolved) {
+                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(filePath, path.path);
+                                            if (dest instanceof TFile) resolved = dest;
+                                        }
+
+                                        if (resolved instanceof TFile) {
+                                            const newPath = normalizePath(`${path.path}/${resolved.name}`);
+                                            if (resolved.path !== newPath) {
+                                                await gridView.app.fileManager.renameFile(resolved, newPath);
+                                            }
                                         }
                                     }
                                 } catch (error) {

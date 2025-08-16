@@ -1,11 +1,12 @@
-import { ItemView, WorkspaceLeaf, TFolder, TFile, Menu, setIcon, EventRef, Platform, normalizePath, FuzzySuggestModal } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
+import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './fileUtils';
+import { extractObsidianPathsFromDT } from './dragUtils';
 import { CustomModeModal } from './modal/customModeModal';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
-import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile } from './fileUtils';
 import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { MediaModal } from './modal/mediaModal';
 import { t } from './translations';
@@ -168,9 +169,27 @@ export class ExplorerView extends ItemView {
         );
 
         this.registerCustomEvent('ge-grid-source-changed', (payload: any) => {
-            this.lastMode = payload?.mode ?? this.lastMode;
-            this.lastPath = payload?.path ?? this.lastPath;
-            schedule();
+            // 檢查模式或路徑是否真的改變了
+            const newMode = payload?.mode ?? this.lastMode;
+            const newPath = payload?.path ?? this.lastPath;
+            
+            // 只有在模式或路徑真正改變時才更新狀態和觸發重繪
+            if (newMode !== this.lastMode || newPath !== this.lastPath) {
+                this.lastMode = newMode;
+                this.lastPath = newPath;
+                
+                // 當模式切換時，清理搜尋狀態以避免資料夾被強制展開
+                if (this.searchQuery.trim()) {
+                    this.searchQuery = '';
+                    if (this.searchInputEl) {
+                        this.searchInputEl.value = '';
+                    }
+                    // 同步搜尋輸入框狀態
+                    this.syncSearchInput();
+                }
+                
+                schedule();
+            }
         });
 
         this.registerCustomEvent('grid-explorer:folder-note-updated', schedule);
@@ -479,10 +498,16 @@ export class ExplorerView extends ItemView {
         // 嘗試獲取當前活躍的 GridView
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
 
-        // 如果有活躍的 GridView，更新快取的狀態
+        // 如果有活躍的 GridView，檢查是否需要更新快取的狀態
         if (activeGrid) {
-            this.lastMode = activeGrid.sourceMode;
-            this.lastPath = activeGrid.sourcePath;
+            const currentMode = activeGrid.sourceMode;
+            const currentPath = activeGrid.sourcePath;
+            
+            // 只有在狀態真正改變時才更新快取
+            if (currentMode !== this.lastMode || currentPath !== this.lastPath) {
+                this.lastMode = currentMode;
+                this.lastPath = currentPath;
+            }
         }
 
         // 返回當前狀態，優先使用活躍 GridView 的狀態，否則使用快取
@@ -531,6 +556,25 @@ export class ExplorerView extends ItemView {
             .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
 
         return topLevelFolders.some((f) => this.shouldShowFolder(f));
+    }
+
+    // 檢查資料夾是否有符合搜尋條件的子項目
+    private hasMatchingChildren(folder: TFolder): boolean {
+        if (!this.isFiltering()) return false;
+        
+        // 檢查資料夾名稱本身是否符合搜尋條件
+        if (this.matchesQuery(folder.name)) return true;
+        
+        // 檢查子資料夾是否有符合條件的
+        const settings = this.plugin.settings;
+        const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
+        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        
+        const childFolders = folder.children
+            .filter((f): f is TFolder => f instanceof TFolder)
+            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+        
+        return childFolders.some((child) => this.hasMatchingChildren(child));
     }
 
     // 渲染模式群組
@@ -616,7 +660,12 @@ export class ExplorerView extends ItemView {
         const nodeEl = contentEl.createDiv({ cls: 'ge-explorer-folder-node' });
         const header = nodeEl.createDiv({ cls: 'ge-explorer-folder-header' });
         const toggle = header.createSpan({ cls: 'ge-explorer-folder-toggle' });
-        const expanded = this.isExpanded(groupKey);
+        let expanded = this.isExpanded(groupKey);
+        // 如果正在搜尋且有符合的項目，自動展開群組
+        if (this.isFiltering() && items.length > 0) {
+            expanded = true;
+            this.setExpanded(groupKey, expanded);
+        }
 
         setIcon(toggle, expanded ? 'chevron-down' : 'chevron-right');
 
@@ -731,7 +780,7 @@ export class ExplorerView extends ItemView {
         const foldersGroupKey = '__folders__root';
         const foldersNode = contentEl.createDiv({ cls: 'ge-explorer-folder-node' });
 
-        const { foldersChildren } = this.createFoldersGroupHeader(foldersNode, foldersGroupKey, currentMode, currentPath);
+        const { foldersChildren } = this.createFoldersGroupHeader(foldersNode, foldersGroupKey, currentMode, currentPath, showIgnoredFolders);
 
         // 若目前在資料夾模式，預先展開對應的父路徑，確保可見
         this.expandCurrentFolderPath(currentMode, currentPath);
@@ -756,14 +805,27 @@ export class ExplorerView extends ItemView {
     }
 
     // 創建資料夾群組標頭
-    private createFoldersGroupHeader(foldersNode: HTMLElement, foldersGroupKey: string, currentMode: string, currentPath: string) {
+    private createFoldersGroupHeader(foldersNode: HTMLElement, foldersGroupKey: string, currentMode: string, currentPath: string, showIgnoredFolders: boolean) {
         const foldersHeader = foldersNode.createDiv({ cls: 'ge-explorer-folder-header' });
         const foldersToggle = foldersHeader.createSpan({ cls: 'ge-explorer-folder-toggle' });
 
+        // 檢查是否已經記錄過展開狀態，如果沒有則預設為收合狀態
         let foldersExpanded = this.isExpanded(foldersGroupKey);
         if (!this.expandedPaths.has(foldersGroupKey)) {
-            foldersExpanded = true; // 預設第一次載入展開
-            this.setExpanded(foldersGroupKey, true);
+            // 如果正在搜尋且有符合的資料夾，自動展開根選項
+            if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredFolders)) {
+                foldersExpanded = true;
+            } else {
+                // 只有在第一次載入且沒有其他展開記錄時才預設展開
+                // 避免在模式切換時自動展開
+                const hasAnyExpandedPaths = this.expandedPaths.size > 0;
+                foldersExpanded = !hasAnyExpandedPaths; // 如果有其他展開路徑，預設收合；否則預設展開
+            }
+            this.setExpanded(foldersGroupKey, foldersExpanded);
+        } else if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredFolders)) {
+            // 如果正在搜尋且有符合的資料夾，即使之前是收合狀態也要展開
+            foldersExpanded = true;
+            this.setExpanded(foldersGroupKey, foldersExpanded);
         }
         setIcon(foldersToggle, foldersExpanded ? 'chevron-down' : 'chevron-right');
 
@@ -851,8 +913,16 @@ export class ExplorerView extends ItemView {
         topLevelFolders.sort((a, b) => a.name.localeCompare(b.name));
 
         for (const child of topLevelFolders) {
+            // 在搜尋時，只展開有符合搜尋條件的子資料夾的資料夾
+            // 而不是強制展開所有資料夾
+            let expanded = this.isExpanded(child.path);
+            if (this.isFiltering()) {
+                // 檢查是否有符合搜尋條件的子項目
+                const hasMatchingChildren = this.hasMatchingChildren(child);
+                expanded = hasMatchingChildren || expanded;
+            }
+            
             // depth=2 -> 28px，與 .ge-explorer-mode-item 的 28px 縮排保持一致
-            const expanded = this.isFiltering() ? true : this.isExpanded(child.path);
             this.renderFolderNode(child, foldersChildren, expanded, 2);
         }
     }
@@ -1094,7 +1164,15 @@ export class ExplorerView extends ItemView {
         const nodeEl = contentEl.createDiv({ cls: 'ge-explorer-folder-node ge-explorer-stash-node' });
         const header = nodeEl.createDiv({ cls: 'ge-explorer-folder-header' });
         const toggle = header.createSpan({ cls: 'ge-explorer-folder-toggle' });
-        const expanded = this.isExpanded(groupKey);
+        let expanded = this.isExpanded(groupKey);
+        // 如果正在搜尋且有符合的暫存檔案，自動展開群組
+        if (this.isFiltering()) {
+            const visibleFiles = this.getVisibleStashFiles();
+            if (visibleFiles.length > 0) {
+                expanded = true;
+                this.setExpanded(groupKey, expanded);
+            }
+        }
 
         setIcon(toggle, expanded ? 'chevron-down' : 'chevron-right');
 
@@ -1229,17 +1307,17 @@ export class ExplorerView extends ItemView {
         // 產生內容（以路徑為連結）
         const lines = files.map(f => {
             const ext = f.extension.toLowerCase();
-            if (isImageFile(f)) {
+            if (isMediaFile(f)) {
                 // 圖片檔要加上副檔名，且前面加上 !
-                return `- ![[${f.path}]]`;
+                return `![[${f.path}]]`;
             }
             if (ext === 'md') {
                 // Markdown 檔的連結不帶 .md 副檔名
                 const withoutExt = f.path.replace(/\.md$/i, '');
-                return `- [[${withoutExt}]]`;
+                return `[[${withoutExt}]]`;
             }
             // 其他檔案維持原樣
-            return `- [[${f.path}]]`;
+            return `[[${f.path}]]`;
         });
         const content = lines.join('\n') + '\n';
 
@@ -1384,11 +1462,12 @@ export class ExplorerView extends ItemView {
         itemEl.addEventListener('dragstart', (event: DragEvent) => {
             if (!event.dataTransfer) return;
 
-            const isMedia = isImageFile(file) || isVideoFile(file) || isAudioFile(file);
-            const mdLink = isMedia ? `![[${file.path}]]` : `[[${file.path}]]`;
-
-            event.dataTransfer.setData('text/plain', mdLink);
-            event.dataTransfer.setData('application/obsidian-grid-explorer-files', JSON.stringify([file.path]));
+            // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
+            const vaultName = this.app.vault.getName();
+            const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
+            
+            event.dataTransfer.setData('text/uri-list', obsidianUri);
+            event.dataTransfer.setData('text/plain', obsidianUri);
             event.dataTransfer.setData('application/obsidian-ge-stash', file.path);
             event.dataTransfer.effectAllowed = 'all';
 
@@ -1459,17 +1538,17 @@ export class ExplorerView extends ItemView {
         this.scheduleRender();
     }
 
+
     // 處理暫存區拖放
     private async handleStashDrop(event: DragEvent) {
         try {
             const dt = event.dataTransfer;
             if (!dt) return;
 
-            // 自訂多檔案格式
-            const filesDataString = dt.getData('application/obsidian-grid-explorer-files');
-            if (filesDataString) {
-                const filePaths: string[] = JSON.parse(filesDataString);
-                this.addToStash(filePaths);
+            // 處理 obsidian:// URI 格式（單檔/多檔）
+            const obsidianPaths = await extractObsidianPathsFromDT(dt);
+            if (obsidianPaths.length > 0) {
+                this.addToStash(obsidianPaths);
                 return;
             }
 
@@ -1784,12 +1863,16 @@ export class ExplorerView extends ItemView {
     private handleDragOver(event: DragEvent) {
         event.preventDefault();
         event.dataTransfer!.dropEffect = 'move';
-        (event.target as HTMLElement).addClass('ge-dragover');
+        // 使用 currentTarget 確保樣式加在 header 本身，而非內部子元素
+        const header = event.currentTarget as HTMLElement;
+        if (header) header.addClass('ge-dragover');
     }
 
     // 處理拖拽離開
     private handleDragLeave(event: DragEvent) {
-        (event.target as HTMLElement).removeClass('ge-dragover');
+        // 使用 currentTarget 確保從 header 本身移除樣式
+        const header = event.currentTarget as HTMLElement;
+        if (header) header.removeClass('ge-dragover');
     }
 
     // 處理拖放事件
@@ -1799,9 +1882,10 @@ export class ExplorerView extends ItemView {
         if (typeof (event as any).preventDefault === 'function') {
             event.preventDefault();
         }
-        const targetEl = (event.target as HTMLElement | null);
-        if (targetEl && typeof (targetEl as any).removeClass === 'function') {
-            targetEl.removeClass('ge-dragover');
+        // 確保從 header 本身移除樣式，而非子元素
+        const header = event.currentTarget as HTMLElement | null;
+        if (header && typeof (header as any).removeClass === 'function') {
+            header.removeClass('ge-dragover');
         }
 
         // 無有效 dataTransfer 則忽略
@@ -1816,15 +1900,17 @@ export class ExplorerView extends ItemView {
 
     // 處理多檔案拖放
     private async handleMultiFileDrop(event: DragEvent, folderPath: string): Promise<boolean> {
-        const filesDataString = event.dataTransfer?.getData('application/obsidian-grid-explorer-files');
-        if (!filesDataString) return false;
+        if (!event.dataTransfer) return false;
+
+        // 處理 obsidian:// URI 格式（單檔/多檔）
+        const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
+        if (obsidianPaths.length === 0) return false;
 
         try {
-            const filePaths: string[] = JSON.parse(filesDataString);
             const destFolder = this.app.vault.getAbstractFileByPath(folderPath);
             if (!(destFolder instanceof TFolder)) return false;
 
-            for (const path of filePaths) {
+            for (const path of obsidianPaths) {
                 await this.moveFileToFolder(path, folderPath);
             }
             return true;
