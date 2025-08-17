@@ -1,4 +1,4 @@
-import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu } from 'obsidian';
+import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu, parseLinktext } from 'obsidian';
 import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
 import { extractObsidianPathsFromDT } from './dragUtils';
@@ -49,9 +49,9 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     // 移除視覺提示
                     container.removeClass('ge-dragover');
 
-
                     // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
                     const dt = (event as DragEvent).dataTransfer;
+                    console.log(dt);
                     if (dt) {
                         try {
                             const obsidianPaths = await extractObsidianPathsFromDT(dt);
@@ -99,26 +99,46 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         }
                     }
 
-                    // 如果沒有檔案路徑列表，則使用檔案路徑
+                    // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
                     const filePath = (event as any).dataTransfer?.getData('text/plain');
                     if (!filePath) return;
 
-                    const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
+                    const srcPath = currentFolder.path || '/';
+                    const lines = filePath
+                        .split(/\r?\n/)
+                        .map((s: string) => s.trim())
+                        .filter((v: string): v is string => v.length > 0);
 
-                    // 獲取檔案和資料夾物件
-                    const file = gridView.app.vault.getAbstractFileByPath(cleanedFilePath);
-
-                    if (file instanceof TFile) {
+                    for (const line of lines) {
                         try {
-                            // 計算新的檔案路徑
-                            const newPath = normalizePath(`${currentFolder.path}/${file.name}`);
-                            // 如果來源路徑和目標路徑相同，則不執行移動
-                            if (file.path !== newPath) {
-                                // 移動檔案
-                                await gridView.app.fileManager.renameFile(file, newPath);
+                            let text = line;
+                            if (text.startsWith('!')) text = text.substring(1);
+
+                            let resolvedFile: TFile | null = null;
+                            if (text.startsWith('[[') && text.endsWith(']]')) {
+                                const inner = text.slice(2, -2);
+                                const parsed = parseLinktext(inner);
+                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                                if (dest instanceof TFile) resolvedFile = dest;
+                            } else {
+                                const direct = gridView.app.vault.getAbstractFileByPath(text);
+                                if (direct instanceof TFile) {
+                                    resolvedFile = direct;
+                                } else {
+                                    const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                    if (dest instanceof TFile) resolvedFile = dest;
+                                }
+                            }
+
+                            if (resolvedFile instanceof TFile) {
+                                const newPath = normalizePath(`${currentFolder.path}/${resolvedFile.name}`);
+                                if (resolvedFile.path !== newPath) {
+                                    await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                }
                             }
                         } catch (error) {
-                            console.error('An error occurred while moving the file:', error);
+                            console.error('An error occurred while moving one of the files (container):', error);
+                            // 繼續處理其他檔案
                         }
                     }
                 });
@@ -425,29 +445,52 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     }
                 }
 
-                // 如果沒有檔案路徑列表，則使用檔案路徑
+                // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
                 const filePath = (event as any).dataTransfer?.getData('text/plain');
                 if (!filePath) return;
-
-                const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
 
                 // 獲取目標資料夾路徑
                 const folderPath = (folderItem as any).dataset.folderPath;
                 if (!folderPath) return;
-
-                // 獲取檔案和資料夾物件
-                const file = gridView.app.vault.getAbstractFileByPath(cleanedFilePath);
                 const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
+                if (!(folder instanceof TFolder)) return;
 
-                if (file instanceof TFile && folder instanceof TFolder) {
+                // 使用 Obsidian API 解析每一行的連結或路徑
+                const srcPath = (folderItem as any).dataset.folderPath || '/';
+                const lines = filePath
+                    .split(/\r?\n/)
+                    .map((s: string) => s.trim())
+                    .filter((v: string): v is string => v.length > 0);
+                for (const line of lines) {
                     try {
-                        // 計算新的檔案路徑
-                        const newPath = normalizePath(`${folderPath}/${file.name}`);
-                        // 移動檔案
-                        await gridView.app.fileManager.renameFile(file, newPath);
+                        let text = line;
+                        if (text.startsWith('!')) text = text.substring(1); // 去除 '!'
 
+                        let resolvedFile: TFile | null = null;
+                        if (text.startsWith('[[') && text.endsWith(']]')) {
+                            const inner = text.slice(2, -2);
+                            const parsed = parseLinktext(inner);
+                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                            if (dest instanceof TFile) resolvedFile = dest;
+                        } else {
+                            const direct = gridView.app.vault.getAbstractFileByPath(text);
+                            if (direct instanceof TFile) {
+                                resolvedFile = direct;
+                            } else {
+                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                if (dest instanceof TFile) resolvedFile = dest;
+                            }
+                        }
+
+                        if (resolvedFile instanceof TFile) {
+                            const newPath = normalizePath(`${folderPath}/${resolvedFile.name}`);
+                            if (resolvedFile.path !== newPath) {
+                                await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                            }
+                        }
                     } catch (error) {
-                        console.error('An error occurred while moving the file:', error);
+                        console.error('An error occurred while moving one of the files:', error);
+                        // 繼續處理其他檔案
                     }
                 }
             });

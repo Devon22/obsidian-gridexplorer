@@ -1,13 +1,12 @@
-import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip } from 'obsidian';
+import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip, parseLinktext } from 'obsidian';
 import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
+import { extractObsidianPathsFromDT } from './dragUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
-import { parseObsidianOpenUris, extractObsidianPathsFromDT } from './dragUtils';
-
 
 export function renderModePath(gridView: GridView) {
 
@@ -284,16 +283,43 @@ export function renderModePath(gridView: GridView) {
                             const filePath = event.dataTransfer?.getData('text/plain');
                             if (!filePath) return;
 
-                            const cleanedFilePath = filePath.replace(/!?\[\[(.*?)\]\]/, '$1');
-                            const file = gridView.app.vault.getAbstractFileByPath(cleanedFilePath);
+                            // 支援多行多檔，使用 Obsidian API 解析每一行
+                            const srcPath = path.path || '/';
+                            const lines = filePath
+                                .split(/\r?\n/)
+                                .map((s: string) => s.trim())
+                                .filter((v: string): v is string => v.length > 0);
 
-                            if (file instanceof TFile) {
+                            for (const line of lines) {
                                 try {
-                                    const newPath = normalizePath(`${path.path}/${file.name}`);
-                                    await gridView.app.fileManager.renameFile(file, newPath);
-                                    gridView.render();
+                                    let text = line;
+                                    if (text.startsWith('!')) text = text.substring(1);
+
+                                    let resolvedFile: TFile | null = null;
+                                    if (text.startsWith('[[') && text.endsWith(']]')) {
+                                        const inner = text.slice(2, -2);
+                                        const parsed = parseLinktext(inner);
+                                        const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                                        if (dest instanceof TFile) resolvedFile = dest;
+                                    } else {
+                                        const direct = gridView.app.vault.getAbstractFileByPath(text);
+                                        if (direct instanceof TFile) {
+                                            resolvedFile = direct;
+                                        } else {
+                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                            if (dest instanceof TFile) resolvedFile = dest;
+                                        }
+                                    }
+
+                                    if (resolvedFile instanceof TFile) {
+                                        const newPath = normalizePath(`${path.path}/${resolvedFile.name}`);
+                                        if (resolvedFile.path !== newPath) {
+                                            await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                        }
+                                    }
                                 } catch (error) {
-                                    console.error('An error occurred while moving the file to folder:', error);
+                                    console.error('An error occurred while moving one of the files to folder:', error);
+                                    // 繼續處理其他檔案
                                 }
                             }
                         });

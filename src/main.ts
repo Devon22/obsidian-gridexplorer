@@ -407,38 +407,57 @@ export default class GridExplorerPlugin extends Plugin {
             evt.preventDefault();
             evt.stopPropagation();
 
-            const pathParts: string[] = [];
+            // 使用索引對映實際路徑，避免依賴顯示文字（可能被其他外掛修改）
             const parentEl = breadcrumbEl.parentElement;
+            // 僅取麵包屑元素，建立清單以取得被點擊元素的索引
+            const crumbs = Array.from(parentEl.querySelectorAll('.view-header-breadcrumb')) as HTMLElement[];
+            const clickedIndex = crumbs.indexOf(breadcrumbEl as HTMLElement);
+            if (clickedIndex < 0) return;
 
-            // 收集路徑片段
-            for (const child of Array.from(parentEl.children)) {
-                if (child.classList.contains('view-header-breadcrumb')) {
-                    const part = child.textContent;
-                    if (part) {
-                        pathParts.push(part);
-                    }
-                }
-                // 收集到當前點擊的元素為止
-                if (child === breadcrumbEl) {
-                    break;
-                }
+            // 嘗試取得目前活躍檔案
+            let activeFile = this.app.workspace.getActiveFile();
+            if (!activeFile) {
+                // 若無活躍檔案，無法可靠對映麵包屑，結束處理
+                return;
             }
 
-            const folderPath = pathParts.join('/');
-            const folder = this.app.vault.getAbstractFileByPath(folderPath);
+            // 蒐集從根到當前檔案之父層的所有資料夾
+            const folders: TFolder[] = [];
+            let currFolder: TFolder | null = (activeFile instanceof TFile) ? activeFile.parent : (activeFile as unknown as TFolder);
+            while (currFolder) {
+                folders.push(currFolder);
+                currFolder = currFolder.parent;
+            }
+            folders.reverse(); // 根 -> 最內層
 
-            if (folder instanceof TFolder) {
-                const view = await this.activateView();
-                if (view instanceof GridView) {
-                    await view.setSource('folder', folderPath, true, '');
-                }
+            // 由於標題麵包屑的最後一段通常是檔名（非資料夾），將其從對映中排除
+            const crumbsFolderCount = Math.max(0, crumbs.length - 1);
+
+            // 若點擊最後一段（檔名），目標應為父資料夾（folders 的最後一個）
+            let targetFolderIndex: number;
+            if (clickedIndex === crumbs.length - 1) {
+                targetFolderIndex = Math.max(0, folders.length - 1);
+            } else {
+                // 其餘情況下，將可見的資料夾麵包屑（通常不含根）對齊到實際資料夾陣列尾端
+                const base = Math.max(0, folders.length - crumbsFolderCount);
+                targetFolderIndex = base + clickedIndex;
+            }
+
+            // 邊界保護
+            targetFolderIndex = Math.min(Math.max(0, targetFolderIndex), Math.max(0, folders.length - 1));
+            const targetFolder = folders[targetFolderIndex];
+            if (!targetFolder) return;
+
+            const folderPath = targetFolder.path;
+            const view = await this.activateView();
+            if (view instanceof GridView) {
+                await view.setSource('folder', folderPath, true, '');
             }
         }, true); // 使用 capture 階段以確保優先處理
 
 
         // 設定 Canvas 拖曳處理
         this.setupCanvasDropHandlers();
-
 
         // Override new tab behavior (for useQuickAccessAsNewTabMode setting)
         const { workspace } = this.app;

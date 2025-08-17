@@ -1331,21 +1331,21 @@ export class GridView extends ItemView {
                 let drag_filename = '';
 
                 // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
-                const vaultName = this.app.vault.getName();
+                // const vaultName = this.app.vault.getName();
                 
                 if (selectedFiles.length > 1) {
                     // 多檔案：建立多個 obsidian://open URI
-                    const obsidianUris = selectedFiles.map(f => 
-                        `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(f.path)}`
-                    );
+                    // const obsidianUris = selectedFiles.map(f => 
+                    //     `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(f.path)}`
+                    // );
                     
-                    // 設定 text/uri-list
-                    event.dataTransfer?.setData('text/uri-list', obsidianUris.join('\n'));
-                    console.log(obsidianUris.join('\n'));
+                    // // 設定 text/uri-list
+                    // event.dataTransfer?.setData('text/uri-list', obsidianUris.join('\n'));
+                    // console.log(obsidianUris.join('\n'));
 
                     // 設定 text/plain
                     const mdList = selectedFiles
-                        .map(f => isMediaFile(f) ? `![[${f.path}]]` : `[[${f.path}]]`)
+                        .map(f => this.app.fileManager.generateMarkdownLink(f, ''))
                         .join('\n');
                     event.dataTransfer?.setData('text/plain', mdList);
 
@@ -1355,13 +1355,13 @@ export class GridView extends ItemView {
                     drag_filename = `${selectedFiles.length} ${t('files')}`;
                 } else {
                     // 單檔案：建立單一 obsidian://open URI
-                    const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
+                    // const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
                     
                     // 設定為 text/uri-list
-                    event.dataTransfer?.setData('text/uri-list', obsidianUri);
+                    // event.dataTransfer?.setData('text/uri-list', obsidianUri);
 
                     // 設定 text/plain
-                    const mdLink = isMediaFile(file) ? `![[${file.path}]]` : `[[${file.path}]]`;
+                    const mdLink = this.app.fileManager.generateMarkdownLink(file, '');
                     event.dataTransfer?.setData('text/plain', mdLink);
 
                     // 兼容舊版：提供 markdown 連結與舊自定義 MIME，供 main.ts 使用

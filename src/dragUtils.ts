@@ -10,7 +10,6 @@ export function parseObsidianOpenUris(input: string): Array<{ vault?: string; fi
 
     // 可能是多行或連續字串，先嘗試按換行切分
     const chunks = input.split(/\r?\n/).filter(Boolean);
-    console.log(chunks);
     const toScan = chunks.length ? chunks : [input];
 
     for (const part of toScan) {
@@ -35,24 +34,10 @@ export async function extractObsidianPathsFromDT(dt: DataTransfer | null): Promi
     if (!dt) return [];
     
     const texts: string[] = [];
-    // 1) items (getAsString)
-    if (dt.items) {
-        const items = Array.from(dt.items).filter(i => i.kind === 'string');
-        await Promise.all(items.map(i => new Promise<void>(resolve => {
-            try {
-                i.getAsString((s) => { if (s) texts.push(s); resolve(); });
-            } catch { resolve(); }
-        })));
-    }
-    // 2) text/uri-list
+    // 僅從 text/uri-list 解析 obsidian://open URIs
     try {
         const uriList = dt.getData('text/uri-list');
         if (uriList) texts.push(uriList);
-    } catch {}
-    // 3) text/plain
-    try {
-        const plain = dt.getData('text/plain');
-        if (plain && plain.startsWith('obsidian://')) texts.push(plain);
     } catch {}
 
     const vaultName = (window as any).app?.vault?.getName?.() as string | undefined;

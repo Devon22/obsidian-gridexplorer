@@ -1,4 +1,4 @@
-import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './fileUtils';
@@ -1304,23 +1304,6 @@ export class ExplorerView extends ItemView {
             return; // 沒有內容就不建立
         }
 
-        // 產生內容（以路徑為連結）
-        const lines = files.map(f => {
-            const ext = f.extension.toLowerCase();
-            if (isMediaFile(f)) {
-                // 圖片檔要加上副檔名，且前面加上 !
-                return `![[${f.path}]]`;
-            }
-            if (ext === 'md') {
-                // Markdown 檔的連結不帶 .md 副檔名
-                const withoutExt = f.path.replace(/\.md$/i, '');
-                return `[[${withoutExt}]]`;
-            }
-            // 其他檔案維持原樣
-            return `[[${f.path}]]`;
-        });
-        const content = lines.join('\n') + '\n';
-
         // 產生檔名：Stash YYYY-MM-DD HHmm.md
         const d = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
@@ -1334,6 +1317,11 @@ export class ExplorerView extends ItemView {
             candidate = `${baseName} (${idx}).md`;
             idx++;
         }
+
+        // 以即將建立的新檔（candidate）作為來源路徑，產生連結
+        const sourcePath = candidate;
+        const lines = files.map(f => this.app.fileManager.generateMarkdownLink(f, sourcePath));
+        const content = lines.join('\n') + '\n';
 
         // 建立檔案並開啟
         const file = await this.app.vault.create(candidate, content);
@@ -1463,11 +1451,15 @@ export class ExplorerView extends ItemView {
             if (!event.dataTransfer) return;
 
             // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
-            const vaultName = this.app.vault.getName();
-            const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
+            // const vaultName = this.app.vault.getName();
+            // const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
+            // event.dataTransfer.setData('text/uri-list', obsidianUri);
+
+            const mdLink = this.app.fileManager.generateMarkdownLink(file, '');
+            event.dataTransfer.setData('text/plain', mdLink);
             
-            event.dataTransfer.setData('text/uri-list', obsidianUri);
-            event.dataTransfer.setData('text/plain', obsidianUri);
+            event.dataTransfer?.setData('application/obsidian-grid-explorer-files', JSON.stringify([file.path]));
+
             event.dataTransfer.setData('application/obsidian-ge-stash', file.path);
             event.dataTransfer.effectAllowed = 'all';
 
@@ -1548,15 +1540,74 @@ export class ExplorerView extends ItemView {
             // 處理 obsidian:// URI 格式（單檔/多檔）
             const obsidianPaths = await extractObsidianPathsFromDT(dt);
             if (obsidianPaths.length > 0) {
-                this.addToStash(obsidianPaths);
+                const { currentPath } = this.getCurrentGridState();
+                const srcPath = currentPath || '/';
+                const resolved: string[] = [];
+                for (let p of obsidianPaths) {
+                    try {
+                        if (!p) continue;
+                        // 與一般文字處理一致：先嘗試絕對路徑，再用 linkpath 解析
+                        let file = this.app.vault.getAbstractFileByPath(p);
+                        if (!(file instanceof TFile)) {
+                            const alt = (this.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
+                            if (alt instanceof TFile) file = alt;
+                        }
+                        if (file instanceof TFile) resolved.push(file.path);
+                    } catch (e) {
+                        console.warn('解析 obsidian:// 路徑失敗，已略過', p, e);
+                    }
+                }
+                if (resolved.length > 0) this.addToStash(resolved);
                 return;
             }
 
-            // 單一文字路徑（可能是 wikilink）
+            // 支援多行文字（每行可能是路徑或 [[WikiLink]]）
             const text = dt.getData('text/plain');
             if (text) {
-                const cleaned = text.replace(/!*\[\[(.*?)\]\]/, '$1');
-                this.addToStash([cleaned]);
+                const { currentPath } = this.getCurrentGridState();
+                const srcPath = currentPath || '/';
+
+                const lines = text
+                    .split(/\r?\n/)
+                    .map((s: string) => s.trim())
+                    .filter((v: string): v is string => v.length > 0);
+
+                const resolvedPaths: string[] = [];
+                for (let line of lines) {
+                    try {
+                        // 去除前置的驚嘆號（內嵌連結語法）
+                        if (line.startsWith('!')) line = line.substring(1);
+
+                        let resolved: TFile | null = null;
+                        if (line.startsWith('[[') && line.endsWith(']]')) {
+                            const inner = line.slice(2, -2);
+                            const parsed = parseLinktext(inner);
+                            const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                            if (dest instanceof TFile) resolved = dest;
+                        } else {
+                            const direct = this.app.vault.getAbstractFileByPath(line);
+                            if (direct instanceof TFile) {
+                                resolved = direct;
+                            } else {
+                                const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(line, srcPath);
+                                if (dest instanceof TFile) resolved = dest;
+                            }
+                        }
+
+                        if (resolved instanceof TFile) {
+                            resolvedPaths.push(resolved.path);
+                        } else {
+                            // 若無法解析成檔案，保留原字串，稍後由 addToStash 過濾
+                            resolvedPaths.push(line);
+                        }
+                    } catch (err) {
+                        console.error('解析拖放文字為檔案路徑時發生錯誤:', err);
+                    }
+                }
+
+                if (resolvedPaths.length > 0) {
+                    this.addToStash(resolvedPaths);
+                }
             }
         } catch (error) {
             console.error('處理暫存區拖放時發生錯誤:', error);
@@ -1893,54 +1944,58 @@ export class ExplorerView extends ItemView {
 
         // 嘗試處理多檔案拖放
         if (await this.handleMultiFileDrop(event, folderPath)) return;
-
-        // 處理單一檔案拖放
-        await this.handleSingleFileDrop(event, folderPath);
     }
 
     // 處理多檔案拖放
     private async handleMultiFileDrop(event: DragEvent, folderPath: string): Promise<boolean> {
         if (!event.dataTransfer) return false;
 
-        // 處理 obsidian:// URI 格式（單檔/多檔）
-        const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
-        if (obsidianPaths.length === 0) return false;
+        // 以 text/plain 取得拖放內容，支援多行（多檔）與 wikilink 格式
+        const filePath = event.dataTransfer.getData('text/plain');
+        if (!filePath) return false;
 
-        try {
-            const destFolder = this.app.vault.getAbstractFileByPath(folderPath);
-            if (!(destFolder instanceof TFolder)) return false;
+        const srcPath = folderPath || '/';
+        const lines = filePath
+            .split(/\r?\n/)
+            .map((s: string) => s.trim())
+            .filter((v: string): v is string => v.length > 0);
 
-            for (const path of obsidianPaths) {
-                await this.moveFileToFolder(path, folderPath);
+        let handled = false;
+        for (const line of lines) {
+            try {
+                let text = line;
+                if (text.startsWith('!')) text = text.substring(1);
+
+                let resolvedFile: TFile | null = null;
+                if (text.startsWith('[[') && text.endsWith(']]')) {
+                    const inner = text.slice(2, -2);
+                    const parsed = parseLinktext(inner);
+                    const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                    if (dest instanceof TFile) resolvedFile = dest;
+                } else {
+                    const direct = this.app.vault.getAbstractFileByPath(text);
+                    if (direct instanceof TFile) {
+                        resolvedFile = direct;
+                    } else {
+                        const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                        if (dest instanceof TFile) resolvedFile = dest;
+                    }
+                }
+
+                if (resolvedFile instanceof TFile) {
+                    const newPath = normalizePath(`${folderPath}/${resolvedFile.name}`);
+                    if (resolvedFile.path !== newPath) {
+                        await this.app.fileManager.renameFile(resolvedFile, newPath);
+                    }
+                    handled = true;
+                }
+            } catch (error) {
+                console.error('An error occurred while moving one of the files (ExplorerView):', error);
+                // 繼續處理其他檔案
             }
-            return true;
-        } catch (error) {
-            console.error('處理多檔案拖放時發生錯誤:', error);
-            return false;
         }
-    }
 
-    // 處理單一檔案拖放
-    private async handleSingleFileDrop(event: DragEvent, folderPath: string) {
-        const filePath = event.dataTransfer?.getData('text/plain');
-        if (!filePath) return;
-
-        // 清理 wikilink 格式
-        const cleanedFilePath = filePath.replace(/!*\[\[(.*?)\]\]/, '$1');
-        await this.moveFileToFolder(cleanedFilePath, folderPath);
-    }
-
-    // 移動檔案到資料夾
-    private async moveFileToFolder(filePath: string, folderPath: string) {
-        const file = this.app.vault.getAbstractFileByPath(filePath);
-        if (!(file instanceof TFile)) return;
-
-        try {
-            const newPath = normalizePath(`${folderPath}/${file.name}`);
-            await this.app.fileManager.renameFile(file, newPath);
-        } catch (error) {
-            console.error(`搬移檔案 ${file.path} 時發生錯誤:`, error);
-        }
+        return handled;
     }
 
     /**
