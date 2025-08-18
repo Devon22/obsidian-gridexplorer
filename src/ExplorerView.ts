@@ -1221,20 +1221,93 @@ export class ExplorerView extends ItemView {
     // 設置暫存區拖放目標
     private setupStashDropTarget(nodeEl: HTMLElement) {
         if (!Platform.isDesktop) return;
+        
+        let currentDropTarget: HTMLElement | null = null;
+        let insertPosition: 'before' | 'after' | 'end' = 'end';
+        let targetIndex = -1;
+        
         nodeEl.addEventListener('dragover', (e: DragEvent) => {
             if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
             e.preventDefault();
             if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-            nodeEl.addClass('ge-dragover');
+            
+            // 清除之前的插入指示器
+            this.clearStashInsertIndicators(nodeEl);
+            
+            // 找到最接近滑鼠位置的暫存項目
+            const stashItems = nodeEl.querySelectorAll('.ge-explorer-stash-item');
+            const mouseY = e.clientY;
+            
+            let closestItem: HTMLElement | null = null;
+            let closestDistance = Infinity;
+            let insertBefore = false;
+            
+            stashItems.forEach((item, index) => {
+                const rect = item.getBoundingClientRect();
+                const itemCenterY = rect.top + rect.height / 2;
+                const distance = Math.abs(mouseY - itemCenterY);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestItem = item as HTMLElement;
+                    insertBefore = mouseY < itemCenterY;
+                    targetIndex = insertBefore ? index : index + 1;
+                }
+            });
+            
+            if (closestItem && closestDistance < 50) { // 50px 容忍範圍
+                currentDropTarget = closestItem;
+                insertPosition = insertBefore ? 'before' : 'after';
+                
+                // 顯示插入指示器
+                if (insertBefore) {
+                    (closestItem as HTMLElement).addClass('ge-stash-insert-before');
+                } else {
+                    (closestItem as HTMLElement).addClass('ge-stash-insert-after');
+                }
+            } else {
+                // 沒有找到合適的項目，插入到最後
+                currentDropTarget = null;
+                insertPosition = 'end';
+                targetIndex = stashItems.length;
+                nodeEl.addClass('ge-dragover');
+            }
         });
 
-        nodeEl.addEventListener('dragleave', () => nodeEl.removeClass('ge-dragover'));
+        nodeEl.addEventListener('dragleave', (e: DragEvent) => {
+            // 檢查是否真的離開了暫存區域
+            const rect = nodeEl.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                this.clearStashInsertIndicators(nodeEl);
+                nodeEl.removeClass('ge-dragover');
+                currentDropTarget = null;
+            }
+        });
 
         nodeEl.addEventListener('drop', async (e: DragEvent) => {
             if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
             e.preventDefault();
+            
+            this.clearStashInsertIndicators(nodeEl);
             nodeEl.removeClass('ge-dragover');
-            await this.handleStashDrop(e);
+            
+            await this.handleStashDrop(e, targetIndex);
+            
+            currentDropTarget = null;
+            insertPosition = 'end';
+            targetIndex = -1;
+        });
+    }
+
+    // 清除暫存區插入指示器
+    private clearStashInsertIndicators(nodeEl: HTMLElement) {
+        const items = nodeEl.querySelectorAll('.ge-explorer-stash-item');
+        items.forEach(item => {
+            (item as HTMLElement).removeClass('ge-stash-insert-before');
+            (item as HTMLElement).removeClass('ge-stash-insert-after');
         });
     }
 
@@ -1410,7 +1483,11 @@ export class ExplorerView extends ItemView {
 
             if (!isShortcut) {
                 // 非捷徑：直接開啟檔案，避免不必要的 activateView
-                this.app.workspace.getLeaf().openFile(file);
+                if (evt.ctrlKey || evt.metaKey) {
+                    this.app.workspace.getLeaf(true).openFile(file);
+                } else {
+                    this.app.workspace.getLeaf().openFile(file);
+                }
                 return;
             }
 
@@ -1532,7 +1609,7 @@ export class ExplorerView extends ItemView {
 
 
     // 處理暫存區拖放
-    private async handleStashDrop(event: DragEvent) {
+    private async handleStashDrop(event: DragEvent, insertIndex?: number) {
         try {
             const dt = event.dataTransfer;
             if (!dt) return;
@@ -1557,7 +1634,7 @@ export class ExplorerView extends ItemView {
                         console.warn('解析 obsidian:// 路徑失敗，已略過', p, e);
                     }
                 }
-                if (resolved.length > 0) this.addToStash(resolved);
+                if (resolved.length > 0) this.addToStash(resolved, insertIndex);
                 return;
             }
 
@@ -1606,7 +1683,7 @@ export class ExplorerView extends ItemView {
                 }
 
                 if (resolvedPaths.length > 0) {
-                    this.addToStash(resolvedPaths);
+                    this.addToStash(resolvedPaths, insertIndex);
                 }
             }
         } catch (error) {
@@ -1615,15 +1692,31 @@ export class ExplorerView extends ItemView {
     }
 
     // 添加到暫存區
-    private addToStash(paths: string[]) {
-        const uniq = new Set(this.stashFilePaths);
+    private addToStash(paths: string[], insertIndex?: number) {
+        // 過濾出有效的檔案路徑
+        const validPaths: string[] = [];
         for (const raw of paths) {
             const p = typeof raw === 'string' ? raw : '';
             if (!p) continue;
             const file = this.app.vault.getAbstractFileByPath(p);
-            if (file instanceof TFile) uniq.add(p);
+            if (file instanceof TFile && !this.stashFilePaths.includes(p)) {
+                validPaths.push(p);
+            }
         }
-        this.stashFilePaths = Array.from(uniq);
+        
+        if (validPaths.length === 0) return;
+        
+        // 如果指定了插入位置，在該位置插入
+        if (insertIndex !== undefined && insertIndex >= 0) {
+            const newList = [...this.stashFilePaths];
+            const actualIndex = Math.min(insertIndex, newList.length);
+            newList.splice(actualIndex, 0, ...validPaths);
+            this.stashFilePaths = newList;
+        } else {
+            // 否則添加到末尾
+            this.stashFilePaths = [...this.stashFilePaths, ...validPaths];
+        }
+        
         this.app.workspace.requestSaveLayout();
         this.scheduleRender();
     }

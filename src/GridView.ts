@@ -1185,8 +1185,6 @@ export class GridView extends ItemView {
             const index = this.gridItems.indexOf(fileEl);
             if (index < 0) return;
 
-            
-
             if (event.ctrlKey || event.metaKey) {
                 if (isMediaFile(file)) {
                     // 開啟媒體檔案

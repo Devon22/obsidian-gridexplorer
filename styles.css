@@ -2236,8 +2236,7 @@ a.ge-current-folder:hover {
     color: var(--text-muted);
 }
 
-.ge-explorer-stash-dropzone:hover,
-.ge-explorer-stash-dropzone.ge-dragover {
+.ge-explorer-stash-dropzone:hover {
     background-color: var(--background-modifier-hover);
     border-color: var(--interactive-accent);
     color: var(--text-normal);
@@ -2265,12 +2264,6 @@ a.ge-current-folder:hover {
 .ge-explorer-stash-item {
     padding-left: 28px; /* 與 .ge-explorer-mode-item 一致的縮排 */
     position: relative; /* 供插入指示線定位 */
-}
-
-/* 暫存區內部排序時的 hover 樣式 */
-.ge-explorer-stash-item.ge-dragover {
-    background-color: var(--background-modifier-hover);
-    outline: 1px dashed var(--interactive-accent);
 }
 
 /* 暫存區拖曳排序：插入指示線（上方） */
