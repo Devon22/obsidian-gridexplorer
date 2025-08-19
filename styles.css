@@ -1063,7 +1063,7 @@ a.ge-current-folder:hover {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    max-width: 150px;
+    max-width: 88px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1071,6 +1071,7 @@ a.ge-current-folder:hover {
     border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
     transition: border-color 0.15s ease;
+    padding: 2px 0;
 }
 
 .ge-search-text-container:hover {

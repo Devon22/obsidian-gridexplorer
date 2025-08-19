@@ -464,6 +464,32 @@ export function renderHeaderButton(gridView: GridView) {
                     }
             });
         });
+        // 新增 base
+        menu.addItem((item) => {
+            item.setTitle(t('new_base'))
+            .setIcon('layout-dashboard')
+            .onClick(async () => {
+                let newFileName = `${t('untitled')}.base`;
+                let newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
+                
+                // 檢查檔案是否已存在，如果存在則遞增編號
+                let counter = 1;
+                while (gridView.app.vault.getAbstractFileByPath(newFilePath)) {
+                    newFileName = `${t('untitled')} ${counter}.base`;
+                    newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
+                    counter++;
+                }
+                
+                try {
+                    // 建立新筆記
+                    const newFile = await gridView.app.vault.create(newFilePath, '');
+                    // 開啟新筆記
+                    await gridView.app.workspace.getLeaf().openFile(newFile);
+                } catch (error) {
+                    console.error('An error occurred while creating a new base:', error);
+                }
+            });
+        });
         // 新增捷徑
         menu.addItem((item) => {
             item.setTitle(t('new_shortcut'))
@@ -510,6 +536,7 @@ export function renderHeaderButton(gridView: GridView) {
     if (gridView.searchQuery) {
         searchButton.style.display = 'none';
         const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
+        searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
 
         // 創建搜尋文字
         const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });

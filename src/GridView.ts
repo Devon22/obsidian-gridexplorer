@@ -1623,9 +1623,16 @@ export class GridView extends ItemView {
             let target;
 
             if (redirectType === 'file') {
-                if (redirectPath.startsWith('[[') && redirectPath.endsWith(']]')) {
-                    const noteName = redirectPath.slice(2, -2);
-                    target = this.app.metadataCache.getFirstLinkpathDest(noteName, file.path);
+                // 支援 ![[...]]（嵌入）與 [[file|alias]]（別名）格式
+                const trimmed = redirectPath.trim();
+                const isEmbed = trimmed.startsWith('!');
+                const wikilink = isEmbed ? trimmed.substring(1) : trimmed; // 去除前置 '!'
+                if (wikilink.startsWith('[[') && wikilink.endsWith(']]')) {
+                    let linkInner = wikilink.slice(2, -2).trim();
+                    // 去除別名部分，例如 "path|alias" -> "path"
+                    const pipeIdx = linkInner.indexOf('|');
+                    if (pipeIdx !== -1) linkInner = linkInner.substring(0, pipeIdx).trim();
+                    target = this.app.metadataCache.getFirstLinkpathDest(linkInner, file.path);
                 } else {
                     target = this.app.vault.getAbstractFileByPath(normalizePath(redirectPath));
                 }

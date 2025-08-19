@@ -1,7 +1,8 @@
 import { App, Modal, TFolder, TFile, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from '../main';
-import { t } from '../translations';
 import { showSearchInputModal, showUriInputModal, SearchOptions } from './inputModal';
+import { isDocumentFile } from '../fileUtils';
+import { t } from '../translations';
 
 interface ShortcutOption {
     type: 'mode' | 'folder' | 'file' | 'search' | 'uri';
@@ -214,9 +215,9 @@ class FileSuggestionModal extends FuzzySuggestModal<TFile> {
         this.onSubmit = onChoose;
     }
 
-    // 獲取所有可選的 Markdown 檔案
+    // 獲取所有可選的檔案（僅文件檔）
     getItems(): TFile[] {
-        return this.app.vault.getMarkdownFiles();
+        return this.app.vault.getFiles().filter((file) => isDocumentFile(file));
     }
 
     // 獲取檔案的顯示文本

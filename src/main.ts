@@ -430,22 +430,19 @@ export default class GridExplorerPlugin extends Plugin {
             }
             folders.reverse(); // 根 -> 最內層
 
-            // 由於標題麵包屑的最後一段通常是檔名（非資料夾），將其從對映中排除
-            const crumbsFolderCount = Math.max(0, crumbs.length - 1);
+            // 以「去除根目錄('/')」後的資料夾清單，直接用索引對應麵包屑
+            const foldersWithoutRoot = folders.filter(f => f.path !== '/');
+            const isClickingFileCrumb = (activeFile instanceof TFile) && (clickedIndex === crumbs.length - 1);
 
-            // 若點擊最後一段（檔名），目標應為父資料夾（folders 的最後一個）
-            let targetFolderIndex: number;
-            if (clickedIndex === crumbs.length - 1) {
-                targetFolderIndex = Math.max(0, folders.length - 1);
+            let targetFolder: TFolder | undefined;
+            if (isClickingFileCrumb) {
+                // 點到檔名時，導向其父資料夾（foldersWithoutRoot 的最後一個；若不存在則退回根）
+                targetFolder = foldersWithoutRoot[foldersWithoutRoot.length - 1] ?? folders[0];
             } else {
-                // 其餘情況下，將可見的資料夾麵包屑（通常不含根）對齊到實際資料夾陣列尾端
-                const base = Math.max(0, folders.length - crumbsFolderCount);
-                targetFolderIndex = base + clickedIndex;
+                // 其他情況，AAA/BBB 與 foldersWithoutRoot[0]/[1] 一一對應
+                targetFolder = foldersWithoutRoot[clickedIndex] ?? folders[0];
             }
 
-            // 邊界保護
-            targetFolderIndex = Math.min(Math.max(0, targetFolderIndex), Math.max(0, folders.length - 1));
-            const targetFolder = folders[targetFolderIndex];
             if (!targetFolder) return;
 
             const folderPath = targetFolder.path;
