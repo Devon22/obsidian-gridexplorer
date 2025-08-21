@@ -128,12 +128,19 @@ export function renderModePath(gridView: GridView) {
             let pathEl;
 
             if (isLast) {
-                if (path.path === '/' && gridView.plugin.settings.folderDisplayStyle === 'show') {
-                    // 當顯示資料夾開啟且是根目錄時，使用 span 元素
-                    pathEl = modenameContainer.createEl('span', {
-                        text: `${customFolderIcon} ${path.name}`.trim(),
-                        cls: 'ge-mode-title'
-                    });
+                if (path.path === '/') {
+                    // 當根目錄時，根據設定使用 span 元素
+                    if (gridView.plugin.settings.folderDisplayStyle !== 'menu') {
+                        pathEl = modenameContainer.createEl('span', {
+                            text: `${customFolderIcon} ${path.name}`.trim(),
+                            cls: 'ge-mode-title'
+                        });
+                    } else {
+                        pathEl = modenameContainer.createEl('a', {
+                            text: `${customFolderIcon} ${path.name}`.trim(),
+                            cls: 'ge-current-folder'
+                        });
+                    }
                 } else {
                     // 其他情況使用 a 元素
                     pathEl = modenameContainer.createEl('a', {
@@ -516,7 +523,16 @@ export function renderModePath(gridView: GridView) {
                         }
                     }
 
-                    if (gridView.sourcePath !== '/') {
+                    // 根目錄顯示規則：
+                    // show -> 不顯示選單（可直接點選）
+                    // menu -> 顯示選單
+                    // hide -> 不顯示選單
+                    if (gridView.sourcePath === '/') {
+                        if (gridView.plugin.settings.folderDisplayStyle === 'menu') {
+                            menu.showAtMouseEvent(event);
+                        }
+                    } else {
+                        // 非根目錄維持原本行為：顯示選單
                         menu.showAtMouseEvent(event);
                     }
                 });

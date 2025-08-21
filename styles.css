@@ -48,6 +48,43 @@
     color: var(--text-muted);
 }
 
+/* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button */
+/* .ge-grid-item { position: relative; }
+.ge-hover-open-note {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.ge-grid-item:hover .ge-hover-open-note {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ge-hover-open-note:hover {
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+}
+
+.ge-hover-open-note svg {
+    width: 14px;
+    height: 14px;
+} */
+
 /* 摘要區域 Content Area */
 .ge-content-area {
     flex: 1;
@@ -1871,9 +1908,10 @@ a.ge-current-folder:hover {
     border-color: var(--horizontal-line);
 }
 
-/* 隱藏網格內容 */
+/* 隱藏網格內容（跳過隱藏時的樣式/排版/繪製成本） */
 .ge-grid-container.ge-hidden {
-    display: none;
+    content-visibility: hidden;
+    pointer-events: none;
 }
 
 /* 行動裝置隱藏滾動條 Mobile hidden Scrollbar */

@@ -301,7 +301,6 @@ export const TRANSLATIONS: Translations = {
         'display_minimized_desc': '將此筆記以最小化方式顯示',
 
         // Quick Access Settings and Commands
-
         'quick_access_settings_title': '快速存取設定',
         'quick_access_folder_name': '快速存取資料夾',
         'quick_access_folder_desc': '設定「開啟快速存取資料夾」命令所使用的資料夾',
@@ -314,11 +313,14 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': '使用快速存取模式',
         'open_quick_access_folder': '開啟快速存取資料夾',
         'open_quick_access_mode': '開啟快速存取模式',
+
         // Explorer Stash
         'stash': '暫存區',
         'drop_files_here': '拖曳檔案到此暫存',
         'clear': '清空',
         'save_stash_as_markdown': '將暫存區存為 Markdown',
+        'add_to_stash': '加入暫存區',
+        'added_to_stash': '已添加到暫存區',
     },
     'en': {
         // Notifications
@@ -601,7 +603,6 @@ export const TRANSLATIONS: Translations = {
         'display_minimized_desc': 'Show this note in minimized mode',
 
         // Quick Access Settings and Commands
-
         'quick_access_settings_title': 'Quick Access Settings',
         'quick_access_folder_name': 'Quick access folder',
         'quick_access_folder_desc': 'Set the folder used by the "Open quick access folder" command',
@@ -614,11 +615,14 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': 'Use quick access mode',
         'open_quick_access_folder': 'Open quick access folder',
         'open_quick_access_mode': 'Open quick access mode',
+
         // Explorer Stash
         'stash': 'Stash',
         'drop_files_here': 'Drop files here to stash',
         'clear': 'Clear',
         'save_stash_as_markdown': 'Save stash as Markdown',
+        'add_to_stash': 'Add to stash',
+        'added_to_stash': 'Added to stash',
     },
     'zh': {
         // 通知信息
@@ -899,7 +903,6 @@ export const TRANSLATIONS: Translations = {
         'display_minimized_desc': '将此笔记以最小化方式显示',
 
         // Quick Access Settings and Commands
-
         'quick_access_settings_title': '快速访问设置',
         'quick_access_folder_name': '快速访问文件夹',
         'quick_access_folder_desc': '设置“打开快速访问文件夹”命令使用的文件夹',
@@ -912,11 +915,14 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': '使用快速访问模式',
         'open_quick_access_folder': '打开快速访问文件夹',
         'open_quick_access_mode': '打开快速访问模式',
+
         // Explorer Stash
         'stash': '暂存区',
         'drop_files_here': '拖曳文件到此暂存',
         'clear': '清空',
         'save_stash_as_markdown': '将暂存区保存为 Markdown',
+        'add_to_stash': '加入暂存区',
+        'added_to_stash': '已添加到暂存区',
     },
     'ja': {
         // 通知メッジ
@@ -1196,9 +1202,7 @@ export const TRANSLATIONS: Translations = {
         'display_minimized': '最小化表示',
         'display_minimized_desc': 'このノートを最小化モードで表示',
 
-        //TODO: please check the translation!
         // Quick Access Settings and Commands
-
         'quick_access_settings_title': 'クイックアクセス設定',
         'quick_access_folder_name': 'クイックアクセスフォルダー',
         'quick_access_folder_desc': '「クイックアクセス フォルダーを開く」コマンドで使用するフォルダーを設定します',
@@ -1211,11 +1215,14 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': 'クイックアクセスモードを使用する',
         'open_quick_access_folder': 'クイックアクセス フォルダーを開く',
         'open_quick_access_mode': 'クイックアクセスモードを開く',
+        
         // Explorer Stash
         'stash': '一時保存',
         'drop_files_here': 'ここにドラッグして一時保存',
         'clear': 'クリア',
         'save_stash_as_markdown': '一時保存をMarkdownとして保存',
+        'add_to_stash': '一時保存に追加',
+        'added_to_stash': '一時保存に追加されました',
     },
     'ru': {
         // Notifications
@@ -1438,7 +1445,7 @@ export const TRANSLATIONS: Translations = {
         'filter_folders': 'Фильтровать папки...',
         'search_for': 'Поиск',
 
-        //
+        // Shortcut Selection Dialog
         'create_shortcut': 'Создать ярлик',
         'select_folder': 'Выбрать папку',
         'select_file': 'Выбрать файл',
@@ -1509,11 +1516,14 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': 'Использовать режим быстрого доступа',
         'open_quick_access_folder': 'Открыть папку быстрого доступа',
         'open_quick_access_mode': 'Открыть быстрый доступ по режиму',
+        
         // Explorer Stash
-        'stash': 'Буфер',
+        'stash': 'Хранилище',
         'drop_files_here': 'Перетащите файлы сюда, чтобы сохранить',
         'clear': 'Очистить',
-        'save_stash_as_markdown': 'Сохранить буфер как Markdown',
+        'save_stash_as_markdown': 'Сохранить хранилище как Markdown',
+        'add_to_stash': 'Добавить в хранилище',
+        'added_to_stash': 'Добавлено в хранилище',
     },
     'uk': {
         // Notifications
@@ -1794,7 +1804,6 @@ export const TRANSLATIONS: Translations = {
         'display_minimized_desc': 'Показувати цю нотатку у мінімізованому режимі',
 
         // Quick Access Settings and Commands
-
         'quick_access_settings_title': 'Налаштування Швидкого доступу',
         'quick_access_folder_name': 'Папка швидкого доступу',
         'quick_access_folder_desc': 'Встановіть папку, що використовується командою «Відкрити папку швидкого доступу»',
@@ -1807,10 +1816,13 @@ export const TRANSLATIONS: Translations = {
         'use_quick_access_mode': 'Використовувати режим швидкого доступу',
         'open_quick_access_folder': 'Відкрити папку швидкого доступу',
         'open_quick_access_mode': 'Відкрити швидкий доступ за режимом',
+        
         // Explorer Stash
         'stash': 'Тимчасове сховище',
         'drop_files_here': 'Перетягніть файли сюди для збереження',
         'clear': 'Очистити',
         'save_stash_as_markdown': 'Зберегти сховище як Markdown',
+        'add_to_stash': 'Додати до сховища',
+        'added_to_stash': 'Додано до сховища',
     }
 }

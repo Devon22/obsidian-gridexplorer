@@ -5,13 +5,14 @@ import { renderModePath } from './renderModePath';
 import { renderFolder } from './renderFolder';
 import { renderFiles } from './renderFiles';
 import { handleKeyDown } from './handleKeyDown';
-import { isDocumentFile, isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
+import { isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
 import { FileWatcher } from './fileWatcher';
 import { findFirstImageInNote } from './mediaUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { MediaModal } from './modal/mediaModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { FloatingAudioPlayer } from './floatingAudioPlayer';
+import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { t } from './translations';
 
 // 定義分隔器狀態
@@ -763,9 +764,10 @@ export class GridView extends ItemView {
                                     fileEl.style.height = '100%';
                                 }
 
-                                // 如果 frontmatter 中存在 redirect 欄位，將圖示設為 shuffle
-                                const redirectValue = metadata?.redirect;
-                                if (redirectValue) {
+                                // 如果 frontmatter 同時存在 type 與非空的 redirect（視為捷徑檔），將圖示設為 shuffle
+                                const redirectType = metadata?.type;
+                                const redirectPath = metadata?.redirect;
+                                if (redirectType && typeof redirectPath === 'string' && redirectPath.trim() !== '') {
                                     const iconContainer = fileEl.querySelector('.ge-icon-container');
                                     if (iconContainer) {
                                         setIcon(iconContainer as HTMLElement, 'shuffle');
@@ -1179,6 +1181,28 @@ export class GridView extends ItemView {
         // 開始觀察這個元素
         observer.observe(fileEl);
 
+        // 加入滑鼠移入顯示的右上角圓形按鈕（僅針對可在網格中顯示筆記的檔案）
+        // 位置與顯示由 CSS 控制（.ge-hover-open-note）
+        // 當設定為「直接在網格中顯示筆記」時，不顯示此按鈕
+        // if (file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
+        //     // 確保容器可做為定位參考
+        //     fileEl.style.position = fileEl.style.position || 'relative';
+        //     const quickBtn = fileEl.createDiv({ cls: 'ge-hover-open-note' });
+        //     setIcon(quickBtn, 'maximize-2');
+        //     quickBtn.addEventListener('click', (e) => {
+        //         e.stopPropagation();
+        //         e.preventDefault();
+        //         // 如果是捷徑檔案，遵循捷徑開啟邏輯；否則在網格中顯示筆記
+        //         if (!this.openShortcutFile(file)) {
+        //             this.showNoteInGrid(file);
+        //         }
+        //     });
+        //     // 阻止滑鼠事件影響拖曳或選取
+        //     quickBtn.addEventListener('mousedown', (e) => {
+        //         e.stopPropagation();
+        //     });
+        // }
+
         // 點擊時開啟檔案
         fileEl.addEventListener('click', (event) => {
             // 獲取項目索引
@@ -1439,16 +1463,27 @@ export class GridView extends ItemView {
                     .setSection?.("open")
                     .onClick(() => {
                         if (selectedFiles.length > 1) {
-                            // 如果多個檔案被選中，開啟所有文件檔案
-                            const documentFiles = selectedFiles.filter(f => isDocumentFile(f));
-                            for (const docFile of documentFiles) {
-                                this.app.workspace.getLeaf(true).openFile(docFile);
+                            // 如果多個檔案被選中，開啟所有檔案
+                            for (const f of selectedFiles) {
+                                this.app.workspace.getLeaf(true).openFile(f);
                             }
                         } else {
                             this.app.workspace.getLeaf(true).openFile(file);
                         }
                     });
             });
+
+            // 加入暫存區選項 (僅在行動裝置上顯示)
+            if (Platform.isMobile) {
+                menu.addItem((item) => {
+                    item
+                        .setTitle(t('add_to_stash'))
+                        .setIcon('archive')
+                        .onClick(() => {
+                            this.addFilesToStash(selectedFiles);
+                        });
+                });
+            }
 
             // 刪除選項
             menu.addItem((item) => {
@@ -1472,6 +1507,37 @@ export class GridView extends ItemView {
             });
             menu.showAtMouseEvent(event);
         });
+    }
+
+    // 將檔案添加到 ExplorerView 的暫存區
+    private addFilesToStash(files: TFile[]) {
+        // 獲取當前活動的 ExplorerView
+        const explorerLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
+        
+        if (explorerLeaves.length === 0) {
+            new Notice('找不到 Explorer 視圖');
+            return;
+        }
+
+        // 使用第一個找到的 ExplorerView
+        const explorerView = explorerLeaves[0].view as ExplorerView;
+        
+        if (!explorerView) {
+            new Notice('無法訪問 Explorer 視圖');
+            return;
+        }
+
+        // 將檔案路徑轉換為字串陣列
+        const filePaths = files.map(file => file.path);
+        
+        // 調用 ExplorerView 的 addToStash 方法
+        (explorerView as any).addToStash(filePaths);
+        
+        // 強制立即重新渲染 ExplorerView 以確保畫面更新
+        (explorerView as any).refresh();
+        
+        // 顯示成功通知
+        new Notice(t('added_to_stash'));
     }
 
     onPaneMenu(menu: Menu, source: string) {
@@ -1713,9 +1779,6 @@ export class GridView extends ItemView {
         const gridContainer = this.containerEl.querySelector('.ge-grid-container');
         if (!gridContainer) return;
 
-        // 隱藏網格內容
-        gridContainer.addClass('ge-hidden');
-
         // 創建筆記顯示容器
         this.noteViewContainer = this.containerEl.createDiv('ge-note-view-container');
 
@@ -1828,10 +1891,7 @@ export class GridView extends ItemView {
     hideNoteInGrid() {
         if (!this.isShowingNote) return;
 
-        const gridContainer = this.containerEl.querySelector('.ge-grid-container');
-        if (gridContainer) {
-            gridContainer.removeClass('ge-hidden');
-        }
+        //const gridContainer = this.containerEl.querySelector('.ge-grid-container');
 
         if (this.noteViewContainer) {
             // 移除鍵盤事件監聽器
