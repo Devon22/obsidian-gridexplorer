@@ -1507,23 +1507,126 @@ a.ge-current-folder:hover {
 .ge-custommode-option-container {
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
-    padding: 0 12px;
-    margin-bottom: 12px;
+    margin-bottom: 0.5rem;
     background-color: var(--background-secondary);
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
 }
 
-.ge-custommode-option-container .setting-item {
+.ge-custommode-option-container.dragging {
+    opacity: 0.5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.ge-custommode-option-container.drag-over {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover);
+}
+
+/* 摺疊狀態的標題列 */
+.ge-custommode-option-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    cursor: pointer;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.ge-custommode-option-header:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.ge-custommode-option-drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+}
+
+.ge-custommode-option-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-normal);
+    align-items: center;
+}
+
+.ge-custommode-option-toggle {
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.ge-custommode-option-container.expanded .ge-custommode-option-toggle {
+    transform: rotate(90deg);
+}
+
+.ge-custommode-option-delete {
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.ge-custommode-option-delete:hover {
+    color: var(--text-error);
+    background-color: var(--background-modifier-error-hover);
+}
+
+.ge-custommode-option-drag-handle,
+.ge-custommode-option-toggle,
+.ge-custommode-option-delete {
+  display: inline-flex;
+  align-items: center;
+  /* 如果需要撐滿標題列高度，可加上 */
+  /* height: 100%; */
+}
+
+/* 展開狀態的內容區域 */
+.ge-custommode-option-content {
+    padding: 0 12px 12px 12px;
+    display: none;
+    align-items: center;
+}
+
+.ge-custommode-option-container.expanded .ge-custommode-option-content {
+    display: block;
+}
+
+.ge-custommode-option-container.expanded .setting-item {
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
     width: 100%;
+    border: none;
+    padding: 0;
+    margin: 0;
 }
 
-.ge-custommode-option-container .setting-item-control {
+.ge-custommode-option-container.expanded .setting-item-control {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
+}
+
+/* 拖曳指示線 */
+.ge-custommode-drop-indicator {
+    height: 2px;
+    background-color: var(--interactive-accent);
+    margin: 4px 0;
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.ge-custommode-drop-indicator.show {
+    opacity: 1;
+}
+
+.ge-custommode-options-container {
+    position: relative;
 }
 
 /* Save Footer */
