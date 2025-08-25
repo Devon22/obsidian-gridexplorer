@@ -1203,6 +1203,42 @@ export class GridView extends ItemView {
         //     });
         // }
 
+        // 滑鼠懸停在項目上時，按 Ctrl 鍵直接顯示筆記
+        if (Platform.isDesktop && file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
+            let triggeredInHover = false;
+            let isHovering = false;
+
+            const trigger = () => {
+                if (triggeredInHover) return;
+                triggeredInHover = true;
+                if (!this.openShortcutFile(file)) {
+                    this.showNoteInGrid(file);
+                }
+            };
+
+            const onKeyDown = (e: KeyboardEvent) => {
+                // 只有在滑鼠確實懸停在此項目上且按下 Ctrl 時才觸發
+                if (isHovering && e.ctrlKey) {
+                    trigger();
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+
+            const onMouseEnter = () => {
+                triggeredInHover = false;
+                isHovering = true;
+                document.addEventListener('keydown', onKeyDown, { capture: true });
+            };
+            const onMouseLeave = () => {
+                isHovering = false;
+                document.removeEventListener('keydown', onKeyDown, { capture: true } as any);
+                triggeredInHover = false;
+            };
+            fileEl.addEventListener('mouseenter', onMouseEnter);
+            fileEl.addEventListener('mouseleave', onMouseLeave);
+        }
+
         // 點擊時開啟檔案
         fileEl.addEventListener('click', (event) => {
             // 獲取項目索引
@@ -1446,7 +1482,7 @@ export class GridView extends ItemView {
                     menu.addItem((item) => {
                         item
                             .setTitle(t('set_note_attribute'))
-                            .setIcon('palette')
+                            .setIcon("palette")
                             .onClick(() => {
                                 showNoteSettingsModal(this.app, this.plugin, selectedFiles);
                             });
@@ -1459,7 +1495,7 @@ export class GridView extends ItemView {
             menu.addItem((item) => {
                 item
                     .setTitle(t('open_in_new_tab'))
-                    .setIcon('external-link')
+                    .setIcon("external-link")
                     .setSection?.("open")
                     .onClick(() => {
                         if (selectedFiles.length > 1) {
@@ -1478,7 +1514,7 @@ export class GridView extends ItemView {
                 menu.addItem((item) => {
                     item
                         .setTitle(t('add_to_stash'))
-                        .setIcon('archive')
+                        .setIcon("archive")
                         .onClick(() => {
                             this.addFilesToStash(selectedFiles);
                         });
@@ -1490,7 +1526,7 @@ export class GridView extends ItemView {
                 (item as any).setWarning(true);
                 item
                     .setTitle(t('delete_note'))
-                    .setIcon('trash')
+                    .setIcon("trash")
                     .onClick(async () => {
                         if (selectedFiles.length > 1) {
                             // 刪除多個檔案
