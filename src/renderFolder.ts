@@ -3,9 +3,11 @@ import { GridView } from './GridView';
 import { isFolderIgnored } from './fileUtils';
 import { extractObsidianPathsFromDT } from './dragUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
-import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
+import { showFolderRenameModal } from './modal/folderRenameModal';
 import { t } from './translations';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './createItemUtils';
+import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
 
 export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
@@ -239,6 +241,50 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                             .setIcon('grid')
                             .onClick(() => {
                                 openFolderInNewView(gridView, folder.path);
+                            });
+                    });
+                    menu.addSeparator();
+
+                    // 新增筆記相關選項
+                    menu.addItem((item) => {
+                        item.setTitle(t('new_note'))
+                            .setIcon('square-pen')
+                            .onClick(async () => {
+                                await createNewNote(gridView.app, folder.path);
+                            });
+                    });
+                    menu.addItem((item) => {
+                        item.setTitle(t('new_folder'))
+                            .setIcon('folder-plus')
+                            .onClick(async () => {
+                                await createNewFolder(gridView.app, folder.path);
+                                // 重新渲染視圖
+                                requestAnimationFrame(() => {
+                                    gridView.render();
+                                });
+                            });
+                    });
+                    menu.addItem((item) => {
+                        item.setTitle(t('new_canvas'))
+                            .setIcon('layout-dashboard')
+                            .onClick(async () => {
+                                await createNewCanvas(gridView.app, folder.path);
+                            });
+                    });
+                    menu.addItem((item) => {
+                        item.setTitle(t('new_base'))
+                            .setIcon('database')
+                            .onClick(async () => {
+                                await createNewBase(gridView.app, folder.path);
+                            });
+                    });
+                    menu.addItem((item) => {
+                        item.setTitle(t('new_shortcut'))
+                            .setIcon('link')
+                            .onClick(async () => {
+                                new ShortcutSelectionModal(gridView.app, gridView.plugin, async (option) => {
+                                    await createShortcut(gridView.app, folder.path, option);
+                                }).open();
                             });
                     });
                     menu.addSeparator();

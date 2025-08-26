@@ -1,4 +1,4 @@
-import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, Notice } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './fileUtils';
@@ -9,6 +9,8 @@ import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { MediaModal } from './modal/mediaModal';
+import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './createItemUtils';
 import { t } from './translations';
 
 // 探索器視圖類型常數
@@ -847,12 +849,15 @@ export class ExplorerView extends ItemView {
         if (!foldersExpanded) foldersChildren.addClass('is-collapsed');
 
         foldersHeader.addEventListener('click', async (evt) => {
+            // 判斷點擊的是切換箭頭、資料夾名稱還是空白區域
             if ((evt.target as HTMLElement).closest('.ge-explorer-folder-toggle')) {
+                // 點擊箭頭：只展開/收合
                 const newExpanded = !this.isExpanded(foldersGroupKey);
                 this.setExpanded(foldersGroupKey, newExpanded);
                 setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
                 foldersChildren.toggleClass('is-collapsed', !newExpanded);
-            } else {
+            } else if ((evt.target as HTMLElement).closest('.ge-explorer-folder-name')) {
+                // 點擊資料夾名稱：可能展開/收合，也可能開啟 GridView
                 // Ctrl/Meta + 點擊：在新的 GridView 分頁中開啟
                 if (evt.ctrlKey || evt.metaKey) {
                     this.openFolderInNewView(rootPath);
@@ -877,6 +882,12 @@ export class ExplorerView extends ItemView {
                 const root = this.app.vault.getRoot();
                 const view = await this.plugin.activateView();
                 if (view instanceof GridView) await view.setSource('folder', (root as any).path ?? '/');
+            } else {
+                // 點擊空白區域：展開/收合
+                const newExpanded = !this.isExpanded(foldersGroupKey);
+                this.setExpanded(foldersGroupKey, newExpanded);
+                setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
+                foldersChildren.toggleClass('is-collapsed', !newExpanded);
             }
         });
 
@@ -965,6 +976,11 @@ export class ExplorerView extends ItemView {
         this.highlightActiveFolder(folder, header);
         this.attachDropTarget(header, folder.path);
 
+        // 如果資料夾沒有可見的子目錄，添加 ge-no-children 類別
+        if (!this.hasVisibleChildren(folder)) {
+            header.addClass('ge-no-children');
+        }
+
         return header;
     }
 
@@ -1050,7 +1066,7 @@ export class ExplorerView extends ItemView {
 
     /**
      * 處理資料夾的點擊事件
-     * 區分點擊切換箭頭和點擊資料夾名稱的不同行為
+     * 區分點擊切換箭頭、資料夾名稱和空白區域的不同行為
      * @param evt 點擊事件
      * @param folder 被點擊的資料夾
      * @param header 資料夾標頭元素
@@ -1059,13 +1075,24 @@ export class ExplorerView extends ItemView {
     private handleFolderClick(evt: Event, folder: TFolder, header: HTMLElement, childrenContainer: HTMLElement) {
         const toggle = header.querySelector('.ge-explorer-folder-toggle') as HTMLElement;
 
-        // 判斷點擊的是切換箭頭還是資料夾名稱
+        // 判斷點擊的是切換箭頭、資料夾名稱還是空白區域
         if ((evt.target as HTMLElement).closest('.ge-explorer-folder-toggle')) {
             // 點擊箭頭：只展開/收合，不開啟 GridView
             this.handleToggleClick(folder, toggle, childrenContainer);
-        } else {
+        } else if ((evt.target as HTMLElement).closest('.ge-explorer-folder-name')) {
             // 點擊資料夾名稱：可能展開/收合，也可能開啟 GridView
             this.handleFolderNameClick(evt as MouseEvent, folder, header, toggle, childrenContainer);
+        } else {
+            // 點擊空白區域：如果沒有子資料夾且未選取則開啟 GridView，已選取則無作用；有子資料夾則展開/收合
+            const isActive = header.hasClass('is-active');
+            if (!this.hasVisibleChildren(folder)) {
+                if (!isActive) {
+                    this.openFolderInGrid(folder.path);
+                }
+                // 如果已選取且沒有子資料夾，則不做任何動作
+            } else {
+                this.handleToggleClick(folder, toggle, childrenContainer);
+            }
         }
     }
 
@@ -1782,10 +1809,72 @@ export class ExplorerView extends ItemView {
         });
         menu.addSeparator();
 
+        // 添加新增筆記相關選項
+        this.addNewItemMenuItems(menu, folder);
+        menu.addSeparator();
+
         this.addFolderNoteMenuItems(menu, folder);
         menu.addSeparator();
         this.addFolderManagementMenuItems(menu, folder);
     }
+
+    /**
+     * 添加新增項目的右鍵選單項目
+     * @param menu 右鍵選單
+     * @param folder 資料夾
+     */
+    private addNewItemMenuItems(menu: Menu, folder: TFolder) {
+        // 新增筆記
+        menu.addItem((item) => {
+            item.setTitle(t('new_note'))
+                .setIcon('square-pen')
+                .onClick(async () => {
+                    await createNewNote(this.app, folder.path);
+                });
+        });
+
+        // 新增資料夾
+        menu.addItem((item) => {
+            item.setTitle(t('new_folder'))
+                .setIcon('folder')
+                .onClick(async () => {
+                    await createNewFolder(this.app, folder.path, () => {
+                        this.scheduleRender();
+                    });
+                });
+        });
+
+        // 新增畫布
+        menu.addItem((item) => {
+            item.setTitle(t('new_canvas'))
+                .setIcon('layout-dashboard')
+                .onClick(async () => {
+                    await createNewCanvas(this.app, folder.path);
+                });
+        });
+
+        // 新增 base
+        menu.addItem((item) => {
+            item.setTitle(t('new_base'))
+                .setIcon('layout-dashboard')
+                .onClick(async () => {
+                    await createNewBase(this.app, folder.path);
+                });
+        });
+
+        // 新增捷徑
+        menu.addItem((item) => {
+            item.setTitle(t('new_shortcut'))
+                .setIcon('shuffle')
+                .onClick(async () => {
+                    const modal = new ShortcutSelectionModal(this.app, this.plugin, async (option) => {
+                        await createShortcut(this.app, folder.path, option);
+                    });
+                    modal.open();
+                });
+        });
+    }
+
 
     /**
      * 添加資料夾筆記的右鍵選單項目

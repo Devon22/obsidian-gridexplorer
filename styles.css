@@ -2202,6 +2202,38 @@ a.ge-current-folder:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
+    padding: 2px 4px 2px 0;
+    border-radius: var(--radius-s);
+    transition: background-color 0.15s ease;
+}
+
+/* 只有有子目錄的資料夾名稱才顯示懸停效果 */
+.ge-explorer-folder-header:not(.ge-no-children) .ge-explorer-folder-name:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-accent);
+}
+
+/* 沒有子目錄的資料夾名稱不顯示特殊游標和懸停效果 */
+.ge-explorer-folder-header.ge-no-children .ge-explorer-folder-name {
+    padding: 0;
+}
+
+.ge-explorer-folder-header.ge-no-children .ge-explorer-folder-name:hover {
+    background-color: transparent !important;
+    color: var(--text-normal) !important;
+}
+
+/* 模式項目和暫存區項目的名稱也不顯示特殊懸停效果 */
+.ge-explorer-mode-item .ge-explorer-folder-name,
+.ge-explorer-stash-item .ge-explorer-folder-name {
+    padding: 0;
+}
+
+.ge-explorer-mode-item .ge-explorer-folder-name:hover,
+.ge-explorer-stash-item .ge-explorer-folder-name:hover {
+    background-color: transparent !important;
+    color: var(--text-normal) !important;
 }
 
 .ge-explorer-folder-children {

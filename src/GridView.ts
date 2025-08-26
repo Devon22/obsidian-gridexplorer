@@ -61,6 +61,7 @@ export class GridView extends ItemView {
     renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
     isShowingNote: boolean = false; // 是否正在顯示筆記
     noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
+    eventCleanupFunctions: (() => void)[] = []; // 存儲事件清理函數
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -305,6 +306,23 @@ export class GridView extends ItemView {
         await this.render();
     }
 
+    // 清理事件監聽器
+    onunload() {
+        // 清理所有事件監聽器
+        this.eventCleanupFunctions.forEach(cleanup => {
+            try {
+                cleanup();
+            } catch (error) {
+                console.warn('GridExplorer: Error during event cleanup:', error);
+            }
+        });
+        this.eventCleanupFunctions = [];
+        
+        // 清理檔案監聽器（FileWatcher 的事件監聽器會在插件卸載時自動清理）
+        
+        super.onunload();
+    }
+
     // 渲染網格
     async render() {
 
@@ -315,6 +333,16 @@ export class GridView extends ItemView {
             selectedFilePath = selectedItem.dataset.filePath || null;
         }
 
+        // 清理之前的事件監聽器
+        this.eventCleanupFunctions.forEach(cleanup => {
+            try {
+                cleanup();
+            } catch (error) {
+                console.warn('GridExplorer: Error during event cleanup:', error);
+            }
+        });
+        this.eventCleanupFunctions = [];
+        
         // 清空整個容器
         this.containerEl.empty();
 
@@ -1207,9 +1235,11 @@ export class GridView extends ItemView {
         if (Platform.isDesktop && file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
             let triggeredInHover = false;
             let isHovering = false;
+            let isMouseDown = false; // 追蹤滑鼠按下狀態
+            let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 
             const trigger = () => {
-                if (triggeredInHover) return;
+                if (triggeredInHover || isMouseDown) return; // 如果滑鼠按下則不觸發
                 triggeredInHover = true;
                 if (!this.openShortcutFile(file)) {
                     this.showNoteInGrid(file);
@@ -1218,25 +1248,66 @@ export class GridView extends ItemView {
 
             const onKeyDown = (e: KeyboardEvent) => {
                 // 只有在滑鼠確實懸停在此項目上且按下 Ctrl 時才觸發
-                if (isHovering && e.ctrlKey) {
-                    trigger();
-                    e.preventDefault();
-                    e.stopPropagation();
+                // 且滑鼠沒有按下（避免干擾 Ctrl+click）
+                if (isHovering && e.ctrlKey && !isMouseDown) {
+                    // 短暫延遲以確保不是 Ctrl+click 操作
+                    setTimeout(() => {
+                        if (isHovering && !triggeredInHover && !isMouseDown) {
+                            trigger();
+                        }
+                    }, 300);
                 }
+            };
+
+            const onMouseDown = () => {
+                isMouseDown = true;
+                triggeredInHover = true; // 防止在點擊過程中觸發 hover 功能
+            };
+
+            const onMouseUp = () => {
+                isMouseDown = false;
+                // 重置觸發狀態，但稍微延遲以避免立即重新觸發
+                setTimeout(() => {
+                    if (isHovering) {
+                        triggeredInHover = false;
+                    }
+                }, 50);
             };
 
             const onMouseEnter = () => {
                 triggeredInHover = false;
                 isHovering = true;
-                document.addEventListener('keydown', onKeyDown, { capture: true });
+                if (!keydownListener) {
+                    keydownListener = onKeyDown;
+                    document.addEventListener('keydown', keydownListener, { capture: true });
+                }
             };
+            
             const onMouseLeave = () => {
                 isHovering = false;
-                document.removeEventListener('keydown', onKeyDown, { capture: true } as any);
+                isMouseDown = false;
+                if (keydownListener) {
+                    document.removeEventListener('keydown', keydownListener, { capture: true });
+                    keydownListener = null;
+                }
                 triggeredInHover = false;
             };
+            
             fileEl.addEventListener('mouseenter', onMouseEnter);
             fileEl.addEventListener('mouseleave', onMouseLeave);
+            fileEl.addEventListener('mousedown', onMouseDown);
+            fileEl.addEventListener('mouseup', onMouseUp);
+            
+            // 添加清理函數到數組中
+            this.eventCleanupFunctions.push(() => {
+                if (keydownListener) {
+                    document.removeEventListener('keydown', keydownListener, { capture: true });
+                }
+                fileEl.removeEventListener('mouseenter', onMouseEnter);
+                fileEl.removeEventListener('mouseleave', onMouseLeave);
+                fileEl.removeEventListener('mousedown', onMouseDown);
+                fileEl.removeEventListener('mouseup', onMouseUp);
+            });
         }
 
         // 點擊時開啟檔案

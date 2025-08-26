@@ -4,6 +4,7 @@ import { EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showSearchModal } from './modal/searchModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut as createShortcutUtil } from './createItemUtils';
 import { t } from './translations';
 
 export function renderHeaderButton(gridView: GridView) {
@@ -389,25 +390,7 @@ export function renderHeaderButton(gridView: GridView) {
                 .setTitle(t('new_note'))
                 .setIcon('square-pen')
                 .onClick(async () => {
-                    let newFileName = `${t('untitled')}.md`;
-                    let newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-
-                    // 檢查檔案是否已存在，如果存在則遞增編號
-                    let counter = 1;
-                    while (gridView.app.vault.getAbstractFileByPath(newFilePath)) {
-                        newFileName = `${t('untitled')} ${counter}.md`;
-                        newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-                        counter++;
-                    }
-
-                    try {
-                        // 建立新筆記
-                        const newFile = await gridView.app.vault.create(newFilePath, '');
-                        // 開啟新筆記
-                        await gridView.app.workspace.getLeaf().openFile(newFile);
-                    } catch (error) {
-                        console.error('An error occurred while creating a new note:', error);
-                    }
+                    await createNewNote(gridView.app, gridView.sourcePath);
                 });
         });
         // 新增資料夾
@@ -415,27 +398,11 @@ export function renderHeaderButton(gridView: GridView) {
             item.setTitle(t('new_folder'))
             .setIcon('folder')
             .onClick(async () => {
-                let newFolderName = `${t('untitled')}`;
-                let newFolderPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFolderName : `${gridView.sourcePath}/${newFolderName}`;
-                
-                // 檢查資料夾是否已存在，如果存在則遞增編號
-                let counter = 1;
-                while (gridView.app.vault.getAbstractFileByPath(newFolderPath)) {
-                    newFolderName = `${t('untitled')} ${counter}`;
-                    newFolderPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFolderName : `${gridView.sourcePath}/${newFolderName}`;
-                    counter++;
-                }
-                
-                try {
-                    // 建立新資料夾
-                    await gridView.app.vault.createFolder(newFolderPath);
-                    // 重新渲染視圖
+                await createNewFolder(gridView.app, gridView.sourcePath, () => {
                     requestAnimationFrame(() => {
                         gridView.render();
                     });
-                } catch (error) {
-                    console.error('An error occurred while creating a new folder:', error);
-                }
+                });
             });
         });
         // 新增畫布
@@ -443,25 +410,7 @@ export function renderHeaderButton(gridView: GridView) {
             item.setTitle(t('new_canvas'))
             .setIcon('layout-dashboard')
             .onClick(async () => {
-                let newFileName = `${t('untitled')}.canvas`;
-                    let newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-
-                    // 檢查檔案是否已存在，如果存在則遞增編號
-                    let counter = 1;
-                    while (gridView.app.vault.getAbstractFileByPath(newFilePath)) {
-                        newFileName = `${t('untitled')} ${counter}.canvas`;
-                        newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-                        counter++;
-                    }
-
-                    try {
-                        // 建立新筆記
-                        const newFile = await gridView.app.vault.create(newFilePath, '');
-                        // 開啟新筆記
-                        await gridView.app.workspace.getLeaf().openFile(newFile);
-                    } catch (error) {
-                        console.error('An error occurred while creating a new canvas:', error);
-                    }
+                await createNewCanvas(gridView.app, gridView.sourcePath);
             });
         });
         // 新增 base
@@ -469,25 +418,7 @@ export function renderHeaderButton(gridView: GridView) {
             item.setTitle(t('new_base'))
             .setIcon('layout-dashboard')
             .onClick(async () => {
-                let newFileName = `${t('untitled')}.base`;
-                let newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-                
-                // 檢查檔案是否已存在，如果存在則遞增編號
-                let counter = 1;
-                while (gridView.app.vault.getAbstractFileByPath(newFilePath)) {
-                    newFileName = `${t('untitled')} ${counter}.base`;
-                    newFilePath = !gridView.sourcePath || gridView.sourcePath === '/' ? newFileName : `${gridView.sourcePath}/${newFileName}`;
-                    counter++;
-                }
-                
-                try {
-                    // 建立新筆記
-                    const newFile = await gridView.app.vault.create(newFilePath, '');
-                    // 開啟新筆記
-                    await gridView.app.workspace.getLeaf().openFile(newFile);
-                } catch (error) {
-                    console.error('An error occurred while creating a new base:', error);
-                }
+                await createNewBase(gridView.app, gridView.sourcePath);
             });
         });
         // 新增捷徑
@@ -496,7 +427,7 @@ export function renderHeaderButton(gridView: GridView) {
             .setIcon('shuffle')
             .onClick(async () => {
                 const modal = new ShortcutSelectionModal(gridView.app, gridView.plugin, async (option) => {
-                    await createShortcut(gridView, option);
+                    await createShortcutUtil(gridView.app, gridView.sourcePath, option);
                 });
                 modal.open();
             });
@@ -719,166 +650,4 @@ export function renderHeaderButton(gridView: GridView) {
             menu.showAtMouseEvent(event);
         }
     });
-}
-
-// 將 URI 轉換為合適的檔名
-function generateFilenameFromUri(uri: string): string {
-    try {
-        // 處理 obsidian:// 協議
-        if (uri.startsWith('obsidian://')) {
-            const match = uri.match(/obsidian:\/\/([^?]+)/);
-            let vaultName = '';
-            
-            // 嘗試提取 vault 參數
-            const vaultMatch = uri.match(/[?&]vault=([^&]+)/);
-            if (vaultMatch) {
-                vaultName = decodeURIComponent(vaultMatch[1]);
-                // 清理 vault 名稱，移除不適合檔名的字符
-                vaultName = vaultName.replace(/[<>:"/\\|?*]/g, '_');
-            }
-            
-            if (match) {
-                const action = match[1];
-                const vaultSuffix = vaultName ? ` (${vaultName})` : '';
-                
-                // 根據不同的 obsidian 動作生成檔名
-                switch (action) {
-                    case 'open':
-                        return `🌐 Obsidian Open${vaultSuffix}`;
-                    case 'new':
-                        return `🌐 Obsidian New${vaultSuffix}`;
-                    case 'search':
-                        return `🌐 Obsidian Search${vaultSuffix}`;
-                    case 'hook-get-address':
-                        return `🌐 Obsidian Hook${vaultSuffix}`;
-                    default:
-                        return `🌐 Obsidian ${action}${vaultSuffix}`;
-                }
-            }
-            return vaultName ? `🌐 Obsidian Link (${vaultName})` : '🌐 Obsidian Link';
-        }
-        
-        // 處理 file:// 協議
-        if (uri.startsWith('file://')) {
-            const filename = uri.split('/').pop() || 'Local File';
-            return `🌐 ${filename}`;
-        }
-        
-        // 處理 http/https 協議
-        if (uri.startsWith('http://') || uri.startsWith('https://')) {
-            const url = new URL(uri);
-            let domain = url.hostname;
-            
-            // 移除 www. 前綴
-            if (domain.startsWith('www.')) {
-                domain = domain.substring(4);
-            }
-            
-            // 如果有路徑，嘗試提取有意義的部分
-            if (url.pathname && url.pathname !== '/') {
-                const pathParts = url.pathname.split('/').filter(part => part.length > 0);
-                if (pathParts.length > 0) {
-                    const lastPart = pathParts[pathParts.length - 1];
-                    // 如果最後一部分看起來像檔名或有意義的標識符
-                    if (lastPart.length < 50 && !lastPart.includes('?')) {
-                        return `🌐 ${domain} - ${lastPart}`;
-                    }
-                }
-            }
-            
-            return `🌐 ${domain}`;
-        }
-        
-        // 其他協議的處理
-        const protocolMatch = uri.match(/^([^:]+):/);
-        if (protocolMatch) {
-            const protocol = protocolMatch[1].toUpperCase();
-            return `🌐 ${protocol} Link`;
-        }
-        
-        // 如果不是標準 URI，直接使用前 30 個字符
-        const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
-        return `🌐 ${cleanUri}`;
-        
-    } catch (error) {
-        // 如果解析失敗，使用安全的預設名稱
-        const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
-        return `🌐 ${cleanUri}`;
-    }
-}
-
-// 創建捷徑檔案
-async function createShortcut(
-    gridView: GridView, 
-    option: { 
-        type: 'mode' | 'folder' | 'file' | 'search' | 'uri'; 
-        value: string; 
-        display: string;
-        searchOptions?: {
-            searchCurrentLocationOnly: boolean;
-            searchFilesNameOnly: boolean;
-            searchMediaFiles: boolean;
-        };
-    }) {
-    try {
-        // 生成不重複的檔案名稱
-        let counter = 0;
-        let shortcutName: string;
-        
-        // 對於 URI 類型，使用特殊的檔名生成邏輯
-        if (option.type === 'uri') {
-            shortcutName = generateFilenameFromUri(option.value);
-        } else {
-            shortcutName = `${option.display}`;
-        }
-
-        let newName = `${shortcutName}.md`;
-        let newPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newName : `${gridView.sourcePath}/${newName}`;
-        while (gridView.app.vault.getAbstractFileByPath(newPath)) {
-            counter++;
-            const baseName = option.type === 'uri' ? generateFilenameFromUri(option.value) : option.display;
-            shortcutName = `${baseName} ${counter}`;
-            newName = `${shortcutName}.md`;
-            newPath = !gridView.sourcePath || gridView.sourcePath === '/' ? newName : `${gridView.sourcePath}/${newName}`;
-        }
-
-        // 創建新檔案
-        const newFile = await gridView.app.vault.create(newPath, '');
-
-        // 使用 processFrontMatter 來更新 frontmatter
-        await gridView.app.fileManager.processFrontMatter(newFile, (frontmatter: any) => {                
-            if (option.type === 'mode') {
-                frontmatter.type = 'mode';
-                frontmatter.redirect = option.value;
-            } else if (option.type === 'folder') {
-                frontmatter.type = 'folder';
-                frontmatter.redirect = option.value;
-            } else if (option.type === 'file') {
-                const link = gridView.app.fileManager.generateMarkdownLink(
-                    gridView.app.vault.getAbstractFileByPath(option.value) as TFile, 
-                    ""
-                );
-                frontmatter.type = "file";
-                frontmatter.redirect = link;
-            } else if (option.type === 'search') {
-                frontmatter.type = 'search';
-                frontmatter.redirect = option.value;
-                // 添加搜尋選項到 frontmatter
-                if (option.searchOptions) {
-                    frontmatter.searchCurrentLocationOnly = option.searchOptions.searchCurrentLocationOnly;
-                    frontmatter.searchFilesNameOnly = option.searchOptions.searchFilesNameOnly;
-                    frontmatter.searchMediaFiles = option.searchOptions.searchMediaFiles;
-                }
-            } else if (option.type === 'uri') {
-                frontmatter.type = 'uri';
-                frontmatter.redirect = option.value;
-            }
-        });
-
-        new Notice(`${t('shortcut_created')}: ${shortcutName}`);
-
-    } catch (error) {
-        console.error('Create shortcut error', error);
-        new Notice(t('failed_to_create_shortcut'));
-    }
 }
