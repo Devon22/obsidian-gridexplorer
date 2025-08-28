@@ -1249,10 +1249,13 @@ export class GridView extends ItemView {
             const onKeyDown = (e: KeyboardEvent) => {
                 // 只有在滑鼠確實懸停在此項目上且按下 Ctrl 時才觸發
                 // 且滑鼠沒有按下（避免干擾 Ctrl+click）
-                if (isHovering && e.ctrlKey && !isMouseDown) {
+                // 並且當前 GridView 必須是活動視圖
+                if (isHovering && e.ctrlKey && !isMouseDown && 
+                    this.app.workspace.getActiveViewOfType(GridView) === this) {
                     // 短暫延遲以確保不是 Ctrl+click 操作
                     setTimeout(() => {
-                        if (isHovering && !triggeredInHover && !isMouseDown) {
+                        if (isHovering && !triggeredInHover && !isMouseDown &&
+                            this.app.workspace.getActiveViewOfType(GridView) === this) {
                             trigger();
                         }
                     }, 300);
