@@ -744,7 +744,6 @@ span.ge-mode-title {
     border-radius: 6px;
     background-color: var(--background-modifier-hover);
     text-decoration: none;
-    border-color: var(--interactive-accent);
 }
 
 .ge-settings-gear {

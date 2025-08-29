@@ -1,7 +1,7 @@
 import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
-import { updateCustomDocumentExtensions } from './fileUtils';
+import { updateCustomDocumentExtensions, isMediaFile } from './fileUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './settings';
@@ -249,9 +249,10 @@ export default class GridExplorerPlugin extends Plugin {
                         }
                     });
                     // 搜尋選取的筆記名稱
-                    const link = this.app.fileManager.generateMarkdownLink(file, "");
+                    const link = isMediaFile(file) ? file.name : this.app.fileManager.generateMarkdownLink(file, "");
                     const truncatedText = file.basename.length > 8 ? file.basename.substring(0, 8) + '...' : file.basename;
-                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', ` [[${truncatedText}]]`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
+                    const displayText = isMediaFile(file) ? ` ${truncatedText}` : ` [[${truncatedText}]]`;
+                    const menuItemTitle = t('search_selection_in_grid_view').replace('...', displayText); // 假設翻譯中有...代表要替換的部分，或者直接格式化
                     menu.addItem(item => {
                         item
                             .setTitle(menuItemTitle)
@@ -391,10 +392,14 @@ export default class GridExplorerPlugin extends Plugin {
             }
         }, true); // 用 capture，可在其他 listener 前先吃到
 
+        
         // 攔截Breadcrumb導航點擊事件
         this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
             // 如果未啟用攔截Breadcrumb導航點擊事件，則跳過
             if (!this.settings.interceptBreadcrumbClicks) return;
+
+            //如果有按著Ctrl鍵，則跳過
+            if (evt.ctrlKey || evt.metaKey) return;
 
             const target = evt.target as HTMLElement;
             const breadcrumbEl = target.closest('.view-header-breadcrumb');
@@ -451,7 +456,7 @@ export default class GridExplorerPlugin extends Plugin {
                 await view.setSource('folder', folderPath, true, '');
             }
         }, true); // 使用 capture 階段以確保優先處理
-
+        
 
         // 設定 Canvas 拖曳處理
         this.setupCanvasDropHandlers();
