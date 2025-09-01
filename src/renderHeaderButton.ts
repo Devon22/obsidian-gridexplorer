@@ -460,48 +460,49 @@ export function renderHeaderButton(gridView: GridView) {
     });
     setIcon(searchButton, 'search');
     searchButton.addEventListener('click', () => {
-        showSearchModal(gridView.app, gridView, '', searchButton);
+        showSearchModal(gridView.app, gridView, gridView.searchQuery, searchButton);
     });
+    
 
     // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
-    if (gridView.searchQuery) {
-        searchButton.style.display = 'none';
-        const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
-        searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
+    // if (gridView.searchQuery) {
+    //     searchButton.style.display = 'none';
+    //     const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
+    //     searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
 
-        // 創建搜尋文字
-        const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
-        // 讓搜尋文字可點選
-        searchText.style.cursor = 'pointer';
-        searchText.addEventListener('click', () => {
-            showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);
-        });
+    //     // 創建搜尋文字
+    //     const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
+    //     // 讓搜尋文字可點選
+    //     searchText.style.cursor = 'pointer';
+    //     searchText.addEventListener('click', () => {
+    //         showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);
+    //     });
 
-        // 先保存開啟 Modal 時的原始狀態
-        const originalSearchQuery = gridView.searchQuery;
-        const originalsearchCurrentLocationOnly = gridView.searchCurrentLocationOnly;
-        const originalSearchFilesNameOnly = gridView.searchFilesNameOnly;
-        const originalSearchMediaFiles = gridView.searchMediaFiles;
+    //     // 先保存開啟 Modal 時的原始狀態
+    //     const originalSearchQuery = gridView.searchQuery;
+    //     const originalsearchCurrentLocationOnly = gridView.searchCurrentLocationOnly;
+    //     const originalSearchFilesNameOnly = gridView.searchFilesNameOnly;
+    //     const originalSearchMediaFiles = gridView.searchMediaFiles;
 
-        // 創建取消按鈕
-        const clearButton = searchTextContainer.createDiv('ge-clear-button');
-        setIcon(clearButton, 'x');
-        clearButton.addEventListener('click', (e) => {
-            e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
-            gridView.pushHistory(
-                gridView.sourceMode,
-                gridView.sourcePath,
-                originalSearchQuery,
-                originalsearchCurrentLocationOnly,
-                originalSearchFilesNameOnly,
-                originalSearchMediaFiles,
-            );
-            gridView.searchQuery = '';
-            gridView.clearSelection();
-            gridView.app.workspace.requestSaveLayout();
-            gridView.render();
-        });
-    }
+    //     // 創建取消按鈕
+    //     const clearButton = searchTextContainer.createDiv('ge-clear-button');
+    //     setIcon(clearButton, 'x');
+    //     clearButton.addEventListener('click', (e) => {
+    //         e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
+    //         gridView.pushHistory(
+    //             gridView.sourceMode,
+    //             gridView.sourcePath,
+    //             originalSearchQuery,
+    //             originalsearchCurrentLocationOnly,
+    //             originalSearchFilesNameOnly,
+    //             originalSearchMediaFiles,
+    //         );
+    //         gridView.searchQuery = '';
+    //         gridView.clearSelection();
+    //         gridView.app.workspace.requestSaveLayout();
+    //         gridView.render();
+    //     });
+    // }
 
     // 更多選項按鈕
     const menu = new Menu();
@@ -636,13 +637,11 @@ export function renderHeaderButton(gridView: GridView) {
             });
     });
     
-    if (gridView.searchQuery === '') {
-        const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
-        setIcon(moreOptionsButton, 'ellipsis-vertical');
-        moreOptionsButton.addEventListener('click', (event) => {
-            menu.showAtMouseEvent(event);
-        });
-    } 
+    const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
+    setIcon(moreOptionsButton, 'ellipsis-vertical');
+    moreOptionsButton.addEventListener('click', (event) => {
+        menu.showAtMouseEvent(event);
+    });
 
     headerButtonsDiv.addEventListener('contextmenu', (event) => {
         if (event.target === headerButtonsDiv) {

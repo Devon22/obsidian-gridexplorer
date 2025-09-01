@@ -6,6 +6,7 @@ import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { CustomModeModal } from './modal/customModeModal';
+import { showSearchModal } from './modal/searchModal';
 import { t } from './translations';
 
 export function renderModePath(gridView: GridView) {
@@ -81,9 +82,9 @@ export function renderModePath(gridView: GridView) {
         }
     });
 
-    // 顯示目前資料夾及完整路徑
+    // 顯示目前資料夾及完整路徑（僅在無搜尋字串時顯示）
     if (gridView.sourceMode === 'folder' &&
-        (gridView.searchQuery === '' || (gridView.searchQuery && gridView.searchCurrentLocationOnly))) {
+        gridView.searchQuery === '') {
 
         // 分割路徑
         const pathParts = gridView.sourcePath.split('/').filter(part => part.trim() !== '');
@@ -785,6 +786,46 @@ export function renderModePath(gridView: GridView) {
         modenameContainer.createEl('span', {
             text: `🔍 ${t('global_search')}`,
             cls: 'ge-mode-title'
+        });
+    }
+
+    // 顯示搜尋字串
+    if (gridView.searchQuery) {
+        // 在模式名稱區塊右側/下方顯示搜尋文字與清除按鈕
+        const searchTextContainer = modenameContainer.createDiv('ge-search-text-container');
+        searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
+
+        // 建立可點選的搜尋文字
+        const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
+        searchText.style.cursor = 'pointer';
+        searchText.addEventListener('click', () => {
+            // 以文字元素作為定位點開啟搜尋 modal（popup 樣式）
+            showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);
+        });
+
+        // 保存開啟前的原始狀態（用於 pushHistory）
+        const originalSearchQuery = gridView.searchQuery;
+        const originalsearchCurrentLocationOnly = gridView.searchCurrentLocationOnly;
+        const originalSearchFilesNameOnly = gridView.searchFilesNameOnly;
+        const originalSearchMediaFiles = gridView.searchMediaFiles;
+
+        // 建立清除按鈕
+        const clearButton = searchTextContainer.createDiv('ge-clear-button');
+        setIcon(clearButton, 'x');
+        clearButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            gridView.pushHistory(
+                gridView.sourceMode,
+                gridView.sourcePath,
+                originalSearchQuery,
+                originalsearchCurrentLocationOnly,
+                originalSearchFilesNameOnly,
+                originalSearchMediaFiles,
+            );
+            gridView.searchQuery = '';
+            gridView.clearSelection();
+            gridView.app.workspace.requestSaveLayout();
+            gridView.render();
         });
     }
 }
