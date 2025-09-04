@@ -1,4 +1,4 @@
-import { Menu, setIcon, TFile, Notice } from 'obsidian';
+import { Menu, setIcon } from 'obsidian';
 import { GridView } from './GridView';
 import { EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';

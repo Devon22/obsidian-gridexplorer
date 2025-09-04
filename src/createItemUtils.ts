@@ -1,5 +1,6 @@
 import { App, TFile, Notice } from 'obsidian';
 import { t } from './translations';
+import { showNameInputModal } from './modal/folderRenameModal';
 
 /**
  * 創建新筆記的共用函數
@@ -35,27 +36,39 @@ export async function createNewNote(app: App, folderPath: string) {
  * @param onSuccess 成功後的回調函數
  */
 export async function createNewFolder(app: App, folderPath: string, onSuccess?: () => void) {
-    let newFolderName = `${t('untitled')}`;
-    let newFolderPath = !folderPath || folderPath === '/' ? newFolderName : `${folderPath}/${newFolderName}`;
-    
-    // 檢查資料夾是否已存在，如果存在則遞增編號
-    let counter = 1;
-    while (app.vault.getAbstractFileByPath(newFolderPath)) {
-        newFolderName = `${t('untitled')} ${counter}`;
-        newFolderPath = !folderPath || folderPath === '/' ? newFolderName : `${folderPath}/${newFolderName}`;
-        counter++;
-    }
-    
-    try {
-        // 建立新資料夾
-        await app.vault.createFolder(newFolderPath);
-        // 執行成功回調
-        if (onSuccess) {
-            onSuccess();
-        }
-    } catch (error) {
-        console.error('An error occurred while creating a new folder:', error);
-    }
+    // 預設名稱
+    const defaultName = `${t('untitled')}`;
+
+    // 先彈出名稱輸入框
+    showNameInputModal(app, {
+        title: t('new_folder'),
+        description: t('enter_new_folder_name'),
+        defaultValue: defaultName,
+        onSubmit: async (inputName: string) => {
+            let baseName = (inputName && inputName.trim().length > 0) ? inputName.trim() : defaultName;
+            let newFolderName = baseName;
+            let newFolderPath = !folderPath || folderPath === '/' ? newFolderName : `${folderPath}/${newFolderName}`;
+
+            // 檢查資料夾是否已存在，如果存在則遞增編號
+            let counter = 1;
+            while (app.vault.getAbstractFileByPath(newFolderPath)) {
+                newFolderName = `${baseName} ${counter}`;
+                newFolderPath = !folderPath || folderPath === '/' ? newFolderName : `${folderPath}/${newFolderName}`;
+                counter++;
+            }
+
+            try {
+                // 建立新資料夾
+                await app.vault.createFolder(newFolderPath);
+                // 執行成功回調
+                if (onSuccess) {
+                    onSuccess();
+                }
+            } catch (error) {
+                console.error('An error occurred while creating a new folder:', error);
+            }
+        },
+    });
 }
 
 /**

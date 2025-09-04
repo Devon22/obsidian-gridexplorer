@@ -7,6 +7,94 @@ export function showFolderRenameModal(app: App, plugin: GridExplorerPlugin, fold
     new FolderRenameModal(app, plugin, folder, gridView).open();
 }
 
+// A generic name input modal that can be reused (e.g., for creating folders)
+export class NameInputModal extends Modal {
+    titleText: string;
+    descText?: string;
+    confirmText: string;
+    cancelText: string;
+    value: string;
+    onSubmit: (value: string) => void;
+
+    constructor(app: App, options: {
+        title: string;
+        description?: string;
+        defaultValue?: string;
+        confirmText?: string;
+        cancelText?: string;
+        onSubmit: (value: string) => void;
+    }) {
+        super(app);
+        this.titleText = options.title;
+        this.descText = options.description;
+        this.confirmText = options.confirmText ?? t('confirm');
+        this.cancelText = options.cancelText ?? t('cancel');
+        this.value = options.defaultValue ?? '';
+        this.onSubmit = options.onSubmit;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+
+        new Setting(contentEl)
+            .setName(this.titleText)
+            .setDesc(this.descText ?? '')
+            .addText(text => {
+                text
+                    .setValue(this.value)
+                    .onChange(value => {
+                        this.value = value;
+                    });
+
+                // Focus and select current value for quick edit
+                window.setTimeout(() => {
+                    text.inputEl.focus();
+                    text.inputEl.select();
+                });
+
+                // Submit on Enter key
+                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.value = text.getValue();
+                        this.onSubmit(this.value.trim());
+                        this.close();
+                    }
+                });
+            });
+
+        new Setting(contentEl)
+            .addButton(button => {
+                button
+                    .setButtonText(this.confirmText)
+                    .setCta()
+                    .onClick(() => {
+                        this.onSubmit(this.value.trim());
+                        this.close();
+                    });
+            })
+            .addButton(button => {
+                button
+                    .setButtonText(this.cancelText)
+                    .onClick(() => {
+                        this.close();
+                    });
+            });
+    }
+}
+
+export function showNameInputModal(app: App, options: {
+    title: string;
+    description?: string;
+    defaultValue?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onSubmit: (value: string) => void;
+}) {
+    new NameInputModal(app, options).open();
+}
+
 export class FolderRenameModal extends Modal {
     plugin: GridExplorerPlugin;
     folder: TFolder;
@@ -34,6 +122,20 @@ export class FolderRenameModal extends Modal {
                     .onChange(value => {
                         this.newName = value;
                     });
+
+                window.setTimeout(() => {
+                    text.inputEl.focus();
+                    text.inputEl.select();
+                });
+
+                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.newName = text.getValue();
+                        this.renameFolder();
+                        this.close();
+                    }
+                });
             });
 
         new Setting(contentEl)

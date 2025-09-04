@@ -644,7 +644,7 @@ export const TRANSLATIONS: Translations = {
         'new_note': '新建笔记',
         'new_folder': '新建文件夹',
         'new_canvas': '新建画布',
-        'new_base': '新建 base',
+        'new_base': '新建数据库',
         'new_shortcut': '新建快捷方式',
         'delete_folder': '删除文件夹',
         'move_folder': '移动文件夹',
