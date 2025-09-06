@@ -83,6 +83,31 @@ export class GridView extends ItemView {
             this.fileWatcher.registerFileWatcher();
         }
 
+        // 在 window 層級以捕獲階段攔截 Alt+ArrowLeft，優先阻擋 Obsidian 內建快捷鍵
+        this.registerDomEvent(window, 'keydown', (event: KeyboardEvent) => {
+            if (event.key === 'ArrowLeft' && event.altKey) {
+                // 僅在本視圖為活動視圖時才處理
+                if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
+                // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
+                if (this.isShowingNote) return;
+                if (document.querySelector('.modal-container')) return;
+                // 僅在資料夾模式且不是根目錄時才後退
+                if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
+                    // 阻止內建快捷鍵與其他監聽器
+                    event.preventDefault();
+                    // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
+                    if (typeof (event as any).stopImmediatePropagation === 'function') {
+                        (event as any).stopImmediatePropagation();
+                    } else {
+                        event.stopPropagation();
+                    }
+                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
+                    this.setSource('folder', parentPath);
+                    this.clearSelection();
+                }
+            }
+        }, true);
+
         // 註冊鍵盤事件處理
         this.registerDomEvent(document, 'keydown', (event: KeyboardEvent) => {
             // 只有當 GridView 是活動視圖時才處理鍵盤事件
