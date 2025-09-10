@@ -105,6 +105,23 @@ export class GridView extends ItemView {
                     this.setSource('folder', parentPath);
                     this.clearSelection();
                 }
+            } else if (event.key === 'ArrowRight' && event.altKey) {
+                // Alt + 右鍵：若有選中項目則模擬點擊（例如開啟/預覽）
+                // 僅在本視圖為活動視圖時才處理
+                if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
+                // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
+                if (this.isShowingNote) return;
+                if (document.querySelector('.modal-container')) return;
+                if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this.gridItems.length) {
+                    // 阻止可能的其他快捷鍵或後續處理，避免重複觸發
+                    event.preventDefault();
+                    if (typeof (event as any).stopImmediatePropagation === 'function') {
+                        (event as any).stopImmediatePropagation();
+                    } else {
+                        event.stopPropagation();
+                    }
+                    this.gridItems[this.selectedItemIndex].click();
+                }
             }
         }, true);
 
