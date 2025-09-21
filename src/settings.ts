@@ -73,6 +73,7 @@ export interface GallerySettings {
     searchCurrentLocationOnly: boolean; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean; // 是否搜尋媒體檔案
+    explorerStashPaths: string[]; // ExplorerView 暫存區的檔案路徑列表（跨視圖持久化）
 }
 
 // 預設設定
@@ -137,6 +138,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     searchCurrentLocationOnly: false, // 預設搜尋所有筆記
     searchFilesNameOnly: false, // 預設不只搜尋筆記名稱
     searchMediaFiles: false, // 預設不搜尋媒體檔案
+    explorerStashPaths: [], // 預設暫存區為空
 };
 
 // 資料夾選擇器

@@ -110,6 +110,8 @@ export class ExplorerView extends ItemView {
         this.restoreExpandedPaths(state);
         this.restoreSearchQuery(state);
         this.restoreStashFiles(state);
+        // 若 state 未提供 stash 或為空，從設定補齊（避免 setState 在 onOpen 之後將暫存清空的情況）
+        this.loadStashFromSettingsIfNeeded();
         this.syncSearchInput();
         this.scheduleRender();
     }
@@ -139,9 +141,32 @@ export class ExplorerView extends ItemView {
                 .filter((p: unknown) => typeof p === 'string' && p)
                 .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
             this.stashFilePaths = Array.from(new Set(validPaths));
-        } else {
-            this.stashFilePaths = [];
+            // 將還原的暫存區同步回設定，確保下次新建視圖也能取得
+            this.persistStashToSettings();
         }
+    }
+
+    // 若當前暫存區為空，嘗試從設定載入（處理新建 ExplorerView 未觸發 setState 的情況）
+    private loadStashFromSettingsIfNeeded() {
+        try {
+            if (this.stashFilePaths.length > 0) return;
+            const paths = (this.plugin.settings as any)?.explorerStashPaths as unknown;
+            if (!Array.isArray(paths)) return;
+            const validPaths = paths
+                .filter((p: unknown) => typeof p === 'string' && p)
+                .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
+            this.stashFilePaths = Array.from(new Set(validPaths));
+        } catch {}
+    }
+
+    // 將目前的暫存清單寫回設定（去重）
+    private persistStashToSettings() {
+        try {
+            const unique = Array.from(new Set(this.stashFilePaths));
+            (this.plugin.settings as any).explorerStashPaths = unique;
+            // 保存但不觸發整體視圖更新，避免頻繁重繪
+            this.plugin.saveSettings(false);
+        } catch {}
     }
 
     // 同步搜尋輸入框狀態
@@ -155,6 +180,8 @@ export class ExplorerView extends ItemView {
 
     // 視圖開啟時初始化
     async onOpen(): Promise<void> {
+        // 從設定載入暫存區（若目前沒有透過 setState 還原）
+        this.loadStashFromSettingsIfNeeded();
         this.render();
         this.registerEventListeners();
     }
@@ -205,6 +232,7 @@ export class ExplorerView extends ItemView {
             if (file instanceof TFile) {
                 this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
                 this.app.workspace.requestSaveLayout();
+                this.persistStashToSettings();
             }
         }
         schedule();
@@ -218,6 +246,7 @@ export class ExplorerView extends ItemView {
             if (file instanceof TFile) {
                 this.stashFilePaths = this.stashFilePaths.map(p => p === oldPath ? newPath : p);
                 this.app.workspace.requestSaveLayout();
+                this.persistStashToSettings();
             }
         }
         schedule();
@@ -1340,9 +1369,13 @@ export class ExplorerView extends ItemView {
 
     // 清理無效的暫存檔案
     private cleanupStashFiles() {
+        const before = this.stashFilePaths.length;
         this.stashFilePaths = this.stashFilePaths.filter((p) =>
             this.app.vault.getAbstractFileByPath(p) instanceof TFile
         );
+        if (this.stashFilePaths.length !== before) {
+            this.persistStashToSettings();
+        }
     }
 
     // 渲染暫存項目
@@ -1631,6 +1664,7 @@ export class ExplorerView extends ItemView {
 
         this.stashFilePaths = newList;
         this.app.workspace.requestSaveLayout();
+        this.persistStashToSettings();
         this.scheduleRender();
     }
 
@@ -1745,6 +1779,7 @@ export class ExplorerView extends ItemView {
         }
         
         this.app.workspace.requestSaveLayout();
+        this.persistStashToSettings();
         this.scheduleRender();
     }
 
@@ -1752,6 +1787,7 @@ export class ExplorerView extends ItemView {
     private removeFromStash(path: string) {
         this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
         this.app.workspace.requestSaveLayout();
+        this.persistStashToSettings();
         this.scheduleRender();
     }
 
@@ -1759,6 +1795,7 @@ export class ExplorerView extends ItemView {
     private clearStash() {
         this.stashFilePaths = [];
         this.app.workspace.requestSaveLayout();
+        this.persistStashToSettings();
         this.scheduleRender();
     }
 
