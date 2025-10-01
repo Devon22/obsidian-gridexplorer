@@ -183,7 +183,11 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
                                 }
                             }
 
-                            matchesTags = tagTerms.every(tag => collectedTags.includes(tag));
+                            matchesTags = tagTerms.every(tag => 
+                                collectedTags.some(collectedTag => 
+                                    collectedTag === tag || collectedTag.startsWith(`${tag}/`)
+                                )
+                            );
                         }
                     }
                 }
