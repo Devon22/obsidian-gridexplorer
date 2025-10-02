@@ -587,6 +587,7 @@
     border-bottom: 1px solid var(--background-modifier-border);
     flex-shrink: 0;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .ge-header-buttons button {
@@ -600,6 +601,7 @@
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+    flex: 0 0 auto;
 }
 
 .ge-header-buttons button:disabled {
