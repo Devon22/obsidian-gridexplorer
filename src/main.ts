@@ -1,7 +1,7 @@
 import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
-import { updateCustomDocumentExtensions, isMediaFile } from './fileUtils';
+import { updateCustomDocumentExtensions, isMediaFile } from './utils/fileUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './settings';

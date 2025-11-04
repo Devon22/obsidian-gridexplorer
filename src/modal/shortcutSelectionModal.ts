@@ -1,7 +1,7 @@
 import { App, Modal, TFolder, TFile, FuzzySuggestModal } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { showSearchInputModal, showUriInputModal, SearchOptions } from './inputModal';
-import { isDocumentFile } from '../fileUtils';
+import { isDocumentFile } from '../utils/fileUtils';
 import { t } from '../translations';
 
 interface ShortcutOption {

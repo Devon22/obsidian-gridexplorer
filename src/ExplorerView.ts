@@ -1,16 +1,16 @@
 import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, Notice } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
-import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './fileUtils';
-import { extractObsidianPathsFromDT } from './dragUtils';
+import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile } from './utils/fileUtils';
+import { extractObsidianPathsFromDT } from './utils/dragUtils';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './utils/createItemUtils';
 import { CustomModeModal } from './modal/customModeModal';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
-import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { MediaModal } from './modal/mediaModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
-import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './createItemUtils';
+import { FloatingAudioPlayer } from './floatingAudioPlayer';
 import { t } from './translations';
 
 // 探索器視圖類型常數

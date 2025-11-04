@@ -480,6 +480,21 @@
     color: rgba(var(--color-pink-rgb), 0.7) !important;
 }
 
+/* 自訂 HEX 色值 Custom HEX Color */
+.ge-grid-item.ge-note-color-custom {
+    background-color: var(--ge-note-color-bg);
+    border-color: var(--ge-note-color-border);
+}
+
+.ge-note-color-custom-text {
+    color: var(--ge-note-color-text) !important;
+}
+
+.ge-grid-item.ge-folder-item.ge-folder-color-custom {
+    background-color: var(--ge-folder-color-bg);
+    border-color: var(--ge-folder-color-border);
+}
+
 /* 資料夾上的資料夾筆記按鈕 Folder Note Button */
 .ge-foldernote-button {
     color: var(--text-muted);
@@ -2505,3 +2520,9 @@ a.ge-current-folder:hover {
 .ge-explorer-stash-item .ge-explorer-folder-icon.ge-pdf { color: var(--color-orange); }
 .ge-explorer-stash-item .ge-explorer-folder-icon.ge-canvas { color: var(--color-green); }
 .ge-explorer-stash-item .ge-explorer-folder-icon.ge-base { color: var(--color-cyan); }
+
+/* 輸入錯誤樣式 Input Error Style */
+.ge-input-error {
+    border-color: var(--color-red) !important;
+    background-color: rgba(var(--color-red-rgb), 0.1) !important;
+}

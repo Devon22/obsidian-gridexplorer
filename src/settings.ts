@@ -70,6 +70,7 @@ export interface GallerySettings {
     quickAccessModeType: string; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
     showNoteInGrid: boolean; // 是否預設在 grid container 中顯示筆記（不需要按 Alt 鍵）
+    openNoteLayout: 'default' | 'newTab' | 'split' | 'newWindow'; // 開啟筆記的方式
     searchCurrentLocationOnly: boolean; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean; // 是否搜尋媒體檔案
@@ -135,6 +136,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     useQuickAccessAsNewTabMode: 'default',
     quickAccessModeType: 'all-files', // Default quick access view type
     showNoteInGrid: false, // 預設不在 grid container 中顯示筆記
+    openNoteLayout: 'default', // 預設開啟筆記的方式
     searchCurrentLocationOnly: false, // 預設搜尋所有筆記
     searchFilesNameOnly: false, // 預設不只搜尋筆記名稱
     searchMediaFiles: false, // 預設不搜尋媒體檔案
@@ -709,6 +711,23 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showNoteInGrid)
                     .onChange(async (value) => {
                         this.plugin.settings.showNoteInGrid = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 設定開啟筆記的方式
+        new Setting(containerEl)
+            .setName(t('open_note_layout'))
+            .setDesc(t('open_note_layout_desc'))
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('default', t('open_note_layout_default'))
+                    .addOption('newTab', t('open_note_layout_newTab'))
+                    .addOption('split', t('open_note_layout_split'))
+                    .addOption('newWindow', t('open_note_layout_newWindow'))
+                    .setValue(this.plugin.settings.openNoteLayout)
+                    .onChange(async (value: 'default' | 'newTab' | 'split' | 'newWindow') => {
+                        this.plugin.settings.openNoteLayout = value;
                         await this.plugin.saveSettings();
                     });
             });

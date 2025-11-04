@@ -5,9 +5,10 @@ import { renderModePath } from './renderModePath';
 import { renderFolder } from './renderFolder';
 import { renderFiles } from './renderFiles';
 import { handleKeyDown } from './handleKeyDown';
-import { isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './fileUtils';
+import { isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './utils/fileUtils';
 import { FileWatcher } from './fileWatcher';
-import { findFirstImageInNote } from './mediaUtils';
+import { findFirstImageInNote } from './utils/mediaUtils';
+import { isHexColor, hexToRgba } from './utils/colorUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { MediaModal } from './modal/mediaModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
@@ -28,6 +29,9 @@ interface FileRenderParams {
     shouldShowDateDividers: boolean;
     state: DividerState;
 }
+
+// 導入顏色輔助函數
+
 
 // 定義網格視圖
 export class GridView extends ItemView {
@@ -803,12 +807,26 @@ export class GridView extends ItemView {
                             if (frontMatterInfo.exists) {
                                 const colorValue = metadata?.color;
                                 if (colorValue) {
-                                    // 使用 CSS 類別來設置顏色
-                                    fileEl.addClass(`ge-note-color-${colorValue}`);
+                                    // 檢查是否為 HEX 色值
+                                    if (isHexColor(colorValue)) {
+                                        // 使用自訂 CSS 變數來設置 HEX 顏色
+                                        fileEl.addClass('ge-note-color-custom');
+                                        fileEl.style.setProperty('--ge-note-color-bg', hexToRgba(colorValue, 0.2));
+                                        fileEl.style.setProperty('--ge-note-color-border', hexToRgba(colorValue, 0.5));
+                                        
+                                        // 設置預覽內容文字顏色
+                                        if (pEl) {
+                                            pEl.addClass('ge-note-color-custom-text');
+                                            pEl.style.setProperty('--ge-note-color-text', hexToRgba(colorValue, 0.7));
+                                        }
+                                    } else {
+                                        // 使用預設的 CSS 類別來設置顏色
+                                        fileEl.addClass(`ge-note-color-${colorValue}`);
 
-                                    // 設置預覽內容文字顏色
-                                    if (pEl) {
-                                        pEl.addClass(`ge-note-color-${colorValue}-text`);
+                                        // 設置預覽內容文字顏色
+                                        if (pEl) {
+                                            pEl.addClass(`ge-note-color-${colorValue}-text`);
+                                        }
                                     }
                                 }
                                 const titleField = this.plugin.settings.noteTitleField || 'title';
@@ -1427,7 +1445,7 @@ export class GridView extends ItemView {
                     // 如果是捷徑檔案，則開啟捷徑，否則正常開啟檔案
                     if (!this.openShortcutFile(file)) {
                         // 非捷徑就正常開啟檔案
-                        const leaf = this.app.workspace.getLeaf();
+                        const leaf = this.getLeafByMode();
                         if (this.searchQuery) {
                             this.app.vault.cachedRead(file).then((content) => {
                                 const searchQuery = this.searchQuery;
@@ -1830,6 +1848,30 @@ export class GridView extends ItemView {
         });
     }
 
+    // 根據 openNoteLayout 設定獲取對應的 leaf
+    getLeafByMode(): WorkspaceLeaf {
+        const mode = this.plugin.settings.openNoteLayout;
+        switch (mode) {
+            case 'newTab':
+                return this.app.workspace.getLeaf('tab');
+            case 'split':
+                // 檢查是否已經有 split 視圖存在
+                const mainEntry = this.app.workspace.rootSplit;
+                if (mainEntry && (mainEntry as any)?.children?.length > 1) {
+                    // 如果已經有 split，直接在現有的 split 中開啟
+                    return this.app.workspace.getLeaf(false);
+                } else {
+                    // 如果沒有 split，創建新的 split
+                    return this.app.workspace.getLeaf('split');
+                }
+            case 'newWindow':
+                return this.app.workspace.getLeaf('window');
+            case 'default':
+            default:
+                return this.app.workspace.getLeaf();
+        }
+    }
+
     // 開啟捷徑檔案
     openShortcutFile(file: TFile): boolean {
         const fileCache = this.app.metadataCache.getFileCache(file);
@@ -1857,7 +1899,7 @@ export class GridView extends ItemView {
                 if (!target) return false;
 
                 if (target instanceof TFile) {
-                    this.app.workspace.getLeaf().openFile(target);
+                    this.getLeafByMode().openFile(target);
                     return true;
                 } else {
                     new Notice(`${t('target_not_found')}: ${redirectPath}`);
@@ -1948,7 +1990,7 @@ export class GridView extends ItemView {
         const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
         setIcon(editButton, 'pencil');
         editButton.addEventListener('click', () => {
-            this.app.workspace.getLeaf().openFile(file);
+            this.getLeafByMode().openFile(file);
         });
 
         // 關閉按鈕
@@ -2009,7 +2051,7 @@ export class GridView extends ItemView {
                         const linkText = link.getAttribute('data-href') || href;
                         const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
                         if (linkedFile) {
-                            this.app.workspace.getLeaf().openFile(linkedFile);
+                            this.getLeafByMode().openFile(linkedFile);
                         }
                     }
                 }

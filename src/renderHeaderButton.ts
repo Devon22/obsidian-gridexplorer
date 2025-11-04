@@ -4,7 +4,7 @@ import { EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showSearchModal } from './modal/searchModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
-import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut as createShortcutUtil } from './createItemUtils';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut as createShortcutUtil } from './utils/createItemUtils';
 import { t } from './translations';
 
 export function renderHeaderButton(gridView: GridView) {

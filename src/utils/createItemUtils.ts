@@ -1,6 +1,6 @@
 import { App, TFile, Notice } from 'obsidian';
-import { t } from './translations';
-import { showNameInputModal } from './modal/folderRenameModal';
+import { showNameInputModal } from '../modal/folderRenameModal';
+import { t } from '../translations';
 
 /**
  * 創建新筆記的共用函數

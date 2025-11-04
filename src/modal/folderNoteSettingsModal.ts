@@ -75,6 +75,9 @@ export class FolderNoteSettingsModal extends Modal {
             });
 
         // 顏色選項
+        // 檢查當前顏色是否為 HEX 格式
+        const isCurrentColorHex = /^#([0-9A-Fa-f]{3}){1,2}$/.test(this.settings.color);
+        
         new Setting(contentEl)
             .setName(t('folder_color'))
             .setDesc(t('folder_color_desc'))
@@ -89,9 +92,44 @@ export class FolderNoteSettingsModal extends Modal {
                     .addOption('blue', t('color_blue'))
                     .addOption('purple', t('color_purple'))
                     .addOption('pink', t('color_pink'))
-                    .setValue(this.settings.color)
+                    .addOption('custom', t('color_custom'))
+                    .setValue(isCurrentColorHex ? 'custom' : this.settings.color)
                     .onChange(value => {
-                        this.settings.color = value;
+                        // 如果選擇的不是「自訂顏色」，則更新顏色值並清空 HEX 輸入框
+                        if (value !== 'custom') {
+                            this.settings.color = value;
+                            if (hexInput) {
+                                hexInput.setValue('');
+                            }
+                        }
+                    });
+            });
+
+        // HEX 自訂顏色輸入欄位
+        let hexInput: any;
+        const hexSetting = new Setting(contentEl)
+            .setName(t('custom_hex_color'))
+            .setDesc(t('custom_hex_color_desc'))
+            .addText(text => {
+                hexInput = text;
+                text.setPlaceholder('#FF8800 or #F80')
+                    .setValue(isCurrentColorHex ? this.settings.color : '')
+                    .onChange(value => {
+                        // 驗證 HEX 格式
+                        if (value && /^#([0-9A-Fa-f]{3}){1,2}$/.test(value)) {
+                            this.settings.color = value;
+                            // 移除錯誤樣式
+                            text.inputEl.removeClass('ge-input-error');
+                        } else if (value && value.trim() !== '') {
+                            // 顯示錯誤樣式但不更新 color
+                            text.inputEl.addClass('ge-input-error');
+                        } else {
+                            // 空值時清除錯誤樣式
+                            text.inputEl.removeClass('ge-input-error');
+                            if (value === '') {
+                                this.settings.color = '';
+                            }
+                        }
                     });
             });
 

@@ -1,13 +1,14 @@
 import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu, parseLinktext } from 'obsidian';
 import { GridView } from './GridView';
-import { isFolderIgnored } from './fileUtils';
-import { extractObsidianPathsFromDT } from './dragUtils';
+import { isFolderIgnored } from './utils/fileUtils';
+import { extractObsidianPathsFromDT } from './utils/dragUtils';
+import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './utils/createItemUtils';
+import { isHexColor, hexToRgba } from './utils/colorUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
-import { t } from './translations';
-import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './createItemUtils';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
+import { t } from './translations';
 
 export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
@@ -203,8 +204,16 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     const metadata = gridView.app.metadataCache.getFileCache(noteFile)?.frontmatter;
                     const colorValue = metadata?.color;
                     if (colorValue) {
-                        // 依顏色名稱加入對應的樣式類別
-                        folderEl.addClass(`ge-folder-color-${colorValue}`);
+                        // 檢查是否為 HEX 色值
+                        if (isHexColor(colorValue)) {
+                            // 使用自訂 CSS 變數來設置 HEX 顏色
+                            folderEl.addClass('ge-folder-color-custom');
+                            folderEl.style.setProperty('--ge-folder-color-bg', hexToRgba(colorValue, 0.2));
+                            folderEl.style.setProperty('--ge-folder-color-border', hexToRgba(colorValue, 0.5));
+                        } else {
+                            // 依顏色名稱加入對應的樣式類別
+                            folderEl.addClass(`ge-folder-color-${colorValue}`);
+                        }
                     }
                     const iconValue = metadata?.icon;
                     if (iconValue) {

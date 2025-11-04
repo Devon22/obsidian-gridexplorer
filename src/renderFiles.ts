@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian';
 import { GridView } from './GridView';
-import { isDocumentFile, isMediaFile, sortFiles, ignoredFiles, getFiles } from './fileUtils';
+import { isDocumentFile, isMediaFile, sortFiles, ignoredFiles, getFiles } from './utils/fileUtils';
 import { t } from './translations';
 
 export async function renderFiles(gridView: GridView, container: HTMLElement) {

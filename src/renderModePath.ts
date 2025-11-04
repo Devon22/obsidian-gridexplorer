@@ -1,7 +1,7 @@
 import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip, parseLinktext } from 'obsidian';
 import { GridView } from './GridView';
-import { isFolderIgnored } from './fileUtils';
-import { extractObsidianPathsFromDT } from './dragUtils';
+import { isFolderIgnored } from './utils/fileUtils';
+import { extractObsidianPathsFromDT } from './utils/dragUtils';
 import { showFolderNoteSettingsModal } from './modal/folderNoteSettingsModal';
 import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';

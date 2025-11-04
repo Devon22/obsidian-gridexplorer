@@ -1,7 +1,7 @@
 import { TFile, TFolder, getFrontMatterInfo, Notice } from 'obsidian';
-import { GridView } from './GridView';
-import { type GallerySettings } from './settings';
-import { t } from './translations';
+import { GridView } from '../GridView';
+import { type GallerySettings } from '../settings';
+import { t } from '../translations';
 
 // 擴展 App 類型以包含 plugins 屬性
 declare module 'obsidian' {
