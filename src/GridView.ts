@@ -1388,8 +1388,13 @@ export class GridView extends ItemView {
                         this.openMediaFile(file, files);
                     }
                 } else {
-                    // 開啟文件檔案到新分頁
-                    this.app.workspace.getLeaf(true).openFile(file);
+                    if (event.ctrlKey && event.altKey) {
+                        // Ctrl+Alt：開啟在分割視窗
+                        this.app.workspace.getLeaf('split').openFile(file);
+                    } else {
+                        // 開啟文件檔案到新分頁
+                        this.app.workspace.getLeaf(true).openFile(file);
+                    }
                 }
                 event.preventDefault();
                 return;
@@ -1417,7 +1422,7 @@ export class GridView extends ItemView {
                         this.openMediaFile(file, files);
                     }
                 } else if (file.extension === 'pdf' || file.extension === 'canvas' || file.extension === 'base') {
-                    this.app.workspace.getLeaf(true).openFile(file);
+                    this.getLeafByMode(file).openFile(file);
                 } else {
                     // 非媒體檔案
                     // 如果是捷徑檔案，則開啟捷徑，否則在網格視圖中直接顯示筆記
@@ -1445,7 +1450,7 @@ export class GridView extends ItemView {
                     // 如果是捷徑檔案，則開啟捷徑，否則正常開啟檔案
                     if (!this.openShortcutFile(file)) {
                         // 非捷徑就正常開啟檔案
-                        const leaf = this.getLeafByMode();
+                        const leaf = this.getLeafByMode(file);
                         if (this.searchQuery) {
                             this.app.vault.cachedRead(file).then((content) => {
                                 const searchQuery = this.searchQuery;
@@ -1849,10 +1854,28 @@ export class GridView extends ItemView {
     }
 
     // 根據 openNoteLayout 設定獲取對應的 leaf
-    getLeafByMode(): WorkspaceLeaf {
+    getLeafByMode(file?: TFile): WorkspaceLeaf {
         const mode = this.plugin.settings.openNoteLayout;
         switch (mode) {
             case 'newTab':
+                // 如果提供了檔案，先檢查是否已經在某個分頁中開啟
+                if (file) {
+                    // 獲取所有 leaves，不限定類型
+                    const allLeaves = this.app.workspace.getLeavesOfType('markdown')
+                        .concat(this.app.workspace.getLeavesOfType('pdf'))
+                        .concat(this.app.workspace.getLeavesOfType('canvas'))
+                        .concat(this.app.workspace.getLeavesOfType('bases'))
+                        .concat(this.app.workspace.getLeavesOfType('excalidraw'));;
+                    for (const leaf of allLeaves) {
+                        const viewState = leaf.getViewState();
+                        if (viewState.state?.file === file.path) {
+                            // 找到已開啟的分頁，切換焦點到該分頁
+                            this.app.workspace.setActiveLeaf(leaf, { focus: true });
+                            return leaf;
+                        }
+                    }
+                }
+                // 沒有找到已開啟的分頁，開新分頁
                 return this.app.workspace.getLeaf('tab');
             case 'split':
                 // 檢查是否已經有 split 視圖存在
@@ -1899,7 +1922,7 @@ export class GridView extends ItemView {
                 if (!target) return false;
 
                 if (target instanceof TFile) {
-                    this.getLeafByMode().openFile(target);
+                    this.getLeafByMode(target).openFile(target);
                     return true;
                 } else {
                     new Notice(`${t('target_not_found')}: ${redirectPath}`);
@@ -1990,7 +2013,7 @@ export class GridView extends ItemView {
         const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
         setIcon(editButton, 'pencil');
         editButton.addEventListener('click', () => {
-            this.getLeafByMode().openFile(file);
+            this.getLeafByMode(file).openFile(file);
         });
 
         // 關閉按鈕
@@ -2051,7 +2074,7 @@ export class GridView extends ItemView {
                         const linkText = link.getAttribute('data-href') || href;
                         const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
                         if (linkedFile) {
-                            this.getLeafByMode().openFile(linkedFile);
+                            this.getLeafByMode(linkedFile).openFile(linkedFile);
                         }
                     }
                 }

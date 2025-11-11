@@ -2,6 +2,8 @@
 .ge-grid-view-container {
     padding: 0px;
     height: 100%;
+    container-type: inline-size;
+    container-name: grid-view;
 }
 
 /* --------------------------------------------------------------------------- */
@@ -643,6 +645,20 @@
 .ge-header-buttons .up-button {
     display: inline-flex;
     align-items: center;
+}
+
+/* 針對非常窄的側邊欄（寬度小於 350px）進一步優化 */
+@container (max-width: 350px) {
+    .ge-header-buttons {
+        gap: 7px;
+        padding: 9px 7px; /* 保持上下 padding 9px，減少左右 padding 到 6px */
+    }
+    
+    .ge-header-buttons button {
+        padding: 6px 9px; /* 保持上下 padding 6px，減少左右 padding 到 8px */
+        gap: 3px;
+        font-size: 13px;
+    }
 }
 
 /* --------------------------------------------------------------------------- */
