@@ -1,7 +1,7 @@
 import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, Notice } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
-import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile } from './utils/fileUtils';
+import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './utils/fileUtils';
 import { extractObsidianPathsFromDT } from './utils/dragUtils';
 import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut } from './utils/createItemUtils';
 import { CustomModeModal } from './modal/customModeModal';
@@ -1587,12 +1587,17 @@ export class ExplorerView extends ItemView {
         itemEl.addEventListener('dragstart', (event: DragEvent) => {
             if (!event.dataTransfer) return;
 
-            // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
-            // const vaultName = this.app.vault.getName();
-            // const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
-            // event.dataTransfer.setData('text/uri-list', obsidianUri);
+            // 使用 Obsidian 產生 Markdown 連結
+            let mdLink = this.app.fileManager.generateMarkdownLink(file, '');
 
-            const mdLink = this.app.fileManager.generateMarkdownLink(file, '');
+            // 若為圖片檔案則改為嵌入語法 ![[...]]，但若已經有 '!' 就不要重複加
+            if (isMediaFile(file)) {
+                const trimmed = mdLink.trimStart();
+                if (!trimmed.startsWith('!')) {
+                    mdLink = '!' + mdLink;
+                }
+            }
+
             event.dataTransfer.setData('text/plain', mdLink);
             
             event.dataTransfer?.setData('application/obsidian-grid-explorer-files', JSON.stringify([file.path]));
