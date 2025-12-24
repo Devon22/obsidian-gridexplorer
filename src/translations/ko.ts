@@ -88,8 +88,8 @@ export default {
     'ignored_folders_desc': '여기에서 무시할 폴더 설정',
     'add_ignored_folder': '무시된 폴더 추가',
     'no_ignored_folders': '무시된 폴더가 없습니다.',
-    'ignored_folder_patterns': '패턴으로 폴더 및 파일 무시',
-    'ignored_folder_patterns_desc': '문자열 패턴을 사용하여 폴더 및 파일 무시 (정규식 지원)',
+    'ignored_folder_patterns': '패턴으로 폴더 무시',
+    'ignored_folder_patterns_desc': '문자열 패턴을 사용하여 폴더 무시 (정규 표현식 지원)',
     'add_ignored_folder_pattern': '폴더 패턴 추가',
     'ignored_folder_pattern_placeholder': '폴더 이름 또는 정규식 패턴 입력',
     'no_ignored_folder_patterns': '무시된 폴더 패턴이 없습니다.',
@@ -214,7 +214,7 @@ export default {
     'open_new_grid_view': '새 그리드 뷰 열기',
     'open_in_new_grid_view': '새 그리드 뷰에서 열기',
     'min_mode': '최소화 모드',
-    'show_ignored_folders': '무시된 폴더 표시',
+    'show_ignored_items': '무시된 폴더 및 파일 표시',
     'delete_note': '파일 삭제',
     'open_folder_note': '폴더 노트 열기',
     'create_folder_note': '폴더 노트 만들기',
@@ -286,6 +286,8 @@ export default {
     'foldernote_pinned_desc': '이 폴더 노트를 맨 위에 고정',
     'display_minimized': '최소화 표시',
     'display_minimized_desc': '이 노트를 최소화 모드로 표시',
+    'display_hidden': '파일 숨기기',
+    'display_hidden_desc': '그리드 뷰에서 이 파일을 숨깁니다',
 
     // Quick Access Settings and Commands
     'quick_access_settings_title': '빠른 액세스 설정',

@@ -53,7 +53,7 @@ export class GridView extends ItemView {
     recentSources: string[] = []; // 歷史記錄
     futureSources: string[] = []; // 未來紀錄（前進堆疊）
     minMode: boolean = false; // 最小模式
-    showIgnoredFolders: boolean = false; // 顯示忽略資料夾
+    showIgnoredItems: boolean = false; // 顯示忽略的資料夾及檔案
     showDateDividers: boolean = false; // 顯示日期分隔器
     showNoteTags: boolean = false; // 顯示筆記標籤
     pinnedList: string[] = []; // 置頂清單
@@ -850,6 +850,9 @@ export class GridView extends ItemView {
                                         imageAreaEl.remove();
                                     }
                                     fileEl.style.height = '100%';
+                                } else if (displayValue === 'hidden') {
+                                    // 為隱藏的筆記添加特殊樣式類別
+                                    fileEl.addClass('ge-note-hidden');
                                 }
 
                                 // 如果 frontmatter 同時存在 type 與非空的 redirect（視為捷徑檔），將圖示設為 shuffle
@@ -2139,7 +2142,7 @@ export class GridView extends ItemView {
                 searchMediaFiles: this.searchMediaFiles,
                 includeMedia: this.includeMedia,
                 minMode: this.minMode,
-                showIgnoredFolders: this.showIgnoredFolders,
+                showIgnoredItems: this.showIgnoredItems,
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
                 hideHeaderElements: this.hideHeaderElements,
@@ -2164,7 +2167,7 @@ export class GridView extends ItemView {
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
             this.includeMedia = state.state.includeMedia ?? false;
             this.minMode = state.state.minMode ?? false;
-            this.showIgnoredFolders = state.state.showIgnoredFolders ?? false;
+            this.showIgnoredItems = state.state.showIgnoredItems ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout;
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;

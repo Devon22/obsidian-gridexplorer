@@ -354,12 +354,12 @@ export class ExplorerView extends ItemView {
         this.ensureSearchContainer(contentEl);
         this.clearContentExceptSearch(contentEl);
 
-        const { currentMode, currentPath, showIgnoredFolders } = this.getCurrentGridState();
+        const { currentMode, currentPath, showIgnoredItems } = this.getCurrentGridState();
 
         this.renderSearchOption(contentEl);
         this.renderStashGroup(contentEl);
         this.renderModeGroups(contentEl, currentMode);
-        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredFolders);
+        this.renderFoldersGroup(contentEl, currentMode, currentPath, showIgnoredItems);
 
         this.handleSearchFocus();
         this.restoreScrollPosition(contentEl, prevScrollTop);
@@ -545,7 +545,7 @@ export class ExplorerView extends ItemView {
         return {
             currentMode: (activeGrid?.sourceMode ?? this.lastMode) ?? '',
             currentPath: (activeGrid?.sourcePath ?? this.lastPath) ?? '',
-            showIgnoredFolders: activeGrid?.showIgnoredFolders ?? false
+            showIgnoredItems: activeGrid?.showIgnoredItems ?? false
         };
     }
 
@@ -568,23 +568,23 @@ export class ExplorerView extends ItemView {
 
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
-        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        const showIgnoredItems = activeGrid?.showIgnoredItems ?? false;
 
         const childFolders = folder.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
 
         return childFolders.some((child) => this.shouldShowFolder(child));
     }
 
     // 檢查是否有可見的頂層資料夾
-    private hasVisibleTopLevelFolders(showIgnoredFolders: boolean): boolean {
+    private hasVisibleTopLevelFolders(showIgnoredItems: boolean): boolean {
         const root = this.app.vault.getRoot();
         const settings = this.plugin.settings;
 
         const topLevelFolders = root.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
 
         return topLevelFolders.some((f) => this.shouldShowFolder(f));
     }
@@ -599,11 +599,11 @@ export class ExplorerView extends ItemView {
         // 檢查子資料夾是否有符合條件的
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
-        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        const showIgnoredItems = activeGrid?.showIgnoredItems ?? false;
         
         const childFolders = folder.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
         
         return childFolders.some((child) => this.hasMatchingChildren(child));
     }
@@ -799,10 +799,10 @@ export class ExplorerView extends ItemView {
     }
 
     // 渲染資料夾群組
-    private renderFoldersGroup(contentEl: HTMLElement, currentMode: string, currentPath: string, showIgnoredFolders: boolean) {
+    private renderFoldersGroup(contentEl: HTMLElement, currentMode: string, currentPath: string, showIgnoredItems: boolean) {
         // 如果正在搜尋，檢查是否有符合的資料夾
         if (this.isFiltering()) {
-            const hasVisibleFolders = this.hasVisibleTopLevelFolders(showIgnoredFolders);
+            const hasVisibleFolders = this.hasVisibleTopLevelFolders(showIgnoredItems);
             if (!hasVisibleFolders) {
                 return;
             }
@@ -811,13 +811,13 @@ export class ExplorerView extends ItemView {
         const foldersGroupKey = '__folders__root';
         const foldersNode = contentEl.createDiv({ cls: 'ge-explorer-folder-node' });
 
-        const { foldersChildren } = this.createFoldersGroupHeader(foldersNode, foldersGroupKey, currentMode, currentPath, showIgnoredFolders);
+        const { foldersChildren } = this.createFoldersGroupHeader(foldersNode, foldersGroupKey, currentMode, currentPath, showIgnoredItems);
 
         // 若目前在資料夾模式，預先展開對應的父路徑，確保可見
         this.expandCurrentFolderPath(currentMode, currentPath);
 
         // 列出頂層資料夾
-        this.renderTopLevelFolders(foldersChildren, showIgnoredFolders);
+        this.renderTopLevelFolders(foldersChildren, showIgnoredItems);
     }
 
     // 開啟資料夾搜尋
@@ -836,7 +836,7 @@ export class ExplorerView extends ItemView {
     }
 
     // 創建資料夾群組標頭
-    private createFoldersGroupHeader(foldersNode: HTMLElement, foldersGroupKey: string, currentMode: string, currentPath: string, showIgnoredFolders: boolean) {
+    private createFoldersGroupHeader(foldersNode: HTMLElement, foldersGroupKey: string, currentMode: string, currentPath: string, showIgnoredItems: boolean) {
         const foldersHeader = foldersNode.createDiv({ cls: 'ge-explorer-folder-header' });
         const foldersToggle = foldersHeader.createSpan({ cls: 'ge-explorer-folder-toggle' });
 
@@ -844,7 +844,7 @@ export class ExplorerView extends ItemView {
         let foldersExpanded = this.isExpanded(foldersGroupKey);
         if (!this.expandedPaths.has(foldersGroupKey)) {
             // 如果正在搜尋且有符合的資料夾，自動展開根選項
-            if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredFolders)) {
+            if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredItems)) {
                 foldersExpanded = true;
             } else {
                 // 只有在第一次載入且沒有其他展開記錄時才預設展開
@@ -853,7 +853,7 @@ export class ExplorerView extends ItemView {
                 foldersExpanded = !hasAnyExpandedPaths; // 如果有其他展開路徑，預設收合；否則預設展開
             }
             this.setExpanded(foldersGroupKey, foldersExpanded);
-        } else if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredFolders)) {
+        } else if (this.isFiltering() && this.hasVisibleTopLevelFolders(showIgnoredItems)) {
             // 如果正在搜尋且有符合的資料夾，即使之前是收合狀態也要展開
             foldersExpanded = true;
             this.setExpanded(foldersGroupKey, foldersExpanded);
@@ -938,12 +938,12 @@ export class ExplorerView extends ItemView {
     }
 
     // 渲染頂層資料夾
-    private renderTopLevelFolders(foldersChildren: HTMLElement, showIgnoredFolders: boolean) {
+    private renderTopLevelFolders(foldersChildren: HTMLElement, showIgnoredItems: boolean) {
         const root = this.app.vault.getRoot();
         const settings = this.plugin.settings;
         let topLevelFolders = root.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .filter(f => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
 
         // 依搜尋字串篩選（顯示符合的節點與其祖先）
         if (this.isFiltering()) {
@@ -1057,11 +1057,11 @@ export class ExplorerView extends ItemView {
     private setupToggleIcon(folder: TFolder, toggle: HTMLElement, expanded: boolean) {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
-        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        const showIgnoredItems = activeGrid?.showIgnoredItems ?? false;
 
         const hasVisibleChildren = folder.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .some((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .some((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
 
         if (!hasVisibleChildren) {
             toggle.innerHTML = '';
@@ -1808,11 +1808,11 @@ export class ExplorerView extends ItemView {
     private hasVisibleChildren(folder: TFolder): boolean {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
-        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        const showIgnoredItems = activeGrid?.showIgnoredItems ?? false;
 
         return folder.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .some((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .some((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
     }
 
     // 在網格視圖中開啟資料夾
@@ -2067,11 +2067,11 @@ export class ExplorerView extends ItemView {
     private renderChildFolders(folder: TFolder, childrenContainer: HTMLElement, depth: number) {
         const settings = this.plugin.settings;
         const activeGrid = this.app.workspace.getActiveViewOfType(GridView);
-        const showIgnoredFolders = activeGrid?.showIgnoredFolders ?? false;
+        const showIgnoredItems = activeGrid?.showIgnoredItems ?? false;
 
         let childFolders = folder.children
             .filter((f): f is TFolder => f instanceof TFolder)
-            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredFolders));
+            .filter((f) => !isFolderIgnored(f, settings.ignoredFolders, settings.ignoredFolderPatterns, showIgnoredItems));
 
         if (this.isFiltering()) {
             childFolders = childFolders.filter((f) => this.shouldShowFolder(f));

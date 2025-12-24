@@ -591,14 +591,14 @@ export function renderHeaderButton(gridView: GridView) {
                 gridView.render();
             });
     });
-    // 顯示忽略資料夾選項
+    // 顯示忽略的資料夾及檔案選項
     menu.addItem((item) => {
         item
-            .setTitle(t('show_ignored_folders'))
+            .setTitle(t('show_ignored_items'))
             .setIcon('folder-open-dot')
-            .setChecked(gridView.showIgnoredFolders)
+            .setChecked(gridView.showIgnoredItems)
             .onClick(() => {
-                gridView.showIgnoredFolders = !gridView.showIgnoredFolders;
+                gridView.showIgnoredItems = !gridView.showIgnoredItems;
                 gridView.app.workspace.requestSaveLayout();
                 gridView.render();
             });

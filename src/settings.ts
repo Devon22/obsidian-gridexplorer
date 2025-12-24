@@ -230,21 +230,32 @@ class IgnoredFolderSuggest extends AbstractInputSuggest<string> {
 export class GridExplorerSettingTab extends PluginSettingTab {
     plugin: GridExplorerPlugin;
 
-    constructor(app: App, plugin: GridExplorerPlugin) {
-        super(app, plugin);
-        this.plugin = plugin;
+    private sectionStates: Map<string, boolean> = new Map();
+
+    private createSection(title: string, defaultExpanded = false): HTMLElement {
+        const isExpanded = this.sectionStates.has(title) ? this.sectionStates.get(title) : defaultExpanded;
+        const details = this.containerEl.createEl('details', { cls: 'ge-settings-section' });
+        if (isExpanded) details.setAttr('open', 'true');
+
+        details.addEventListener('toggle', () => {
+            this.sectionStates.set(title, details.open);
+        });
+
+        const summary = details.createEl('summary', { cls: 'ge-settings-section-summary' });
+        summary.createEl('h3', { text: title });
+        return details.createDiv({ cls: 'ge-settings-section-content' });
     }
 
     display() {
         const { containerEl } = this;
         containerEl.empty();
 
-        // 顯示模式設定區域
-        // 自訂模式設定
-        containerEl.createEl('h3', { text: t('custom_mode_settings') });
+        let sectionEl: HTMLElement;
 
-        // 建立自訂模式的容器，以便實現拖曳排序
-        const customModesContainer = containerEl.createDiv();
+        // 自訂模式設定
+        sectionEl = this.createSection(t('custom_mode_settings'));
+
+        const customModesContainer = sectionEl.createDiv();
         this.plugin.settings.customModes.forEach((mode, index) => {
             const setting = new Setting(customModesContainer)
                 .setName(`${mode.icon} ${mode.displayName}`)
@@ -301,7 +312,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
             // 編輯按鈕
             setting.addButton((button: ButtonComponent) => {
-                button.setButtonText(t('edit'))
+                button.setIcon('pencil')
+                    .setClass('ge-edit-button')
+                    .setTooltip(t('edit'))
                     .onClick(() => {
                         // 找到正確的索引，以防萬一順序已變
                         const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
@@ -316,7 +329,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
             // 移除按鈕
             setting.addButton((button: ButtonComponent) => {
-                button.setButtonText(t('remove'))
+                button.setIcon('trash-2')
+                    .setClass('ge-remove-button')
+                    .setTooltip(t('remove'))
                     .setWarning()
                     .onClick(() => {
                         // 找到正確的索引，以防萬一順序已變
@@ -329,7 +344,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
         });
 
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .addButton(button => {
                 button.setButtonText(t('add_custom_mode'))
                     .setCta()
@@ -352,20 +367,20 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         }
 
                         const data = JSON.stringify(this.plugin.settings.customModes, null, 2);
-                        
+
                         if (!Platform.isDesktop) {
                             // 行動裝置：使用 Obsidian 的檔案 API
                             try {
                                 const fileName = 'gridexplorer-custom-modes.json';
                                 let filePath = fileName;
                                 let counter = 1;
-                                
+
                                 // 檢查檔案是否已存在，如果存在則添加數字後綴
                                 while (this.app.vault.getAbstractFileByPath(filePath)) {
                                     filePath = `gridexplorer-custom-modes-${counter}.json`;
                                     counter++;
                                 }
-                                
+
                                 await this.app.vault.create(filePath, data);
                                 new Notice(t('export_success_vault').replace('{filename}', filePath));
                             } catch (error) {
@@ -446,10 +461,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 顯示模式設定區域
-        containerEl.createEl('h3', { text: t('display_mode_settings'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('display_mode_settings'));
 
         // 設定是否顯示書籤模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`📑 ${t('show_bookmarks_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -461,7 +476,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 設定是否顯示搜尋結果模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`🔍 ${t('show_search_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -473,7 +488,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 設定是否顯示反向連結模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`🔗 ${t('show_backlinks_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -485,7 +500,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 設定是否顯示外部連結模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`🔗 ${t('show_outgoinglinks_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -497,7 +512,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 設定是否顯示所有檔案模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`📔 ${t('show_all_files_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -509,7 +524,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 最近檔案模式設定
-        const recentFilesSetting = new Setting(containerEl)
+        const recentFilesSetting = new Setting(sectionEl)
             .setName(`📅 ${t('show_recent_files_mode')}`);
 
         // 添加切換按鈕
@@ -545,7 +560,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         });
 
         // 隨機筆記模式設定
-        const randomNoteSetting = new Setting(containerEl)
+        const randomNoteSetting = new Setting(sectionEl)
             .setName(`🎲 ${t('show_random_note_mode')}`);
 
         // 添加切換按鈕
@@ -581,7 +596,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         });
 
         // 顯示任務模式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`☑️ ${t('show_tasks_mode')}`)
             .addToggle(toggle => {
                 toggle
@@ -592,10 +607,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     });
             });
 
-        containerEl.createEl('h3', { text: t('grid_view_settings'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('grid_view_settings'), true);
 
         // 重用現有的網格視圖
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('reuse_existing_leaf'))
             .setDesc(t('reuse_existing_leaf_desc'))
             .addToggle(toggle => {
@@ -608,7 +623,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 預設開啟位置設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('default_open_location'))
             .setDesc(t('default_open_location_desc'))
             .addDropdown(dropdown => {
@@ -624,7 +639,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 預設排序模式設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('default_sort_type'))
             .setDesc(t('default_sort_type_desc'))
             .addDropdown(dropdown => {
@@ -644,7 +659,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 日期分隔器模式設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('date_divider_mode'))
             .setDesc(t('date_divider_mode_desc'))
             .addDropdown(dropdown => {
@@ -661,7 +676,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 資料夾顯示樣式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('folder_display_style'))
             .setDesc(t('folder_display_style_desc'))
             .addDropdown(dropdown => {
@@ -677,7 +692,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 顯示圖片和影片設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('show_media_files'))
             .setDesc(t('show_media_files_desc'))
             .addToggle(toggle => {
@@ -690,7 +705,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 顯示影片縮圖設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('show_video_thumbnails'))
             .setDesc(t('show_video_thumbnails_desc'))
             .addToggle(toggle => {
@@ -703,7 +718,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 是否預設顯示筆記
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('show_note_in_grid'))
             .setDesc(t('show_note_in_grid_desc'))
             .addToggle(toggle => {
@@ -716,7 +731,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 設定開啟筆記的方式
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('open_note_layout'))
             .setDesc(t('open_note_layout_desc'))
             .addDropdown(dropdown => {
@@ -733,7 +748,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 筆記標題欄位名稱設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('note_title_field'))
             .setDesc(t('note_title_field_desc'))
             .addText(text => text
@@ -745,7 +760,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 }));
 
         // 筆記摘要欄位名稱設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('note_summary_field'))
             .setDesc(t('note_summary_field_desc'))
             .addText(text => text
@@ -757,7 +772,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 }));
 
         // 修改時間欄位名稱設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('modified_date_field'))
             .setDesc(t('modified_date_field_desc'))
             .addText(text => text
@@ -769,7 +784,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 }));
 
         // 建立時間欄位名稱設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('created_date_field'))
             .setDesc(t('created_date_field_desc'))
             .addText(text => text
@@ -781,7 +796,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 }));
 
         // 自訂文件副檔名設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('custom_document_extensions'))
             .setDesc(t('custom_document_extensions_desc'))
             .addText(text => {
@@ -795,7 +810,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 自訂資料夾圖示
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('custom_folder_icon'))
             .setDesc(t('custom_folder_icon_desc'))
             .addText(text => {
@@ -808,7 +823,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 檔案監控功能設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('enable_file_watcher'))
             .setDesc(t('enable_file_watcher_desc'))
             .addToggle(toggle => {
@@ -821,7 +836,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 攔截所有tag點擊事件
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('intercept_all_tag_clicks'))
             .setDesc(t('intercept_all_tag_clicks_desc'))
             .addToggle(toggle => {
@@ -834,7 +849,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 攔截Breadcrumb點擊事件
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('intercept_breadcrumb_clicks'))
             .setDesc(t('intercept_breadcrumb_clicks_desc'))
             .addToggle(toggle => {
@@ -847,11 +862,11 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
 
-        // 網格項目樣式設定標題
-        containerEl.createEl('h3', { text: t('grid_item_style_settings'), attr: { style: 'margin-top: 40px;' } });
+        // 網格項目樣式設定
+        sectionEl = this.createSection(t('grid_item_style_settings'));
 
         // 卡片版面設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('card_layout'))
             .setDesc(t('card_layout_desc'))
             .addDropdown(drop => {
@@ -865,7 +880,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 顯示筆記標籤設定
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('show_note_tags'))
             .setDesc(t('show_note_tags_desc'))
             .addToggle(toggle => {
@@ -878,7 +893,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 網格項目寬度設定
-        const gridItemWidthSetting = new Setting(containerEl)
+        const gridItemWidthSetting = new Setting(sectionEl)
             .setName(`${t('horizontal_card')} ${t('grid_item_width')}`)
             .setDesc(`${t('grid_item_width_desc')} (now: ${this.plugin.settings.gridItemWidth}px)`)
             .addSlider(slider => {
@@ -894,7 +909,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 網格項目高度設定
-        const gridItemHeightSetting = new Setting(containerEl)
+        const gridItemHeightSetting = new Setting(sectionEl)
             .setName(`${t('horizontal_card')} ${t('grid_item_height')}`)
             .setDesc(`${t('grid_item_height_desc')} (now: ${this.plugin.settings.gridItemHeight === 0 ? 'auto' : this.plugin.settings.gridItemHeight})`)
             .addSlider(slider => {
@@ -910,7 +925,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 圖片區域寬度設定
-        const imageAreaWidthSetting = new Setting(containerEl)
+        const imageAreaWidthSetting = new Setting(sectionEl)
             .setName(`${t('horizontal_card')} ${t('image_area_width')}`)
             .setDesc(`${t('image_area_width_desc')} (now: ${this.plugin.settings.imageAreaWidth}px)`)
             .addSlider(slider => {
@@ -926,7 +941,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 圖片區域高度設定
-        const imageAreaHeightSetting = new Setting(containerEl)
+        const imageAreaHeightSetting = new Setting(sectionEl)
             .setName(`${t('horizontal_card')} ${t('image_area_height')}`)
             .setDesc(`${t('image_area_height_desc')} (now: ${this.plugin.settings.imageAreaHeight}px)`)
             .addSlider(slider => {
@@ -942,7 +957,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 直向卡片 - 網格項目寬度
-        const vGridItemWidthSetting = new Setting(containerEl)
+        const vGridItemWidthSetting = new Setting(sectionEl)
             .setName(`${t('vertical_card')} ${t('grid_item_width')}`)
             .setDesc(`${t('grid_item_width_desc')} (now: ${this.plugin.settings.verticalGridItemWidth}px)`)
             .addSlider(slider => {
@@ -957,7 +972,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 直向卡片 - 網格項目高度
-        const vGridItemHeightSetting = new Setting(containerEl)
+        const vGridItemHeightSetting = new Setting(sectionEl)
             .setName(`${t('vertical_card')} ${t('grid_item_height')}`)
             .setDesc(`${t('grid_item_height_desc')} (now: ${this.plugin.settings.verticalGridItemHeight}px)`)
             .addSlider(slider => {
@@ -972,7 +987,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 直向卡片 - 圖片區域高度
-        const vImageAreaHeightSetting = new Setting(containerEl)
+        const vImageAreaHeightSetting = new Setting(sectionEl)
             .setName(`${t('vertical_card')} ${t('image_area_height')}`)
             .setDesc(`${t('image_area_height_desc')} (now: ${this.plugin.settings.verticalImageAreaHeight}px)`)
             .addSlider(slider => {
@@ -987,7 +1002,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 直向卡片圖片位置
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(`${t('vertical_card')} ${t('image_position')}`)
             .setDesc(t('image_position_desc'))
             .addDropdown(dropdown => {
@@ -1001,7 +1016,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         //筆記標題的字型大小
-        const titleFontSizeSetting = new Setting(containerEl)
+        const titleFontSizeSetting = new Setting(sectionEl)
             .setName(t('title_font_size'))
             .setDesc(`${t('title_font_size_desc')} (now: ${this.plugin.settings.titleFontSize.toFixed(2)})`)
             .addSlider(slider => {
@@ -1017,7 +1032,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 標題支援多行顯示
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('multi_line_title'))
             .setDesc(t('multi_line_title_desc'))
             .addToggle(toggle => {
@@ -1030,7 +1045,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 筆記摘要的字數設定
-        const summaryLengthSetting = new Setting(containerEl)
+        const summaryLengthSetting = new Setting(sectionEl)
             .setName(t('summary_length'))
             .setDesc(`${t('summary_length_desc')} (now: ${this.plugin.settings.summaryLength})`)
             .addSlider(slider => {
@@ -1046,7 +1061,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 是否在摘要中顯示程式碼區塊
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('show_code_block_in_summary'))
             .setDesc(t('show_code_block_in_summary_desc'))
             .addToggle(toggle => toggle
@@ -1058,10 +1073,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
 
         // 搜尋設定區域
-        containerEl.createEl('h3', { text: t('default_search_option'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('default_search_option'));
 
         // 是否只搜尋當前位置
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('search_current_location_only'))
             .addToggle(toggle => {
                 toggle
@@ -1073,7 +1088,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 是否只搜尋筆記名稱
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('search_files_name_only'))
             .addToggle(toggle => {
                 toggle
@@ -1085,7 +1100,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 是否搜尋媒體檔案
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('search_media_files'))
             .addToggle(toggle => {
                 toggle
@@ -1098,10 +1113,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
 
         // 資料夾筆記設定區域
-        containerEl.createEl('h3', { text: t('folder_note_settings'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('folder_note_settings'));
 
         // 資料夾筆記設定 (預設、置頂、隱藏)
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('foldernote_display_settings'))
             .setDesc(t('foldernote_display_settings_desc'))
             .addDropdown(dropdown => {
@@ -1117,10 +1132,10 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // Quick Access Settings
-        containerEl.createEl('h3', { text: t('quick_access_settings_title'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('quick_access_settings_title'));
 
         // Quick Access Folder Setting
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('quick_access_folder_name'))
             .setDesc(t('quick_access_folder_desc'))
             .addText(text => {
@@ -1135,7 +1150,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
 
         // Quick Access View Setting
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('quick_access_mode_name'))
             .setDesc(t('quick_access_mode_desc'))
             .addDropdown(dropdown => {
@@ -1159,7 +1174,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // Use Quick Access as a new tab view
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('use_quick_access_as_new_tab_view'))
             .setDesc(t('use_quick_access_as_new_tab_view_desc'))
             .addDropdown(dropdown => {
@@ -1175,12 +1190,12 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
         // 忽略資料夾設定區域
-        containerEl.createEl('h3', { text: t('ignored_folders_settings'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('ignored_folders_settings'));
 
         // 忽略的資料夾設定
-        const ignoredFoldersContainer = containerEl.createDiv('ignored-folders-container');
+        const ignoredFoldersContainer = sectionEl.createDiv('ignored-folders-container');
 
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('ignored_folders'))
             .setDesc(t('ignored_folders_desc'))
             .setHeading();
@@ -1197,12 +1212,12 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         const ignoredFoldersList = ignoredFoldersContainer.createDiv('ge-ignored-folders-list');
         this.renderIgnoredFoldersList(ignoredFoldersList);
 
-        containerEl.appendChild(ignoredFoldersContainer);
+        sectionEl.appendChild(ignoredFoldersContainer);
 
         // 以字串忽略資料夾（可用正則表達式）設定
-        const ignoredFolderPatternsContainer = containerEl.createDiv('ignored-folder-patterns-container');
+        const ignoredFolderPatternsContainer = sectionEl.createDiv('ignored-folder-patterns-container');
 
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('ignored_folder_patterns'))
             .setDesc(t('ignored_folder_patterns_desc'))
             .setHeading();
@@ -1248,12 +1263,12 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         const ignoredFolderPatternsList = ignoredFolderPatternsContainer.createDiv('ge-ignored-folder-patterns-list');
         this.renderIgnoredFolderPatternsList(ignoredFolderPatternsList);
 
-        containerEl.appendChild(ignoredFolderPatternsContainer);
+        sectionEl.appendChild(ignoredFolderPatternsContainer);
 
         // 設定檔管理 (Reset / Export / Import)
-        containerEl.createEl('h3', { text: t('config_management'), attr: { style: 'margin-top: 40px;' } });
+        sectionEl = this.createSection(t('config_management'));
 
-        new Setting(containerEl)
+        new Setting(sectionEl)
             .setName(t('config_management'))
             .setDesc(t('config_management_desc'))
             // Reset to default
@@ -1375,7 +1390,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
                 // 重新渲染列表
                 this.renderIgnoredFoldersList(containerEl);
-                this.display();
+                // this.display();
             });
         });
     }

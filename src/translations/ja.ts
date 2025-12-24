@@ -213,7 +213,7 @@ export default {
     'open_new_grid_view': '新しいグリッドビューを開く',
     'open_in_new_grid_view': '新しいグリッドビューで開く',
     'min_mode': '最小化モード',
-    'show_ignored_folders': '無視するフォルダーを表示',
+    'show_ignored_items': '無視するフォルダーとファイルを表示',
     'delete_note': 'ファイルを削除',
     'open_folder_note': 'フォルダーノートを開く',
     'create_folder_note': 'フォルダーノートを作成',
@@ -285,6 +285,8 @@ export default {
     'foldernote_pinned_desc': 'フォルダーノートを最上部に固定',
     'display_minimized': '最小化表示',
     'display_minimized_desc': 'このノートを最小化モードで表示',
+    'display_hidden': 'ファイルを非表示',
+    'display_hidden_desc': 'グリッドビューでこのファイルを非表示',
 
     // Quick Access Settings and Commands
     'quick_access_settings_title': 'クイックアクセス設定',

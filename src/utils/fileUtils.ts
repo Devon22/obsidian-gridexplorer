@@ -202,8 +202,8 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
 export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
     const settings = gridView.plugin.settings;
     
-    // 如果開啟顯示忽略資料夾模式，則顯示所有檔案
-    if (gridView.showIgnoredFolders) {
+    // 如果開啟顯示忽略項目模式，則顯示所有檔案
+    if (gridView.showIgnoredItems) {
         return files;
     }
     
@@ -211,8 +211,18 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
     const folderCache: {[path: string]: boolean} = {};
     
     return files.filter(file => {
+        // 檢查檔案的 metadata 是否有 hidden: true
+        if (file.extension === 'md') {
+            const metadata = gridView.app.metadataCache.getFileCache(file)?.frontmatter;
+            const displayValue = metadata?.display;
+            if (displayValue === 'hidden') {
+                return false;
+            }
+        }
+
         // 獲取檔案所在的資料夾路徑
         const folderPath = file.parent?.path || '/';
+        
         
         // 如果快取中沒有這個資料夾的檢查結果，則進行檢查
         if (folderCache[folderPath] === undefined) {

@@ -9,6 +9,7 @@ export interface NoteSettings {
     color: string;
     isPinned: boolean;
     isMinimized: boolean;
+    isHidden: boolean;
 }
 
 export function showNoteSettingsModal(app: App, plugin: GridExplorerPlugin, file: TFile | TFile[]) {
@@ -24,6 +25,7 @@ export class NoteSettingsModal extends Modal {
         color: '',
         isPinned: false,
         isMinimized: false,
+        isHidden: false,
     };
     private initialIsPinned: boolean = false; // 記錄初始的 isPinned 狀態
     
@@ -146,15 +148,42 @@ export class NoteSettingsModal extends Modal {
         }
 
         // 最小化顯示切換
+        let minimizedToggle: any;
+        let hiddenToggle: any;
+        
         if (this.files[0].extension === "md") {
             new Setting(contentEl)
                 .setName(t('display_minimized'))
                 .setDesc(t('display_minimized_desc'))
                 .addToggle(toggle => {
+                    minimizedToggle = toggle;
                     toggle
                         .setValue(this.settings.isMinimized)
                         .onChange(value => {
                             this.settings.isMinimized = value;
+                            if (value && this.settings.isHidden) {
+                                this.settings.isHidden = false;
+                                if (hiddenToggle) hiddenToggle.setValue(false);
+                            }
+                        });
+                });
+        }
+
+        // 隱藏檔案切換
+        if (this.files[0].extension === "md") {
+            new Setting(contentEl)
+                .setName(t('display_hidden'))
+                .setDesc(t('display_hidden_desc'))
+                .addToggle(toggle => {
+                    hiddenToggle = toggle;
+                    toggle
+                        .setValue(this.settings.isHidden)
+                        .onChange(value => {
+                            this.settings.isHidden = value;
+                            if (value && this.settings.isMinimized) {
+                                this.settings.isMinimized = false;
+                                if (minimizedToggle) minimizedToggle.setValue(false);
+                            }
                         });
                 });
         }
@@ -253,6 +282,10 @@ export class NoteSettingsModal extends Modal {
                     if (fileCache.frontmatter.display === 'minimized') {
                         this.settings.isMinimized = true;
                     }
+                    // 讀取隱藏設定
+                    if (fileCache.frontmatter.display === 'hidden') {
+                        this.settings.isHidden = true;
+                    }
                 }
             }
 
@@ -298,10 +331,12 @@ export class NoteSettingsModal extends Modal {
                     } else {
                         delete frontmatter['color'];
                     }
-                    if (this.settings.isMinimized) {
+                    if (this.settings.isHidden) {
+                        frontmatter['display'] = 'hidden';
+                    } else if (this.settings.isMinimized) {
                         frontmatter['display'] = 'minimized';
                     } else {
-                        if (frontmatter['display'] === 'minimized') delete frontmatter['display'];
+                        if (frontmatter['display'] === 'minimized' || frontmatter['display'] === 'hidden') delete frontmatter['display'];
                     }
                 });
             }
@@ -317,10 +352,12 @@ export class NoteSettingsModal extends Modal {
                             } else {
                                 delete frontmatter['color'];
                             }
-                            if (this.settings.isMinimized) {
+                            if (this.settings.isHidden) {
+                                frontmatter['display'] = 'hidden';
+                            } else if (this.settings.isMinimized) {
                                 frontmatter['display'] = 'minimized';
                             } else {
-                                if (frontmatter['display'] === 'minimized') delete frontmatter['display'];
+                                if (frontmatter['display'] === 'minimized' || frontmatter['display'] === 'hidden') delete frontmatter['display'];
                             }
                         });
                     }

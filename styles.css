@@ -416,69 +416,83 @@
 
 /* 資料夾和筆記顏色 Folder & Note Colors */
 .ge-grid-item.ge-folder-item.ge-folder-color-red,
-.ge-grid-item.ge-note-color-red { 
-    background-color: rgba(var(--color-red-rgb), 0.2); 
+.ge-grid-item.ge-note-color-red {
+    background-color: rgba(var(--color-red-rgb), 0.2);
     border-color: rgba(var(--color-red-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-orange,
-.ge-grid-item.ge-note-color-orange { 
-    background-color: rgba(var(--color-orange-rgb), 0.2); 
-    border-color: rgba(var(--color-orange-rgb), 0.5); 
+.ge-grid-item.ge-note-color-orange {
+    background-color: rgba(var(--color-orange-rgb), 0.2);
+    border-color: rgba(var(--color-orange-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-yellow,
-.ge-grid-item.ge-note-color-yellow { 
-    background-color: rgba(var(--color-yellow-rgb), 0.2); 
-    border-color: rgba(var(--color-yellow-rgb), 0.5); 
+.ge-grid-item.ge-note-color-yellow {
+    background-color: rgba(var(--color-yellow-rgb), 0.2);
+    border-color: rgba(var(--color-yellow-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-green,
-.ge-grid-item.ge-note-color-green { 
-    background-color: rgba(var(--color-green-rgb), 0.2); 
-    border-color: rgba(var(--color-green-rgb), 0.5); 
+.ge-grid-item.ge-note-color-green {
+    background-color: rgba(var(--color-green-rgb), 0.2);
+    border-color: rgba(var(--color-green-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-cyan,
-.ge-grid-item.ge-note-color-cyan { 
-    background-color: rgba(var(--color-cyan-rgb), 0.2); 
-    border-color: rgba(var(--color-cyan-rgb), 0.5); 
+.ge-grid-item.ge-note-color-cyan {
+    background-color: rgba(var(--color-cyan-rgb), 0.2);
+    border-color: rgba(var(--color-cyan-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-blue,
-.ge-grid-item.ge-note-color-blue { 
-    background-color: rgba(var(--color-blue-rgb), 0.2); 
-    border-color: rgba(var(--color-blue-rgb), 0.5); 
+.ge-grid-item.ge-note-color-blue {
+    background-color: rgba(var(--color-blue-rgb), 0.2);
+    border-color: rgba(var(--color-blue-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-purple,
-.ge-grid-item.ge-note-color-purple { 
-    background-color: rgba(var(--color-purple-rgb), 0.2); 
-    border-color: rgba(var(--color-purple-rgb), 0.5); 
+.ge-grid-item.ge-note-color-purple {
+    background-color: rgba(var(--color-purple-rgb), 0.2);
+    border-color: rgba(var(--color-purple-rgb), 0.5);
 }
+
 .ge-grid-item.ge-folder-item.ge-folder-color-pink,
-.ge-grid-item.ge-note-color-pink { 
-    background-color: rgba(var(--color-pink-rgb), 0.2); 
-    border-color: rgba(var(--color-pink-rgb), 0.5); 
+.ge-grid-item.ge-note-color-pink {
+    background-color: rgba(var(--color-pink-rgb), 0.2);
+    border-color: rgba(var(--color-pink-rgb), 0.5);
 }
 
 /* 筆記文字顏色 Note Text Color */
-.ge-note-color-red-text { 
+.ge-note-color-red-text {
     color: rgba(var(--color-red-rgb), 0.7) !important;
 }
-.ge-note-color-orange-text { 
+
+.ge-note-color-orange-text {
     color: rgba(var(--color-orange-rgb), 0.7) !important;
 }
-.ge-note-color-yellow-text { 
+
+.ge-note-color-yellow-text {
     color: rgba(var(--color-yellow-rgb), 0.7) !important;
 }
-.ge-note-color-green-text { 
+
+.ge-note-color-green-text {
     color: rgba(var(--color-green-rgb), 0.7) !important;
 }
-.ge-note-color-cyan-text { 
+
+.ge-note-color-cyan-text {
     color: rgba(var(--color-cyan-rgb), 0.7) !important;
 }
-.ge-note-color-blue-text { 
+
+.ge-note-color-blue-text {
     color: rgba(var(--color-blue-rgb), 0.7) !important;
 }
-.ge-note-color-purple-text { 
+
+.ge-note-color-purple-text {
     color: rgba(var(--color-purple-rgb), 0.7) !important;
 }
-.ge-note-color-pink-text { 
+
+.ge-note-color-pink-text {
     color: rgba(var(--color-pink-rgb), 0.7) !important;
 }
 
@@ -495,6 +509,27 @@
 .ge-grid-item.ge-folder-item.ge-folder-color-custom {
     background-color: var(--ge-folder-color-bg);
     border-color: var(--ge-folder-color-border);
+}
+
+/* 隱藏的筆記樣式 Hidden Note Style */
+.ge-grid-item.ge-note-hidden {
+    opacity: 0.5;
+    border-style: dashed;
+    border-width: 2px;
+    background-color: var(--background-modifier-border);
+}
+
+.ge-grid-item.ge-note-hidden:hover {
+    opacity: 0.7;
+}
+
+.ge-grid-item.ge-note-hidden .ge-title {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.ge-grid-item.ge-note-hidden .ge-content-area p {
+    color: var(--text-faint);
 }
 
 /* 資料夾上的資料夾筆記按鈕 Folder Note Button */
@@ -653,7 +688,7 @@
         gap: 7px;
         padding: 9px 7px; /* 保持上下 padding 9px，減少左右 padding 到 6px */
     }
-    
+
     .ge-header-buttons button {
         padding: 6px 9px; /* 保持上下 padding 6px，減少左右 padding 到 8px */
         gap: 3px;
@@ -706,7 +741,7 @@
 .ge-sort-button:hover {
     opacity: 1;
     background-color: var(--background-modifier-hover);
-    box-shadow: 0 1px 0 rgba(0,0,0,0.05) inset;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05) inset;
 }
 
 .ge-sort-button svg {
@@ -734,7 +769,7 @@ a.ge-mode-title {
     border: 1px solid var(--background-modifier-border) !important;
     border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
     background: var(--background-primary);
 }
 
@@ -793,6 +828,52 @@ span.ge-mode-title {
 .ge-settings-gear:hover {
     background-color: var(--background-modifier-hover);
     opacity: 1;
+}
+
+/* 設定分區樣式 Settings Sections */
+.ge-settings-section {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background-color: var(--background-primary-alt);
+    overflow: hidden;
+}
+
+.ge-settings-section-summary {
+    padding: 10px 15px;
+    cursor: pointer;
+    background-color: var(--background-secondary);
+    display: flex;
+    align-items: center;
+    list-style: none;
+}
+
+.ge-settings-section-summary h3 {
+    margin: 0 !important;
+    font-size: 1.1em;
+    flex-grow: 1;
+}
+
+.ge-settings-section-summary::before {
+    content: "▶";
+    font-size: 0.8em;
+    margin-right: 10px;
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+}
+
+.ge-settings-section[open] .ge-settings-section-summary::before {
+    transform: rotate(90deg);
+}
+
+.ge-settings-section-content {
+    padding: 10px 20px 20px 20px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* 行動版調整 Mobile adjustments */
+.is-mobile .ge-settings-section-content {
+    padding: 10px 10px 15px 10px;
 }
 
 /* 路徑容器樣式 */
@@ -1198,7 +1279,7 @@ a.ge-current-folder:hover {
     cursor: pointer;
     color: var(--text-muted);
     font-size: 14px;
-    margin-right:4px;
+    margin-right: 4px;
     flex-shrink: 0;
 }
 
@@ -1427,7 +1508,7 @@ a.ge-current-folder:hover {
     text-overflow: ellipsis;
     padding-right: 24px;
     cursor: default;
-    margin: 2px; 
+    margin: 2px;
 }
 
 .ge-floating-audio-player audio {
@@ -1448,7 +1529,7 @@ a.ge-current-folder:hover {
     cursor: pointer;
     border-radius: 50%;
     transition: background-color 0.2s ease, color 0.2s ease;
-    z-index: 1102; 
+    z-index: 1102;
 }
 
 .ge-audio-close-button:hover {
@@ -1464,7 +1545,7 @@ a.ge-current-folder:hover {
     height: 30px;
     cursor: move;
     border-radius: 8px 8px 0 0;
-    z-index: 1101; 
+    z-index: 1101;
 }
 
 .ge-audio-dragging {
@@ -1637,10 +1718,10 @@ a.ge-current-folder:hover {
 .ge-custommode-option-drag-handle,
 .ge-custommode-option-toggle,
 .ge-custommode-option-delete {
-  display: inline-flex;
-  align-items: center;
-  /* 如果需要撐滿標題列高度，可加上 */
-  /* height: 100%; */
+    display: inline-flex;
+    align-items: center;
+    /* 如果需要撐滿標題列高度，可加上 */
+    /* height: 100%; */
 }
 
 /* 展開狀態的內容區域 */
@@ -2000,7 +2081,7 @@ a.ge-current-folder:hover {
 
 /* --------------------------------------------------------------------------- */
 
-.ge-note-content > p:nth-child(2) {
+.ge-note-content>p:nth-child(2) {
     margin-block-start: 0;
 }
 
@@ -2022,7 +2103,7 @@ a.ge-current-folder:hover {
     font-size: 90%;
     color: var(--text-code);
 }
-    
+
 .ge-note-content a {
     color: var(--text-accent);
     text-decoration: none;
@@ -2212,8 +2293,8 @@ a.ge-current-folder:hover {
     background-color: var(--background-modifier-hover);
 }
 
-.ge-explorer-folder-header.ge-dragover { 
-    background-color: var(--background-modifier-hover); 
+.ge-explorer-folder-header.ge-dragover {
+    background-color: var(--background-modifier-hover);
 }
 
 .ge-explorer-folder-header.is-active,
@@ -2312,32 +2393,32 @@ a.ge-current-folder:hover {
 /* ExplorerView - Mobile spacing & touch targets */
 .is-mobile .ge-explorer-folder-header,
 .is-mobile .ge-explorer-mode-item {
-  padding: 8px 10px;      /* ↑ from 4px 6px */
-  gap: 10px;              /* ↑ from 6px */
-  min-height: 36px;       /* 提升最小點擊高度，可視需要調整到 40–44px */
+    padding: 8px 10px;      /* ↑ from 4px 6px */
+    gap: 10px;              /* ↑ from 6px */
+    min-height: 36px;       /* 提升最小點擊高度，可視需要調整到 40–44px */
     border-radius: var(--radius-s);
 }
 
 /* 頂層根節點 header 的外距在手機放大一點，避免項目太擠 */
 .is-mobile .ge-explorer-view-container > .ge-explorer-folder-node > .ge-explorer-folder-header {
-  margin: 8px 10px;       /* ↑ from 6px 8px */
+    margin: 8px 10px;       /* ↑ from 6px 8px */
 }
 
 /* 讓切換箭頭與圖示在手機更好點 */
 .is-mobile .ge-explorer-folder-toggle,
 .is-mobile .ge-explorer-folder-icon {
-  width: 20px;            /* ↑ from 16px */
-  height: 20px;           /* ↑ from 16px */
+    width: 20px;            /* ↑ from 16px */
+    height: 20px;           /* ↑ from 16px */
 }
 
 /* 模式子項的縮排在手機視覺可略加（可選） */
 .is-mobile .ge-explorer-mode-item {
-  padding-left: 32px;     /* ↑ from 28px */
+    padding-left: 32px;     /* ↑ from 28px */
 }
 
 /* 列與列之間多一點空隙（可選，避免過度擁擠） */
 .is-mobile .ge-explorer-folder-header {
-  margin-bottom: 5px;     /* ↑ from 3px */
+    margin-bottom: 5px;     /* ↑ from 3px */
 }
 
 /* 降低手機點擊的藍色高亮痕跡（可選） */
@@ -2358,24 +2439,31 @@ a.ge-current-folder:hover {
 .ge-explorer-folder-header.ge-folder-color-red {
     background-color: rgba(var(--color-red-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-orange {
     background-color: rgba(var(--color-orange-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-yellow {
     background-color: rgba(var(--color-yellow-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-green {
     background-color: rgba(var(--color-green-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-cyan {
     background-color: rgba(var(--color-cyan-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-blue {
     background-color: rgba(var(--color-blue-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-purple {
     background-color: rgba(var(--color-purple-rgb), 0.2);
 }
+
 .ge-explorer-folder-header.ge-folder-color-pink {
     background-color: rgba(var(--color-pink-rgb), 0.2);
 }
@@ -2384,24 +2472,31 @@ a.ge-current-folder:hover {
 .ge-explorer-folder-header.ge-folder-color-red:hover {
     background-color: rgba(var(--color-red-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-orange:hover {
     background-color: rgba(var(--color-orange-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-yellow:hover {
     background-color: rgba(var(--color-yellow-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-green:hover {
     background-color: rgba(var(--color-green-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-cyan:hover {
     background-color: rgba(var(--color-cyan-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-blue:hover {
     background-color: rgba(var(--color-blue-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-purple:hover {
     background-color: rgba(var(--color-purple-rgb), 0.3);
 }
+
 .ge-explorer-folder-header.ge-folder-color-pink:hover {
     background-color: rgba(var(--color-pink-rgb), 0.3);
 }
@@ -2530,12 +2625,29 @@ a.ge-current-folder:hover {
 }
 
 /* 讓 stash item 的圖示可沿用 grid 的色票類別 */
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-img { color: var(--color-blue); }
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-video { color: var(--color-red); }
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-audio { color: var(--color-purple); }
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-pdf { color: var(--color-orange); }
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-canvas { color: var(--color-green); }
-.ge-explorer-stash-item .ge-explorer-folder-icon.ge-base { color: var(--color-cyan); }
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-img {
+    color: var(--color-blue);
+}
+
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-video {
+    color: var(--color-red);
+}
+
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-audio {
+    color: var(--color-purple);
+}
+
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-pdf {
+    color: var(--color-orange);
+}
+
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-canvas {
+    color: var(--color-green);
+}
+
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-base {
+    color: var(--color-cyan);
+}
 
 /* 輸入錯誤樣式 Input Error Style */
 .ge-input-error {

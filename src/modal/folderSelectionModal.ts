@@ -305,7 +305,7 @@ export class FolderSelectionModal extends Modal {
                     folder,
                     this.plugin.settings.ignoredFolders,
                     this.plugin.settings.ignoredFolderPatterns,
-                    false // 在選擇資料夾時不考慮 showIgnoredFolders 設置
+                    false // 在選擇資料夾時不考慮 showIgnoredItems 設置
                 );
             })
             .sort((a, b) => a.path.localeCompare(b.path));

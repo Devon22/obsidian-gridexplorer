@@ -195,7 +195,7 @@ export function renderModePath(gridView: GridView) {
                                         child as TFolder,
                                         gridView.plugin.settings.ignoredFolders,
                                         gridView.plugin.settings.ignoredFolderPatterns,
-                                        gridView.showIgnoredFolders
+                                        gridView.showIgnoredItems
                                     ))
                                     .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
@@ -374,7 +374,7 @@ export function renderModePath(gridView: GridView) {
                                 child as TFolder,
                                 gridView.plugin.settings.ignoredFolders,
                                 gridView.plugin.settings.ignoredFolderPatterns,
-                                gridView.showIgnoredFolders
+                                gridView.showIgnoredItems
                             )) as TFolder[];
 
                         if (subFolders.length > 0) {

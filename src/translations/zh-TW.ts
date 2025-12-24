@@ -88,8 +88,8 @@ export default {
     'ignored_folders_desc': '在這裡設定要忽略的資料夾',
     'add_ignored_folder': '新增忽略資料夾',
     'no_ignored_folders': '沒有忽略的資料夾。',
-    'ignored_folder_patterns': '以字串忽略資料夾和檔案',
-    'ignored_folder_patterns_desc': '使用字串模式忽略資料夾和檔案（支援正則表達式）',
+    'ignored_folder_patterns': '以字串忽略資料夾',
+    'ignored_folder_patterns_desc': '使用字串模式忽略資料夾（支援正則表達式）',
     'add_ignored_folder_pattern': '新增忽略資料夾模式',
     'ignored_folder_pattern_placeholder': '輸入資料夾名稱或正則表達式',
     'no_ignored_folder_patterns': '沒有忽略的資料夾模式。',
@@ -214,7 +214,7 @@ export default {
     'open_new_grid_view': '開啟新網格視圖',
     'open_in_new_grid_view': '在新網格視圖中開啟',
     'min_mode': '最小化模式',
-    'show_ignored_folders': '顯示忽略的資料夾',
+    'show_ignored_items': '顯示忽略的資料夾及檔案',
     'delete_note': '刪除檔案',
     'open_folder_note': '開啟資料夾筆記',
     'create_folder_note': '建立資料夾筆記',
@@ -286,6 +286,8 @@ export default {
     'foldernote_pinned_desc': '將資料夾筆記固定在最上方',
     'display_minimized': '最小化顯示',
     'display_minimized_desc': '將此筆記以最小化方式顯示',
+    'display_hidden': '隱藏檔案',
+    'display_hidden_desc': '在網格視圖中隱藏此檔案',
 
     // Quick Access Settings and Commands
     'quick_access_settings_title': '快速存取設定',

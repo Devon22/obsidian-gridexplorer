@@ -87,8 +87,8 @@ export default {
     'ignored_folders_desc': '在这里设置要忽略的文件夹',
     'add_ignored_folder': '添加忽略文件夹',
     'no_ignored_folders': '没有忽略的文件夹。',
-    'ignored_folder_patterns': '以字符串忽略文件夹和文件',
-    'ignored_folder_patterns_desc': '使用字符串模式忽略文件夹和文件（支持正则表达式）',
+    'ignored_folder_patterns': '以字符串忽略文件夹',
+    'ignored_folder_patterns_desc': '使用字符串模式忽略文件夹（支持正则表达式）',
     'add_ignored_folder_pattern': '添加忽略文件夹模式',
     'ignored_folder_pattern_placeholder': '输入文件夹名称或正则表达式',
     'no_ignored_folder_patterns': '没有忽略的文件夹模式。',
@@ -213,7 +213,7 @@ export default {
     'open_new_grid_view': '打开新网格视图',
     'open_in_new_grid_view': '在新网格视图中打开',
     'min_mode': '最小化模式',
-    'show_ignored_folders': '显示忽略的文件夹',
+    'show_ignored_items': '显示忽略的文件夹及文件',
     'delete_note': '删除文件',
     'open_folder_note': '打开文件夹笔记',
     'create_folder_note': '创建文件夹笔记',
@@ -285,6 +285,8 @@ export default {
     'foldernote_pinned_desc': '将文件夹笔记固定在顶部',
     'display_minimized': '最小化显示',
     'display_minimized_desc': '将此笔记以最小化方式显示',
+    'display_hidden': '隐藏文件',
+    'display_hidden_desc': '在网格视图中隐藏此文件',
 
     // Quick Access Settings and Commands
     'quick_access_settings_title': '快速访问设置',

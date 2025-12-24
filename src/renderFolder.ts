@@ -164,7 +164,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         child,
                         gridView.plugin.settings.ignoredFolders,
                         gridView.plugin.settings.ignoredFolderPatterns,
-                        gridView.showIgnoredFolders
+                        gridView.showIgnoredItems
                     );
                 })
                 .sort((a, b) => a.name.localeCompare(b.name));
