@@ -336,8 +336,8 @@ export default class GridExplorerPlugin extends Plugin {
             // 只處理左鍵
             if (evt.button !== 0) return;
 
-            // 若點擊的是屬性面板中 tag pill 的刪除按鈕，直接跳過
-            if ((evt.target as HTMLElement).closest('.multi-select-pill-remove-button')) return;
+            // 若點擊的是屬性面板中 tag pill 的刪除按鈕或標籤面板中的展開圖示，直接跳過
+            if ((evt.target as HTMLElement).closest('.multi-select-pill-remove-button, .tree-item-icon.collapse-icon')) return;
 
             // 從觸發點往上找，看是否碰到 tag 連結
             const el = (evt.target as HTMLElement).closest(
