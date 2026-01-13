@@ -234,7 +234,7 @@ export class GridView extends ItemView {
             searchFilesNameOnly,
             searchMediaFiles,
         });
-        
+
         this.recentSources.unshift(key);
         // 一旦有新的歷史被推入，清空 futureSources
         this.futureSources = [];
@@ -347,7 +347,7 @@ export class GridView extends ItemView {
                 mode: this.sourceMode,
                 path: this.sourcePath,
             });
-        } catch {}
+        } catch { }
 
         await this.render();
     }
@@ -363,9 +363,9 @@ export class GridView extends ItemView {
             }
         });
         this.eventCleanupFunctions = [];
-        
+
         // 清理檔案監聽器（FileWatcher 的事件監聽器會在插件卸載時自動清理）
-        
+
         super.onunload();
     }
 
@@ -388,7 +388,7 @@ export class GridView extends ItemView {
             }
         });
         this.eventCleanupFunctions = [];
-        
+
         // 清空整個容器
         this.containerEl.empty();
 
@@ -400,6 +400,7 @@ export class GridView extends ItemView {
 
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
+
 
         // 取得置頂清單
         if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
@@ -704,7 +705,7 @@ export class GridView extends ItemView {
                                                 }
 
                                                 if (metadata?.[fieldKey] !== undefined && metadata?.[fieldKey] !== '' && metadata?.[fieldKey] !== null) {
-                                                    
+
                                                     let value = metadata[fieldKey];
 
                                                     // 如果是數字，則加入千位分隔符號
@@ -715,7 +716,7 @@ export class GridView extends ItemView {
                                                     if (Array.isArray(metadata[fieldKey])) {
                                                         value = metadata[fieldKey].join(', ');
                                                     }
-                                                    
+
                                                     let outputValue: string | number | null = value;
                                                     if (calcExpr) {
                                                         try {
@@ -813,7 +814,7 @@ export class GridView extends ItemView {
                                         fileEl.addClass('ge-note-color-custom');
                                         fileEl.style.setProperty('--ge-note-color-bg', hexToRgba(colorValue, 0.2));
                                         fileEl.style.setProperty('--ge-note-color-border', hexToRgba(colorValue, 0.5));
-                                        
+
                                         // 設置預覽內容文字顏色
                                         if (pEl) {
                                             pEl.addClass('ge-note-color-custom-text');
@@ -1313,7 +1314,7 @@ export class GridView extends ItemView {
                 // 只有在滑鼠確實懸停在此項目上且按下 Ctrl 時才觸發
                 // 且滑鼠沒有按下（避免干擾 Ctrl+click）
                 // 並且當前 GridView 必須是活動視圖
-                if (isHovering && e.ctrlKey && !isMouseDown && 
+                if (isHovering && e.ctrlKey && !isMouseDown &&
                     this.app.workspace.getActiveViewOfType(GridView) === this) {
                     // 短暫延遲以確保不是 Ctrl+click 操作
                     setTimeout(() => {
@@ -1348,7 +1349,7 @@ export class GridView extends ItemView {
                     document.addEventListener('keydown', keydownListener, { capture: true });
                 }
             };
-            
+
             const onMouseLeave = () => {
                 isHovering = false;
                 isMouseDown = false;
@@ -1358,12 +1359,12 @@ export class GridView extends ItemView {
                 }
                 triggeredInHover = false;
             };
-            
+
             fileEl.addEventListener('mouseenter', onMouseEnter);
             fileEl.addEventListener('mouseleave', onMouseLeave);
             fileEl.addEventListener('mousedown', onMouseDown);
             fileEl.addEventListener('mouseup', onMouseUp);
-            
+
             // 添加清理函數到數組中
             this.eventCleanupFunctions.push(() => {
                 if (keydownListener) {
@@ -1532,13 +1533,13 @@ export class GridView extends ItemView {
 
                 // 使用 Obsidian 內建的拖曳格式（obsidian:// URI）
                 // const vaultName = this.app.vault.getName();
-                
+
                 if (selectedFiles.length > 1) {
                     // 多檔案：建立多個 obsidian://open URI
                     // const obsidianUris = selectedFiles.map(f => 
                     //     `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(f.path)}`
                     // );
-                    
+
                     // // 設定 text/uri-list
                     // event.dataTransfer?.setData('text/uri-list', obsidianUris.join('\n'));
                     // console.log(obsidianUris.join('\n'));
@@ -1556,7 +1557,7 @@ export class GridView extends ItemView {
                 } else {
                     // 單檔案：建立單一 obsidian://open URI
                     // const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`;
-                    
+
                     // 設定為 text/uri-list
                     // event.dataTransfer?.setData('text/uri-list', obsidianUri);
 
@@ -1691,7 +1692,7 @@ export class GridView extends ItemView {
     private addFilesToStash(files: TFile[]) {
         // 獲取當前活動的 ExplorerView
         const explorerLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
-        
+
         if (explorerLeaves.length === 0) {
             new Notice('找不到 Explorer 視圖');
             return;
@@ -1699,7 +1700,7 @@ export class GridView extends ItemView {
 
         // 使用第一個找到的 ExplorerView
         const explorerView = explorerLeaves[0].view as ExplorerView;
-        
+
         if (!explorerView) {
             new Notice('無法訪問 Explorer 視圖');
             return;
@@ -1707,13 +1708,13 @@ export class GridView extends ItemView {
 
         // 將檔案路徑轉換為字串陣列
         const filePaths = files.map(file => file.path);
-        
+
         // 調用 ExplorerView 的 addToStash 方法
         (explorerView as any).addToStash(filePaths);
-        
+
         // 強制立即重新渲染 ExplorerView 以確保畫面更新
         (explorerView as any).refresh();
-        
+
         // 顯示成功通知
         new Notice(t('added_to_stash'));
     }
@@ -1984,7 +1985,7 @@ export class GridView extends ItemView {
                 new Notice(`${t('target_not_found')}: ${redirectPath}`);
             }
         }
-        
+
         return false;
     }
 

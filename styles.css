@@ -31,7 +31,7 @@
 .ge-grid-item {
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--button-radius);
+    border-radius: var(--radius-m);
     padding: 10px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -229,7 +229,8 @@
     /* 垂直排列 */
     flex-direction: column;
     align-items: stretch;
-    height: var(--grid-item-height); /* 與一般網格一致，保持同排等高 */
+    height: var(--grid-item-height);
+    /* 與一般網格一致，保持同排等高 */
     gap: 0px;
     padding: 0px !important;
 }
@@ -237,8 +238,10 @@
 /* 摘要文字 Content Area */
 .ge-vertical-card .ge-content-area {
     order: 1;
-    flex: 1 1 auto; /* 使摘要區撐開，標籤可貼底 */
-    flex-grow: 1; /* Add this line */
+    flex: 1 1 auto;
+    /* 使摘要區撐開，標籤可貼底 */
+    flex-grow: 1;
+    /* Add this line */
     padding: 10px !important;
 }
 
@@ -246,7 +249,7 @@
 .ge-vertical-card .ge-image-area {
     order: 3;
     width: 100%;
-    height: var(--image-area-height);  
+    height: var(--image-area-height);
 }
 
 /* 標籤列置底 Tags Container */
@@ -266,8 +269,8 @@
 
 .ge-vertical-card.ge-image-top .ge-image-area img,
 .ge-vertical-card.ge-image-top .ge-image-area video {
-    border-radius: calc(var(--button-radius) - var(--border-width)) calc(var(--button-radius) - var(--border-width)) 0px 0px !important;
-} 
+    border-radius: calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) 0px 0px !important;
+}
 
 /* 預設 bottom 可維持原有順序，以下為明確設置 */
 .ge-vertical-card.ge-image-bottom .ge-image-area {
@@ -280,8 +283,8 @@
 
 .ge-vertical-card.ge-image-bottom .ge-image-area img,
 .ge-vertical-card.ge-image-bottom .ge-image-area video {
-    border-radius: 0px 0px calc(var(--button-radius) - var(--border-width)) calc(var(--button-radius) - var(--border-width)) !important;
-} 
+    border-radius: 0px 0px calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) !important;
+}
 
 /* 鼠標懸停效果：整張卡片微抬升 */
 .ge-vertical-card .ge-grid-item:hover {
@@ -290,7 +293,8 @@
 
 /* 僅圖片/影片的直向卡片 Media Card */
 .ge-vertical-card .ge-media-card {
-    padding: 0; /* 移除內距，讓媒體填滿 */
+    padding: 0;
+    /* 移除內距，讓媒體填滿 */
     border: none;
     gap: 0;
     height: var(--grid-item-height);
@@ -305,12 +309,13 @@
 
 .ge-vertical-card .ge-media-card .ge-image-area img,
 .ge-vertical-card .ge-media-card .ge-image-area video {
-    border-radius: 4px !important;
+    border-radius: var(--radius-m) !important;
 }
 
 .ge-vertical-card .ge-media-card .ge-content-area,
 .ge-vertical-card .ge-media-card .ge-tags-container {
-    display: none !important; /* 隱藏標題、摘要、標籤 */
+    display: none !important;
+    /* 隱藏標題、摘要、標籤 */
 }
 
 /* 標籤容器 Tags Container */
@@ -406,7 +411,8 @@
 }
 
 .ge-grid-item.ge-folder-item .ge-content-area {
-    min-height: 0px; /* 設定最小高度 */
+    min-height: 0px;
+    /* 設定最小高度 */
     justify-content: center;
 }
 
@@ -686,11 +692,13 @@
 @container (max-width: 350px) {
     .ge-header-buttons {
         gap: 7px;
-        padding: 9px 7px; /* 保持上下 padding 9px，減少左右 padding 到 6px */
+        padding: 9px 7px;
+        /* 保持上下 padding 9px，減少左右 padding 到 6px */
     }
 
     .ge-header-buttons button {
-        padding: 6px 9px; /* 保持上下 padding 6px，減少左右 padding 到 8px */
+        padding: 6px 9px;
+        /* 保持上下 padding 6px，減少左右 padding 到 8px */
         gap: 3px;
         font-size: 13px;
     }
@@ -1260,8 +1268,10 @@ a.ge-current-folder:hover {
 .ge-search-text {
     font-size: 14px;
     color: var(--text-normal);
-    flex-grow: 1; /* 讓文字填滿剩餘空間 */
-    min-width: 0; /* 防止内容溢出 */
+    flex-grow: 1;
+    /* 讓文字填滿剩餘空間 */
+    min-width: 0;
+    /* 防止内容溢出 */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1627,7 +1637,8 @@ a.ge-current-folder:hover {
 /* 拖曳預覽 Drag Preview */
 .ge-custom-drag-preview {
     position: absolute;
-    top: -1000px; /* 隱藏在視窗外 */
+    top: -1000px;
+    /* 隱藏在視窗外 */
     left: -1000px;
     font-size: var(--font-ui-small);
     white-space: nowrap;
@@ -2383,7 +2394,8 @@ a.ge-current-folder:hover {
 }
 
 .ge-explorer-folder-children {
-    margin-left: 0; /* 由 header paddingLeft 控制縮排 */
+    margin-left: 0;
+    /* 由 header paddingLeft 控制縮排 */
 }
 
 .ge-explorer-folder-children.is-collapsed {
@@ -2393,32 +2405,40 @@ a.ge-current-folder:hover {
 /* ExplorerView - Mobile spacing & touch targets */
 .is-mobile .ge-explorer-folder-header,
 .is-mobile .ge-explorer-mode-item {
-    padding: 8px 10px;      /* ↑ from 4px 6px */
-    gap: 10px;              /* ↑ from 6px */
-    min-height: 36px;       /* 提升最小點擊高度，可視需要調整到 40–44px */
+    padding: 8px 10px;
+    /* ↑ from 4px 6px */
+    gap: 10px;
+    /* ↑ from 6px */
+    min-height: 36px;
+    /* 提升最小點擊高度，可視需要調整到 40–44px */
     border-radius: var(--radius-s);
 }
 
 /* 頂層根節點 header 的外距在手機放大一點，避免項目太擠 */
-.is-mobile .ge-explorer-view-container > .ge-explorer-folder-node > .ge-explorer-folder-header {
-    margin: 8px 10px;       /* ↑ from 6px 8px */
+.is-mobile .ge-explorer-view-container>.ge-explorer-folder-node>.ge-explorer-folder-header {
+    margin: 8px 10px;
+    /* ↑ from 6px 8px */
 }
 
 /* 讓切換箭頭與圖示在手機更好點 */
 .is-mobile .ge-explorer-folder-toggle,
 .is-mobile .ge-explorer-folder-icon {
-    width: 20px;            /* ↑ from 16px */
-    height: 20px;           /* ↑ from 16px */
+    width: 20px;
+    /* ↑ from 16px */
+    height: 20px;
+    /* ↑ from 16px */
 }
 
 /* 模式子項的縮排在手機視覺可略加（可選） */
 .is-mobile .ge-explorer-mode-item {
-    padding-left: 32px;     /* ↑ from 28px */
+    padding-left: 32px;
+    /* ↑ from 28px */
 }
 
 /* 列與列之間多一點空隙（可選，避免過度擁擠） */
 .is-mobile .ge-explorer-folder-header {
-    margin-bottom: 5px;     /* ↑ from 3px */
+    margin-bottom: 5px;
+    /* ↑ from 3px */
 }
 
 /* 降低手機點擊的藍色高亮痕跡（可選） */
@@ -2430,8 +2450,9 @@ a.ge-current-folder:hover {
 /* --------------------------------------------------------------------------- */
 /* 統一三個根節點（自訂模式/模式/Folder）的上下間距與外觀 */
 /* 頂層根節點 header：統一外距與圓角（自訂模式/模式/Folder） */
-.ge-explorer-view-container > .ge-explorer-folder-node > .ge-explorer-folder-header {
-    margin: 6px 8px; /* 一致的左右/上下間距 */
+.ge-explorer-view-container>.ge-explorer-folder-node>.ge-explorer-folder-header {
+    margin: 6px 8px;
+    /* 一致的左右/上下間距 */
     border-radius: var(--radius-s);
 }
 
@@ -2516,7 +2537,8 @@ a.ge-current-folder:hover {
     flex: 1 1 auto;
     min-width: 0;
     height: 28px;
-    padding: 4px 28px 4px 8px; /* 右側預留清除鍵空間 */
+    padding: 4px 28px 4px 8px;
+    /* 右側預留清除鍵空間 */
     background: transparent;
     border: none;
     outline: none;
@@ -2563,7 +2585,8 @@ a.ge-current-folder:hover {
 /* --------------------------------------------------------------------------- */
 /* ExplorerView Stash Group */
 .ge-explorer-stash-dropzone {
-    padding-left: 28px; /* 與 .ge-explorer-mode-item 一致的縮排 */
+    padding-left: 28px;
+    /* 與 .ge-explorer-mode-item 一致的縮排 */
     border: 1px dashed var(--background-modifier-border);
     border-radius: var(--radius-s);
     margin: 4px 0px 4px -1px;
@@ -2596,15 +2619,18 @@ a.ge-current-folder:hover {
 }
 
 .ge-explorer-stash-item {
-    padding-left: 28px; /* 與 .ge-explorer-mode-item 一致的縮排 */
-    position: relative; /* 供插入指示線定位 */
+    padding-left: 28px;
+    /* 與 .ge-explorer-mode-item 一致的縮排 */
+    position: relative;
+    /* 供插入指示線定位 */
 }
 
 /* 暫存區拖曳排序：插入指示線（上方） */
 .ge-explorer-stash-item.ge-stash-insert-before::before {
     content: "";
     position: absolute;
-    left: 20px; /* 與內容縮排對齊，略小於 28px 以避開圖示 */
+    left: 20px;
+    /* 與內容縮排對齊，略小於 28px 以避開圖示 */
     right: 8px;
     top: -1px;
     height: 0;
@@ -2653,4 +2679,28 @@ a.ge-current-folder:hover {
 .ge-input-error {
     border-color: var(--color-red) !important;
     background-color: rgba(var(--color-red-rgb), 0.1) !important;
+}
+
+/* --------------------------------------------------------------------------- */
+/* 手機版頂部邊距適配 (針對 Obsidian 更新後的介面調整) */
+
+.is-phone .ge-grid-view-container,
+.is-phone .ge-note-view-container {
+    /* 讓整個插件容器避開頂部安全區域 (狀態列/瀏海) */
+    /* Obsidian 更新後將此變數用於處理頂部間距 */
+    padding-top: var(--safe-area-inset-top);
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+}
+
+/* 移除 Obsidian 預設為 .view-content 添加的 margin-top，
+   因為 GridExplorer 的 header buttons 位在 view-content 之外，
+   這會導致 buttons 與 grid 之間出現多餘的空隙。 */
+.is-phone .ge-grid-view-container .view-content {
+    margin-top: 0 !important;
+    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
+}
+
+.is-phone .ge-note-view-container {
+    padding-bottom: var(--view-bottom-spacing) !important;
 }
