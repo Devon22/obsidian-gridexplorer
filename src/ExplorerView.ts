@@ -10,7 +10,7 @@ import { showFolderRenameModal } from './modal/folderRenameModal';
 import { showFolderMoveModal } from './modal/folderMoveModal';
 import { MediaModal } from './modal/mediaModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
-import { FloatingAudioPlayer } from './floatingAudioPlayer';
+import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { t } from './translations';
 
 // 探索器視圖類型常數
