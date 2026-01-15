@@ -6,13 +6,13 @@ import { renderFolder } from './renderFolder';
 import { renderFiles } from './renderFiles';
 import { handleKeyDown } from './handleKeyDown';
 import { isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './utils/fileUtils';
-import { FileWatcher } from './fileWatcher';
+import { FileWatcher } from './FileWatcher';
 import { findFirstImageInNote } from './utils/mediaUtils';
 import { isHexColor, hexToRgba } from './utils/colorUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { MediaModal } from './modal/mediaModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
-import { FloatingAudioPlayer } from './floatingAudioPlayer';
+import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { t } from './translations';
 

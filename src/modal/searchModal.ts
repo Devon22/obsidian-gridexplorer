@@ -70,7 +70,19 @@ export class SearchModal extends Modal {
                 return;
             }
             const query = match[1].toLowerCase();
-            tagSuggestions = allTagsArr.filter((t) => t.toLowerCase().startsWith(query)).slice(0, 10);
+            const filteredTags = allTagsArr.filter((t) => t.toLowerCase().includes(query));
+            
+            // 排序：優先顯示前綴匹配的標籤，其次按字母順序排序
+            tagSuggestions = filteredTags.sort((a, b) => {
+                const aLower = a.toLowerCase();
+                const bLower = b.toLowerCase();
+                const aStartsWith = aLower.startsWith(query);
+                const bStartsWith = bLower.startsWith(query);
+                
+                if (aStartsWith && !bStartsWith) return -1;
+                if (!aStartsWith && bStartsWith) return 1;
+                return aLower.localeCompare(bLower);
+            }).slice(0, 10);
 
             if (tagSuggestions.length === 0) {
                 tagSuggestionContainer.style.display = 'none';
