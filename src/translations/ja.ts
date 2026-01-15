@@ -47,7 +47,7 @@ export default {
     'folder_mode': 'フォルダ',
     'search_results': '検索結果',
     'backlinks_mode': 'バックリンク',
-    'outgoinglinks_mode': 'アウトグリンク',
+    'outgoinglinks_mode': 'アウトゴーイングリンク',
     'all_files_mode': 'すべてのファイル',
     'recent_files_mode': '最近のファイル',
     'random_note_mode': 'ランダムノート',
@@ -160,7 +160,7 @@ export default {
     'show_bookmarks_mode': 'ブックマークモードを表示',
     'show_search_mode': '検索結果モードを表示',
     'show_backlinks_mode': 'バックリンクモードを表示',
-    'show_outgoinglinks_mode': 'アウトグリンクモードを表示',
+    'show_outgoinglinks_mode': 'アウトゴーイングリンクモードを表示',
     'show_all_files_mode': '全ファイルモードを表示',
     'show_recent_files_mode': '最近ファイルモードを表示',
     'recent_files_count': '最近ファイルモード表示筆数',
@@ -178,8 +178,8 @@ export default {
     'default': 'デフォルト',
     'hidden': '隠す',
 
-    // 隠す頂部元素
-    'hide_header_elements': '頂部元素を隠す',
+    // 隠すヘッダー要素
+    'hide_header_elements': 'ヘッダー要素を隠す',
 
     // 開く場所設定
     'default_open_location': 'デフォルトの開く場所',
