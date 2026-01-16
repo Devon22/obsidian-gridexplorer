@@ -2701,6 +2701,6 @@ a.ge-current-folder:hover {
     padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
 }
 
-.is-phone .ge-note-view-container {
+.is-phone .mod-root .ge-note-view-container {
     padding-bottom: var(--view-bottom-spacing) !important;
 }
