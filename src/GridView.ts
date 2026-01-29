@@ -1991,6 +1991,11 @@ export class GridView extends ItemView {
 
     // 在網格視圖中直接顯示筆記
     async showNoteInGrid(file: TFile) {
+        // 隱藏移動端導航欄
+        // const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+        // if (mobileNavbar) {
+        //     mobileNavbar.style.display = 'none';
+        // }
 
         // 關閉之前的筆記顯示
         if (this.isShowingNote) {
@@ -2112,7 +2117,11 @@ export class GridView extends ItemView {
     hideNoteInGrid() {
         if (!this.isShowingNote) return;
 
-        //const gridContainer = this.containerEl.querySelector('.ge-grid-container');
+        // 顯示移動端導航欄
+        // const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+        // if (mobileNavbar) {
+        //     mobileNavbar.style.display = '';
+        // }
 
         if (this.noteViewContainer) {
             // 移除鍵盤事件監聽器

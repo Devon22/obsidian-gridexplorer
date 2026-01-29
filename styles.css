@@ -2133,6 +2133,11 @@ a.ge-current-folder:hover {
     border-radius: 0 var(--radius-s) var(--radius-s) 0;
 }
 
+/* 隱藏複製按鈕 */
+.ge-note-content .copy-code-button {
+    display: none;
+}
+
 .ge-note-content ul,
 .ge-note-content ol {
     margin: 1em 0;
@@ -2701,6 +2706,6 @@ a.ge-current-folder:hover {
     padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
 }
 
-.is-phone .mod-root .ge-note-view-container {
+.is-phone .ge-note-content {
     padding-bottom: var(--view-bottom-spacing) !important;
 }
