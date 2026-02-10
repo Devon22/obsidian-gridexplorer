@@ -376,7 +376,8 @@ export class MediaModal extends Modal {
             const deltaY = Math.abs(touch.clientY - this.touchStartY);
             
             // 如果水平移動距離大於垂直移動距離，則認為是水平拖曳
-            if (deltaX > deltaY && deltaX > 10) {
+            // 如果垂直移動距離大於水平移動距離，則認為是垂直拖曳
+            if ((deltaX > deltaY && deltaX > 10) || (deltaY > deltaX && deltaY > 10)) {
                 this.isDragging = true;
                 // 阻止預設的滾動行為
                 e.preventDefault();
@@ -396,16 +397,22 @@ export class MediaModal extends Modal {
             
             // 檢查是否符合滑動條件
             const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
-            const isValidDistance = Math.abs(deltaX) >= this.minSwipeDistance;
+            const isVerticalSwipe = Math.abs(deltaY) > Math.abs(deltaX);
+            const isValidDistance = Math.abs(deltaX) >= this.minSwipeDistance || Math.abs(deltaY) >= this.minSwipeDistance;
             const isValidTime = deltaTime <= this.maxSwipeTime;
             
-            if (isHorizontalSwipe && isValidDistance && isValidTime) {
-                if (deltaX > 0) {
-                    // 向右滑動 - 顯示上一個媒體
-                    this.showPrevMedia();
-                } else {
-                    // 向左滑動 - 顯示下一個媒體
-                    this.showNextMedia();
+            if (isValidDistance && isValidTime) {
+                if (isHorizontalSwipe) {
+                    if (deltaX > 0) {
+                        // 向右滑動 - 顯示上一個媒體
+                        this.showPrevMedia();
+                    } else {
+                        // 向左滑動 - 顯示下一個媒體
+                        this.showNextMedia();
+                    }
+                } else if (isVerticalSwipe && deltaY > 0) {
+                    // 向下滑動 - 關閉全螢幕
+                    this.close();
                 }
             }
             
