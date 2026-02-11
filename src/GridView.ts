@@ -2016,7 +2016,9 @@ export class GridView extends ItemView {
         // 筆記標題
         const noteTitle = leftBar.createDiv('ge-note-title');
         noteTitle.textContent = file.basename;
-        setTooltip(noteTitle, file.basename);
+        if (Platform.isDesktop) {
+            setTooltip(noteTitle, file.basename);
+        }
 
         // 編輯按鈕
         const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
@@ -2024,6 +2026,10 @@ export class GridView extends ItemView {
         editButton.addEventListener('click', () => {
             this.getLeafByMode(file).openFile(file);
         });
+
+        // Metadata 切換按鈕
+        const infoButton = rightBar.createEl('button', { cls: 'ge-note-info-button' });
+        setIcon(infoButton, 'info')
 
         // 關閉按鈕
         const closeButton = rightBar.createEl('button', { cls: 'ge-note-close-button' });
@@ -2047,6 +2053,134 @@ export class GridView extends ItemView {
         const noteContent = scrollContainer.createDiv('ge-note-content-container');
         if (isInSidebar) {
             noteContent.style.padding = '15px';
+        }
+
+        // 取得 Metadata (Frontmatter)
+        const fileCache = this.app.metadataCache.getFileCache(file);
+        const frontmatter = fileCache?.frontmatter;
+
+        if (frontmatter) {
+            // 檢查是否除了 position 以外還有其他屬性
+            const keys = Object.keys(frontmatter).filter(k => k !== 'position');
+            if (keys.length > 0) {
+                const metadataContainer = noteContent.createDiv('ge-note-metadata-container');
+
+                // 綁定切換事件
+                infoButton.addEventListener('click', () => {
+                    metadataContainer.classList.toggle('is-visible');
+                    scrollContainer.scrollTo(0, 0);
+                });
+
+                const metadataContent = metadataContainer.createDiv('ge-note-metadata-content');
+                for (const key of keys) {
+                    const item = metadataContent.createDiv('ge-note-metadata-item');
+                    item.createSpan({ cls: 'ge-note-metadata-key', text: `${key}: ` });
+                    const value = frontmatter[key];
+                    const valueSpan = item.createSpan({ cls: 'ge-note-metadata-value' });
+
+                    const values = Array.isArray(value) ? value : [value];
+                    values.forEach((val, index) => {
+                        const valStr = String(val);
+                        // 處理內部連結 [[link]] 或 [[link|alias]]
+                        const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+                        // 處理 URL
+                        const urlRegex = /(https?:\/\/[^\s]+)/g;
+                        // 處理 Tag
+                        const tagRegex = /#([^\s#]+)/g;
+
+                        if (wikilinkRegex.test(valStr)) {
+                            wikilinkRegex.lastIndex = 0;
+                            let lastIndex = 0;
+                            let match;
+                            while ((match = wikilinkRegex.exec(valStr)) !== null) {
+                                // 插入匹配前的文字
+                                if (match.index > lastIndex) {
+                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                                }
+                                const linkPath = match[1];
+                                const linkAlias = match[2] || linkPath;
+                                const linkEl = valueSpan.createEl('a', {
+                                    cls: 'internal-link',
+                                    text: linkAlias,
+                                    attr: { 'data-href': linkPath }
+                                });
+                                linkEl.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+                                    if (linkedFile) {
+                                        this.getLeafByMode(linkedFile).openFile(linkedFile);
+                                    }
+                                });
+                                lastIndex = wikilinkRegex.lastIndex;
+                            }
+                            if (lastIndex < valStr.length) {
+                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                            }
+                        } else if (urlRegex.test(valStr)) {
+                            urlRegex.lastIndex = 0;
+                            let lastIndex = 0;
+                            let match;
+                            while ((match = urlRegex.exec(valStr)) !== null) {
+                                if (match.index > lastIndex) {
+                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                                }
+                                const url = match[1];
+                                valueSpan.createEl('a', {
+                                    cls: 'external-link',
+                                    text: url,
+                                    attr: { 'href': url, 'target': '_blank', 'rel': 'noopener' }
+                                });
+                                lastIndex = urlRegex.lastIndex;
+                            }
+                            if (lastIndex < valStr.length) {
+                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                            }
+                        } else if (key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag' || tagRegex.test(valStr)) {
+                            if ((key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag') && !valStr.startsWith('#')) {
+                                const tagEl = valueSpan.createEl('a', {
+                                    cls: 'tag',
+                                    text: '#' + valStr,
+                                    attr: { 'href': '#' + valStr }
+                                });
+                                tagEl.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    (this.app as any).internalPlugins?.getPluginById('global-search')?.instance?.openGlobalSearch('tag:#' + valStr);
+                                });
+                            } else {
+                                tagRegex.lastIndex = 0;
+                                let lastIndex = 0;
+                                let match;
+                                while ((match = tagRegex.exec(valStr)) !== null) {
+                                    if (match.index > lastIndex) {
+                                        valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                                    }
+                                    const tagName = match[1];
+                                    const tagEl = valueSpan.createEl('a', {
+                                        cls: 'tag',
+                                        text: '#' + tagName,
+                                        attr: { 'href': '#' + tagName }
+                                    });
+                                    tagEl.addEventListener('click', (e) => {
+                                        e.preventDefault();
+                                        (this.app as any).internalPlugins?.getPluginById('global-search')?.instance?.openGlobalSearch('tag:#' + tagName);
+                                    });
+                                    lastIndex = tagRegex.lastIndex;
+                                }
+                                if (lastIndex < valStr.length) {
+                                    valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                                }
+                            }
+                        } else {
+                            valueSpan.createSpan({ text: valStr });
+                        }
+
+                        if (index < values.length - 1) {
+                            const isTag = key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag';
+                            valueSpan.createSpan({ text: isTag ? ' ' : ', ' });
+                        }
+                    });
+                }
+            }
         }
 
         // 創建筆記內容區域
