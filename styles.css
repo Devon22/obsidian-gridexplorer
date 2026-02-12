@@ -2010,7 +2010,8 @@ a.ge-current-folder:hover {
 }
 
 .ge-note-close-button,
-.ge-note-edit-button {
+.ge-note-edit-button,
+.ge-note-info-button {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -2024,7 +2025,8 @@ a.ge-current-folder:hover {
 }
 
 .is-tablet .ge-note-close-button:not(.clickable-icon),
-.is-tablet .ge-note-edit-button:not(.clickable-icon) {
+.is-tablet .ge-note-edit-button:not(.clickable-icon),
+.is-tablet .ge-note-info-button:not(.clickable-icon) {
     padding: 6px 12px !important;
 }
 
@@ -2038,15 +2040,24 @@ a.ge-current-folder:hover {
 }
 
 .ge-note-close-button:hover,
-.ge-note-edit-button:hover {
+.ge-note-edit-button:hover,
+.ge-note-info-button:hover {
     background-color: var(--interactive-hover);
     transform: translateY(-1px);
     opacity: 1;
 }
 
 .ge-note-close-button:active,
-.ge-note-edit-button:active {
+.ge-note-edit-button:active,
+.ge-note-info-button:active {
     transform: translateY(0);
+}
+
+.is-mobile .ge-note-info-button:focus,
+.is-mobile .ge-note-info-button:focus-visible {
+    outline: none;
+    background-color: var(--interactive-normal) !important;
+    transform: none !important;
 }
 
 .ge-note-content-container {
@@ -2116,23 +2127,6 @@ a.ge-current-folder:hover {
 
 .ge-note-metadata-container.is-visible {
     display: block;
-}
-
-.ge-note-info-button {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background-color: var(--interactive-normal);
-    border-radius: var(--button-radius);
-    color: var(--text-normal);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.ge-note-info-button:hover {
-    transform: translateY(-1px);
 }
 
 .ge-note-metadata-content {

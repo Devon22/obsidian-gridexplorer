@@ -1992,10 +1992,17 @@ export class GridView extends ItemView {
     // 在網格視圖中直接顯示筆記
     async showNoteInGrid(file: TFile) {
         // 隱藏移動端導航欄
-        // const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
-        // if (mobileNavbar) {
-        //     mobileNavbar.style.display = 'none';
-        // }
+        if (Platform.isPhone) {
+            const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+            if (mobileNavbar) {
+                if (!document.body.classList.contains('is-floating-nav')) {
+                    mobileNavbar.style.transform = 'translateY(100%)';
+                } else {
+                    mobileNavbar.style.transform = 'translateY(200%)';
+                }
+                mobileNavbar.style.transition = 'transform 0.3s ease-out';
+            }
+        }
 
         // 關閉之前的筆記顯示
         if (this.isShowingNote) {
@@ -2251,11 +2258,14 @@ export class GridView extends ItemView {
     hideNoteInGrid() {
         if (!this.isShowingNote) return;
 
-        // 顯示移動端導航欄
-        // const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
-        // if (mobileNavbar) {
-        //     mobileNavbar.style.display = '';
-        // }
+        // 顯示移動端導航欄 (僅在行動裝置上)
+        if (Platform.isPhone) {
+            const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+            if (mobileNavbar) {
+                mobileNavbar.style.transform = 'translateY(0)';
+                mobileNavbar.style.transition = 'transform 0.3s ease-in';
+            }
+        }
 
         if (this.noteViewContainer) {
             // 移除鍵盤事件監聽器
