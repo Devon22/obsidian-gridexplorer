@@ -178,6 +178,7 @@ export default {
     'all': 'All',
     'default': 'Default',
     'hidden': 'Hidden',
+    'all_bookmarks': 'All Bookmarks',
 
     // Hide header elements setting
     'hide_header_elements': 'Hide header elements',

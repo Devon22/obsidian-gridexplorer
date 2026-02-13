@@ -177,6 +177,7 @@ export default {
     'all': 'すべて',
     'default': 'デフォルト',
     'hidden': '隠す',
+    'bookmark_groups': 'ブックマーク群組',
 
     // 隠すヘッダー要素
     'hide_header_elements': 'ヘッダー要素を隠す',
@@ -301,7 +302,7 @@ export default {
     'use_quick_access_mode': 'クイックアクセスモードを使用する',
     'open_quick_access_folder': 'クイックアクセス フォルダーを開く',
     'open_quick_access_mode': 'クイックアクセスモードを開く',
-    
+
     // Explorer Stash
     'stash': '一時保存',
     'drop_files_here': 'ここにドラッグして一時保存',

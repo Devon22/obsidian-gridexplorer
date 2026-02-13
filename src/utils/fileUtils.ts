@@ -73,7 +73,7 @@ export function sortFiles(files: TFile[], gridView: GridView, overrideSortType?:
     const hasModifiedField = !!settings.modifiedDateField;
     const hasCreatedField = !!settings.createdDateField;
     const hasAnyDateField = hasModifiedField || hasCreatedField;
-    
+
     // 符合以下任一條件就使用簡單排序：
     // 1. 非日期排序類型 (name-asc, name-desc, random)
     // 2. 沒有設定任何日期欄位
@@ -106,7 +106,7 @@ export function sortFiles(files: TFile[], gridView: GridView, overrideSortType?:
         // 只對 .md 檔案讀取 metadata
         const shouldReadMetadata = file.extension === 'md';
         const metadata = shouldReadMetadata ? app.metadataCache.getFileCache(file) : null;
-        
+
         return {
             file,
             mDate: (() => {
@@ -167,12 +167,12 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
     if (showIgnoredFolders) return false;
 
     // 檢查資料夾是否在忽略清單中
-    const isInIgnoredFolders = ignoredFolders.some(ignored => 
+    const isInIgnoredFolders = ignoredFolders.some(ignored =>
         folder.path === ignored || folder.path.startsWith(ignored + '/')
     );
-    
+
     if (isInIgnoredFolders) return true;
-    
+
     // 檢查資料夾是否符合忽略的模式
     if (ignoredFolderPatterns && ignoredFolderPatterns.length > 0) {
         const matchesIgnoredPattern = ignoredFolderPatterns.some(pattern => {
@@ -180,7 +180,7 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
                 // 嘗試將模式作為正則表達式處理
                 // 如果模式包含特殊字符，使用正則表達式處理
                 if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
-                    const regex = new RegExp(pattern); 
+                    const regex = new RegExp(pattern);
                     return regex.test(folder.path);
                 } else {
                     // 檢查資料夾名稱是否包含模式字串（不區分大小寫）
@@ -191,7 +191,7 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
                 return folder.name.toLowerCase().includes(pattern.toLowerCase());
             }
         });
-        
+
         if (matchesIgnoredPattern) return true;
     }
 
@@ -201,15 +201,15 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
 // 檢查檔案是否應該被忽略
 export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
     const settings = gridView.plugin.settings;
-    
+
     // 如果開啟顯示忽略項目模式，則顯示所有檔案
     if (gridView.showIgnoredItems) {
         return files;
     }
-    
+
     // 建立一個快取來存儲已經檢查過的資料夾路徑
-    const folderCache: {[path: string]: boolean} = {};
-    
+    const folderCache: { [path: string]: boolean } = {};
+
     return files.filter(file => {
         // 檢查檔案的 metadata 是否有 hidden: true
         if (file.extension === 'md') {
@@ -222,13 +222,13 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
 
         // 獲取檔案所在的資料夾路徑
         const folderPath = file.parent?.path || '/';
-        
-        
+
+
         // 如果快取中沒有這個資料夾的檢查結果，則進行檢查
         if (folderCache[folderPath] === undefined) {
             // 獲取資料夾對象
             const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
-            
+
             if (folder instanceof TFolder) {
                 // 使用 isFolderIgnored 檢查資料夾是否應該被忽略
                 folderCache[folderPath] = isFolderIgnored(
@@ -242,7 +242,7 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
                 folderCache[folderPath] = false;
             }
         }
-        
+
         // 如果資料夾被忽略，則過濾掉該檔案
         return !folderCache[folderPath];
     });
@@ -262,11 +262,11 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             // 只取得當前資料夾中的支援檔案，不包含子資料夾
             const files = folder.children.filter((file): file is TFile => {
                 if (!(file instanceof TFile)) return false;
-                
+
                 // 當存在搜尋關鍵字時，是否包含媒體檔案取決於 includeMediaFiles
                 // 不存在搜尋關鍵字時，是否包含媒體檔案取決於 settings.showMediaFiles
                 const allowMedia = settings.showMediaFiles && (!gridView.searchQuery || includeMediaFiles);
-                    
+
                 // 如果是文件檔案，直接包含；若為媒體檔案則依 allowMedia 判斷
                 if (isDocumentFile(file) || (allowMedia && isMediaFile(file))) {
                     return true;
@@ -285,13 +285,13 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 const resultDomLookup = searchLeaf.view.dom.resultDomLookup;
                 if (resultDomLookup) {
                     const files = Array.from(resultDomLookup.keys())
-                    .filter((file): file is TFile => file instanceof TFile);
+                        .filter((file): file is TFile => file instanceof TFile);
                     return sortFiles(files, gridView);
                 }
             }
         }
         return [];
-    } else if (sourceMode === 'backlinks') {        
+    } else if (sourceMode === 'backlinks') {
         // 反向連結模式：找出所有引用當前筆記的檔案
         const activeFile = app.workspace.getActiveFile();
         if (!activeFile) {
@@ -305,10 +305,10 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             if (Object.keys(links).includes(activeFile.path)) {
                 const sourceFile = app.vault.getAbstractFileByPath(sourcePath) as TFile;
                 if (sourceFile) {
-                        backlinks.add(sourceFile);
-                    }
+                    backlinks.add(sourceFile);
                 }
             }
+        }
 
         return sortFiles(Array.from(backlinks) as TFile[], gridView);
     } else if (sourceMode === 'outgoinglinks') {
@@ -322,11 +322,11 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         // 使用 resolvedLinks 來找出外部連結
         const resolvedLinks = app.metadataCache.resolvedLinks;
         const fileLinks = resolvedLinks[activeFile.path];
-        
+
         if (fileLinks) {
             for (const targetPath of Object.keys(fileLinks)) {
                 const targetFile = app.vault.getAbstractFileByPath(targetPath) as TFile;
-                if (targetFile && (isDocumentFile(targetFile) || 
+                if (targetFile && (isDocumentFile(targetFile) ||
                     (settings.showMediaFiles && isMediaFile(targetFile)))) {
                     outgoingLinks.add(targetFile);
                 }
@@ -362,7 +362,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         }
 
         return sortFiles(Array.from(outgoingLinks), gridView);
-    } else if(sourceMode === 'bookmarks') {
+    } else if (sourceMode === 'bookmarks') {
         // 書籤模式
         const bookmarksPlugin = (app as any).internalPlugins.plugins.bookmarks;
         if (!bookmarksPlugin?.enabled) {
@@ -371,7 +371,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
 
         const bookmarks = bookmarksPlugin.instance.items;
         const bookmarkedFiles = new Set();
-        
+
         const processBookmarkItem = (item: any) => {
             if (item.type === 'file') {
                 const file = app.vault.getAbstractFileByPath(item.path);
@@ -386,8 +386,29 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 item.items.forEach(processBookmarkItem);
             }
         };
-        
-        bookmarks.forEach(processBookmarkItem);
+
+        const bookmarkGroupId = gridView.bookmarkGroupId;
+        if (!bookmarkGroupId || bookmarkGroupId === 'all') {
+            bookmarks.forEach(processBookmarkItem);
+        } else {
+            // 遞迴尋找指定的群組
+            const findAndProcessGroup = (items: any[]) => {
+                for (const item of items) {
+                    if (item.type === 'group') {
+                        // 使用 title 作為 ID
+                        if (item.title === bookmarkGroupId) {
+                            item.items.forEach(processBookmarkItem);
+                            return true;
+                        }
+                        if (item.items && findAndProcessGroup(item.items)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            findAndProcessGroup(bookmarks);
+        }
         return Array.from(bookmarkedFiles) as TFile[];
     } else if (sourceMode === 'tasks') {
         // 任務模式
@@ -404,7 +425,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 for (const task of allTasks) {
                     const file = app.vault.getAbstractFileByPath(task.path);
                     if (!(file instanceof TFile)) continue;
-                    
+
                     // 根據過濾條件檢查任務
                     if (gridView.taskFilter === 'uncompleted' && !task.isDone) {
                         filesWithTasks.add(file);
@@ -423,7 +444,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             try {
                 const tasks = dv.pages().file.tasks;
                 let filteredTasks;
-                
+
                 if (gridView.taskFilter === 'uncompleted') {
                     filteredTasks = tasks.where((t: { completed: boolean }) => !t.completed);
                 } else if (gridView.taskFilter === 'completed') {
@@ -431,7 +452,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 } else { // 'all'
                     filteredTasks = tasks;
                 }
-                
+
                 for (const task of filteredTasks.array()) {
                     const file = app.vault.getAbstractFileByPath(task.path);
                     if (file instanceof TFile) {
@@ -442,7 +463,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 console.error('Error getting tasks from Dataview:', error);
                 return [];
             }
-            
+
         } else {
             // 使用原生方法
             const markdownFiles = app.vault.getMarkdownFiles();
@@ -465,7 +486,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                         const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
                         shouldAdd = hasIncomplete || hasCompleted;
                     }
-                    
+
                     if (shouldAdd) {
                         filesWithTasks.add(file);
                     }
@@ -531,7 +552,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 dvCode = mode.options[idx].dataviewCode;
             }
         }
-        
+
         try {
             const activeFile = app.workspace.getActiveFile();
             if (activeFile) {

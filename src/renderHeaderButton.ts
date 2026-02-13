@@ -34,7 +34,7 @@ export function renderHeaderButton(gridView: GridView) {
     backButton.addEventListener('click', async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        
+
         // 如果有歷史記錄
         if (gridView.recentSources.length > 0) {
             // 將當前狀態推入 futureSources 以便前進
@@ -54,7 +54,7 @@ export function renderHeaderButton(gridView: GridView) {
             // 取得最近一筆歷史記錄
             const lastSource = JSON.parse(gridView.recentSources[0]);
             gridView.recentSources.shift(); // 從歷史記錄中移除
-            
+
             // 設定來源及搜尋狀態（不記錄到歷史）
             await gridView.setSource(
                 lastSource.mode,
@@ -119,7 +119,7 @@ export function renderHeaderButton(gridView: GridView) {
         // 只有在有歷史記錄時才顯示右鍵選單
         if (gridView.recentSources.length > 0) {
             event.preventDefault();
-            
+
             const menu = new Menu();
 
             // 添加歷史記錄
@@ -127,11 +127,11 @@ export function renderHeaderButton(gridView: GridView) {
                 try {
                     const sourceInfo = JSON.parse(sourceInfoStr);
                     const { mode, path } = sourceInfo;
-                    
+
                     // 根據模式顯示圖示和文字
                     let displayText = '';
                     let icon = '';
-                    
+
                     switch (mode) {
                         case 'folder':
                             displayText = path || '/';
@@ -190,7 +190,7 @@ export function renderHeaderButton(gridView: GridView) {
                             displayText += `: "${sourceInfo.searchQuery}"`;
                         }
                     }
-                    
+
                     // 添加歷史記錄到選單
                     menu.addItem((item) => {
                         item
@@ -213,7 +213,7 @@ export function renderHeaderButton(gridView: GridView) {
                                 if (clickedIndex !== -1) {
                                     const newerHistory = gridView.recentSources.slice(0, clickedIndex);
                                     const forwardStack = [...newerHistory].reverse();
-                                gridView.futureSources = [...forwardStack, currentKey, ...gridView.futureSources];
+                                    gridView.futureSources = [...forwardStack, currentKey, ...gridView.futureSources];
                                     if (gridView.futureSources.length > 10) {
                                         gridView.futureSources.length = 10;
                                     }
@@ -242,7 +242,7 @@ export function renderHeaderButton(gridView: GridView) {
             menu.showAtMouseEvent(event);
         }
     });
-        
+
     // 添加右鍵選單支援
     forwardButton.addEventListener('contextmenu', (event) => {
         // 只有在有歷史記錄或未來記錄時才顯示右鍵選單
@@ -250,7 +250,7 @@ export function renderHeaderButton(gridView: GridView) {
             event.preventDefault();
 
             const menu = new Menu();
-            
+
             // 添加未來記錄
             gridView.futureSources.forEach((sourceInfoStr, index) => {
                 try {
@@ -381,7 +381,7 @@ export function renderHeaderButton(gridView: GridView) {
     // 添加新增筆記按鈕
     const newNoteButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('new_note') } });
     setIcon(newNoteButton, 'square-pen');
-    newNoteButton.addEventListener('click', (event) => {                
+    newNoteButton.addEventListener('click', (event) => {
         event.preventDefault();
         const menu = new Menu();
         // 新增筆記
@@ -396,54 +396,54 @@ export function renderHeaderButton(gridView: GridView) {
         // 新增資料夾
         menu.addItem((item) => {
             item.setTitle(t('new_folder'))
-            .setIcon('folder')
-            .onClick(async () => {
-                await createNewFolder(gridView.app, gridView.sourcePath, () => {
-                    requestAnimationFrame(() => {
-                        gridView.render();
+                .setIcon('folder')
+                .onClick(async () => {
+                    await createNewFolder(gridView.app, gridView.sourcePath, () => {
+                        requestAnimationFrame(() => {
+                            gridView.render();
+                        });
                     });
                 });
-            });
         });
         // 新增畫布
         menu.addItem((item) => {
             item.setTitle(t('new_canvas'))
-            .setIcon('layout-dashboard')
-            .onClick(async () => {
-                await createNewCanvas(gridView.app, gridView.sourcePath);
-            });
+                .setIcon('layout-dashboard')
+                .onClick(async () => {
+                    await createNewCanvas(gridView.app, gridView.sourcePath);
+                });
         });
         // 新增 base
         menu.addItem((item) => {
             item.setTitle(t('new_base'))
-            .setIcon('layout-dashboard')
-            .onClick(async () => {
-                await createNewBase(gridView.app, gridView.sourcePath);
-            });
+                .setIcon('layout-dashboard')
+                .onClick(async () => {
+                    await createNewBase(gridView.app, gridView.sourcePath);
+                });
         });
         // 新增捷徑
         menu.addItem((item) => {
             item.setTitle(t('new_shortcut'))
-            .setIcon('shuffle')
-            .onClick(async () => {
-                const modal = new ShortcutSelectionModal(gridView.app, gridView.plugin, async (option) => {
-                    await createShortcutUtil(gridView.app, gridView.sourcePath, option);
+                .setIcon('shuffle')
+                .onClick(async () => {
+                    const modal = new ShortcutSelectionModal(gridView.app, gridView.plugin, async (option) => {
+                        await createShortcutUtil(gridView.app, gridView.sourcePath, option);
+                    });
+                    modal.open();
                 });
-                modal.open();
-            });
         });
         menu.showAtMouseEvent(event);
     });
 
     // 添加重新選擇資料夾按鈕
-    const reselectButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('reselect') }  });
+    const reselectButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('reselect') } });
     reselectButton.addEventListener('click', () => {
         showFolderSelectionModal(gridView.app, gridView.plugin, gridView, reselectButton);
     });
     setIcon(reselectButton, "grid");
 
     // 添加重新整理按鈕
-    const refreshButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('refresh') }  });
+    const refreshButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('refresh') } });
     refreshButton.addEventListener('click', () => {
         if (gridView.sortType === 'random') {
             gridView.clearSelection();
@@ -462,51 +462,10 @@ export function renderHeaderButton(gridView: GridView) {
     searchButton.addEventListener('click', () => {
         showSearchModal(gridView.app, gridView, gridView.searchQuery, searchButton);
     });
-    
-
-    // 如果有搜尋關鍵字，顯示搜尋文字和取消按鈕
-    // if (gridView.searchQuery) {
-    //     searchButton.style.display = 'none';
-    //     const searchTextContainer = searchButtonContainer.createDiv('ge-search-text-container');
-    //     searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
-
-    //     // 創建搜尋文字
-    //     const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
-    //     // 讓搜尋文字可點選
-    //     searchText.style.cursor = 'pointer';
-    //     searchText.addEventListener('click', () => {
-    //         showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);
-    //     });
-
-    //     // 先保存開啟 Modal 時的原始狀態
-    //     const originalSearchQuery = gridView.searchQuery;
-    //     const originalsearchCurrentLocationOnly = gridView.searchCurrentLocationOnly;
-    //     const originalSearchFilesNameOnly = gridView.searchFilesNameOnly;
-    //     const originalSearchMediaFiles = gridView.searchMediaFiles;
-
-    //     // 創建取消按鈕
-    //     const clearButton = searchTextContainer.createDiv('ge-clear-button');
-    //     setIcon(clearButton, 'x');
-    //     clearButton.addEventListener('click', (e) => {
-    //         e.stopPropagation();  // 防止觸發搜尋文字的點擊事件
-    //         gridView.pushHistory(
-    //             gridView.sourceMode,
-    //             gridView.sourcePath,
-    //             originalSearchQuery,
-    //             originalsearchCurrentLocationOnly,
-    //             originalSearchFilesNameOnly,
-    //             originalSearchMediaFiles,
-    //         );
-    //         gridView.searchQuery = '';
-    //         gridView.clearSelection();
-    //         gridView.app.workspace.requestSaveLayout();
-    //         gridView.render();
-    //     });
-    // }
 
     // 更多選項按鈕
-    const menu = new Menu();
-    menu.addItem((item) => {
+    const moreMenu = new Menu();
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('open_new_grid_view'))
             .setIcon('grid')
@@ -539,10 +498,10 @@ export function renderHeaderButton(gridView: GridView) {
                 workspace.revealLeaf(leaf);
             });
     });
-    menu.addSeparator();
+    moreMenu.addSeparator();
 
     // 直向卡片切換
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item.setTitle(t('vertical_card'))
             .setIcon('layout')
             .setChecked(gridView.baseCardLayout === 'vertical')
@@ -554,7 +513,7 @@ export function renderHeaderButton(gridView: GridView) {
             });
     });
     // 最小化模式選項
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('min_mode'))
             .setIcon('minimize-2')
@@ -567,7 +526,7 @@ export function renderHeaderButton(gridView: GridView) {
     });
     // 顯示日期分隔器
     if (gridView.plugin.settings.dateDividerMode !== 'none') {
-        menu.addItem((item) => {
+        moreMenu.addItem((item) => {
             item
                 .setTitle(t('show_date_dividers'))
                 .setIcon('calendar')
@@ -580,7 +539,7 @@ export function renderHeaderButton(gridView: GridView) {
         });
     }
     // 顯示筆記標籤
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('show_note_tags'))
             .setIcon('tag')
@@ -592,7 +551,7 @@ export function renderHeaderButton(gridView: GridView) {
             });
     });
     // 顯示忽略的資料夾及檔案選項
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('show_ignored_items'))
             .setIcon('folder-open-dot')
@@ -603,11 +562,11 @@ export function renderHeaderButton(gridView: GridView) {
                 gridView.render();
             });
     });
-    
-    menu.addSeparator();
+
+    moreMenu.addSeparator();
 
     // 開啟瀏覽器
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('open_explorer'))
             .setIcon('folder-tree')
@@ -626,7 +585,7 @@ export function renderHeaderButton(gridView: GridView) {
     });
 
     // 顯示設定選項
-    menu.addItem((item) => {
+    moreMenu.addItem((item) => {
         item
             .setTitle(t('open_settings'))
             .setIcon('settings')
@@ -636,17 +595,17 @@ export function renderHeaderButton(gridView: GridView) {
                 (gridView.app as any).setting.openTabById(gridView.plugin.manifest.id);
             });
     });
-    
+
     const moreOptionsButton = headerButtonsDiv.createEl('button', { attr: { 'aria-label': t('more_options') } });
     setIcon(moreOptionsButton, 'ellipsis-vertical');
     moreOptionsButton.addEventListener('click', (event) => {
-        menu.showAtMouseEvent(event);
+        moreMenu.showAtMouseEvent(event);
     });
 
     headerButtonsDiv.addEventListener('contextmenu', (event) => {
         if (event.target === headerButtonsDiv) {
             event.preventDefault();
-            menu.showAtMouseEvent(event);
+            moreMenu.showAtMouseEvent(event);
         }
     });
 }

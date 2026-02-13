@@ -177,6 +177,7 @@ export default {
     'all': 'Все',
     'default': 'По умолчанию',
     'hidden': 'Скрытые',
+    'bookmark_groups': 'Букмарк группы',
 
     // Hide header elements setting
     'hide_header_elements': 'Скрыть элементы заголовка',
@@ -301,7 +302,7 @@ export default {
     'use_quick_access_mode': 'Использовать режим быстрого доступа',
     'open_quick_access_folder': 'Открыть папку быстрого доступа',
     'open_quick_access_mode': 'Открыть быстрый доступ по режиму',
-    
+
     // Explorer Stash
     'stash': 'Хранилище',
     'drop_files_here': 'Перетащите файлы сюда, чтобы сохранить',

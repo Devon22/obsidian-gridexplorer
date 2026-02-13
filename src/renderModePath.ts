@@ -13,20 +13,20 @@ export function renderModePath(gridView: GridView) {
 
     // 創建模式名稱和排序按鈕的容器
     const modeHeaderContainer = gridView.containerEl.createDiv('ge-mode-header-container');
-        
+
     // 左側：模式名稱
     const modenameContainer = modeHeaderContainer.createDiv('ge-modename-content');
-    
+
     // 右側：排序按鈕
     const rightActions = modeHeaderContainer.createDiv('ge-right-actions');
-    
+
     // 添加排序按鈕
-    if (gridView.sourceMode !== 'bookmarks' && 
-        gridView.sourceMode !== 'recent-files' && 
+    if (gridView.sourceMode !== 'bookmarks' &&
+        gridView.sourceMode !== 'recent-files' &&
         gridView.sourceMode !== 'random-note') {
-        const sortButton = rightActions.createEl('a', { 
+        const sortButton = rightActions.createEl('a', {
             cls: 'ge-sort-button',
-            attr: { 
+            attr: {
                 'aria-label': t('sorting'),
                 'href': '#'
             }
@@ -648,6 +648,53 @@ export function renderModePath(gridView: GridView) {
         }
 
         switch (gridView.sourceMode) {
+            case 'bookmarks':
+                const bookmarkGroupName = gridView.bookmarkGroupId === 'all' ? t('all_bookmarks') : gridView.bookmarkGroupId;
+                const bookmarkGroupSpan = modenameContainer.createEl('a', { text: bookmarkGroupName, cls: 'ge-sub-option' });
+                bookmarkGroupSpan.addEventListener('click', (evt) => {
+                    const menu = new Menu();
+
+                    // "全部" 選項
+                    menu.addItem((item) => {
+                        item.setTitle(t('all_bookmarks'))
+                            .setIcon('layers')
+                            .setChecked(gridView.bookmarkGroupId === 'all')
+                            .onClick(() => {
+                                gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'all');
+                            });
+                    });
+
+                    menu.addSeparator();
+
+                    // 取得所有書籤群組
+                    const bookmarksPlugin = (gridView.app as any).internalPlugins.plugins.bookmarks;
+                    if (bookmarksPlugin?.enabled) {
+                        const bookmarks = bookmarksPlugin.instance.items;
+                        const groups: string[] = [];
+                        const findGroups = (items: any[]) => {
+                            items.forEach(item => {
+                                if (item.type === 'group') {
+                                    groups.push(item.title);
+                                    if (item.items) findGroups(item.items);
+                                }
+                            });
+                        };
+                        findGroups(bookmarks);
+
+                        groups.forEach(groupTitle => {
+                            menu.addItem((item) => {
+                                item.setTitle(groupTitle)
+                                    .setIcon('folder')
+                                    .setChecked(gridView.bookmarkGroupId === groupTitle)
+                                    .onClick(() => {
+                                        gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, groupTitle);
+                                    });
+                            });
+                        });
+                    }
+                    menu.showAtMouseEvent(evt);
+                });
+                break;
             case 'random-note':
             case 'recent-files':
             case 'all-files':

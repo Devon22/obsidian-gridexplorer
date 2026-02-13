@@ -59,6 +59,7 @@ export class GridView extends ItemView {
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
     hideHeaderElements: boolean = false; // 是否隱藏標題列元素（模式名稱和按鈕）
+    bookmarkGroupId: string = 'all'; // 書籤群組 ID
     customOptionIndex: number = -1; // 自訂模式選項索引    
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
@@ -252,7 +253,8 @@ export class GridView extends ItemView {
         searchQuery?: string,
         searchCurrentLocationOnly?: boolean,
         searchFilesNameOnly?: boolean,
-        searchMediaFiles?: boolean
+        searchMediaFiles?: boolean,
+        bookmarkGroupId?: string
     ) {
 
         // 如果新的狀態與當前狀態相同，則不進行任何操作
@@ -261,7 +263,8 @@ export class GridView extends ItemView {
             this.searchQuery === searchQuery &&
             this.searchCurrentLocationOnly === searchCurrentLocationOnly &&
             this.searchFilesNameOnly === searchFilesNameOnly &&
-            this.searchMediaFiles === searchMediaFiles) {
+            this.searchMediaFiles === searchMediaFiles &&
+            (bookmarkGroupId === undefined || this.bookmarkGroupId === bookmarkGroupId)) {
             return;
         }
 
@@ -336,6 +339,9 @@ export class GridView extends ItemView {
         }
         if (searchMediaFiles !== undefined) {
             this.searchMediaFiles = searchMediaFiles;
+        }
+        if (bookmarkGroupId !== undefined) {
+            this.bookmarkGroupId = bookmarkGroupId;
         }
 
         // 通知 Obsidian 保存視圖狀態
@@ -1991,19 +1997,6 @@ export class GridView extends ItemView {
 
     // 在網格視圖中直接顯示筆記
     async showNoteInGrid(file: TFile) {
-        // 隱藏移動端導航欄
-        if (Platform.isPhone) {
-            const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
-            if (mobileNavbar) {
-                if (!document.body.classList.contains('is-floating-nav')) {
-                    mobileNavbar.style.transform = 'translateY(100%)';
-                } else {
-                    mobileNavbar.style.transform = 'translateY(200%)';
-                }
-                mobileNavbar.style.transition = 'transform 0.3s ease-out';
-            }
-        }
-
         // 關閉之前的筆記顯示
         if (this.isShowingNote) {
             this.hideNoteInGrid();
@@ -2060,6 +2053,59 @@ export class GridView extends ItemView {
         const noteContent = scrollContainer.createDiv('ge-note-content-container');
         if (isInSidebar) {
             noteContent.style.padding = '15px';
+        }
+
+        // 在移動端添加滾動監聽，根據滾動方向控制導航欄顯示/隱藏
+        if (Platform.isPhone) {
+            let lastScrollTop = 0;
+            const handleScroll = () => {
+                const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+                if (!mobileNavbar) return;
+
+                const currentScrollTop = scrollContainer.scrollTop;
+
+                // 往上捲（滾動位置增加）時隱藏導航欄
+                if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
+                    if (!document.body.classList.contains('is-floating-nav')) {
+                        mobileNavbar.style.transform = 'translateY(100%)';
+                    } else {
+                        mobileNavbar.style.transform = 'translateY(200%)';
+                    }
+                    mobileNavbar.style.transition = 'transform 0.3s ease-out';
+                }
+                // 往下捲（滾動位置減少）時顯示導航欄
+                else if (currentScrollTop < lastScrollTop) {
+                    mobileNavbar.style.transform = 'translateY(0)';
+                    mobileNavbar.style.transition = 'transform 0.3s ease-in';
+                }
+
+                lastScrollTop = currentScrollTop;
+            };
+
+            scrollContainer.addEventListener('scroll', handleScroll);
+
+            // 監聽分頁切換事件，當離開當前視圖時恢復導航欄
+            const handleActiveLeafChange = () => {
+                const activeView = this.app.workspace.getActiveViewOfType(GridView);
+                // 如果當前活動視圖不是這個 GridView 實例，或者不在顯示筆記狀態
+                if (activeView !== this || !this.isShowingNote) {
+                    const navbar = document.querySelector('.mobile-navbar') as HTMLElement;
+                    if (navbar) {
+                        navbar.style.transform = 'translateY(0)';
+                        navbar.style.transition = 'transform 0.3s ease-in';
+                    }
+                }
+            };
+
+            // 註冊事件監聽器
+            this.registerEvent(
+                this.app.workspace.on('active-leaf-change', handleActiveLeafChange)
+            );
+
+            // 儲存滾動事件清理函數
+            this.eventCleanupFunctions.push(() => {
+                scrollContainer.removeEventListener('scroll', handleScroll);
+            });
         }
 
         // 取得 Metadata (Frontmatter)
@@ -2304,6 +2350,7 @@ export class GridView extends ItemView {
                 showNoteTags: this.showNoteTags,
                 recentSources: this.recentSources,
                 futureSources: this.futureSources,
+                bookmarkGroupId: this.bookmarkGroupId,
             }
         };
     }
@@ -2329,6 +2376,7 @@ export class GridView extends ItemView {
             this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
             this.recentSources = state.state.recentSources ?? [];
             this.futureSources = state.state.futureSources ?? [];
+            this.bookmarkGroupId = state.state.bookmarkGroupId ?? 'all';
             await this.render();
         }
     }
