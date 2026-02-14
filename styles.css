@@ -1425,6 +1425,9 @@ a.ge-current-folder:hover {
 .ge-fullscreen-video {
     max-width: 100vw;
     max-height: 100vh;
+    position: relative;
+    z-index: 1006;
+    /* 高於 .ge-media-prev-area 的 1005 */
 }
 
 .ge-media-container video {
@@ -1477,6 +1480,22 @@ a.ge-current-folder:hover {
     justify-content: center;
     z-index: 1005;
     cursor: pointer;
+}
+
+.is-phone .ge-media-prev-area,
+.is-phone .ge-media-next-area {
+    width: 20%;
+}
+
+.is-tablet .ge-media-prev-area,
+.is-tablet .ge-media-next-area {
+    width: 15%;
+}
+
+/* 縮放時停用側邊區域，避免干擾捲動 */
+.ge-media-modal-content.is-zoomed .ge-media-prev-area,
+.ge-media-modal-content.is-zoomed .ge-media-next-area {
+    pointer-events: none;
 }
 
 .ge-media-prev-area {

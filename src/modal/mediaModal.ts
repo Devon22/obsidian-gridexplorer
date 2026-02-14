@@ -9,7 +9,7 @@ export class MediaModal extends Modal {
     private isZoomed = false;
     private handleWheel: ((event: WheelEvent) => void) | null = null;
     private gridView: any; // 儲存 GridView 實例的引用
-    
+
     // 觸控拖曳相關屬性
     private touchStartX = 0;
     private touchStartY = 0;
@@ -24,23 +24,23 @@ export class MediaModal extends Modal {
         this.mediaFiles = mediaFiles;
         this.currentIndex = this.mediaFiles.findIndex(f => f.path === file.path);
         this.gridView = gridView; // 保存 GridView 實例
-        
+
         // 設置 modal 樣式
         this.modalEl.addClass('ge-media-modal');
     }
 
     onOpen() {
         const { contentEl } = this;
-        
+
         // 設置 modal 樣式為全螢幕
         contentEl.empty();
         contentEl.style.width = '100%';
         contentEl.style.height = '100%';
         contentEl.addClass('ge-media-modal-content');
-        
+
         // 創建媒體顯示區域
         const mediaView = contentEl.createDiv('ge-media-view');
-        
+
         // 創建關閉按鈕
         const closeButton = contentEl.createDiv('ge-media-close-button');
         setIcon(closeButton, 'x');
@@ -48,14 +48,14 @@ export class MediaModal extends Modal {
             e.stopPropagation();
             this.close();
         });
-        
+
         // 創建左右切換按鈕區域
         const prevArea = contentEl.createDiv('ge-media-prev-area');
         const nextArea = contentEl.createDiv('ge-media-next-area');
-        
+
         // 創建媒體元素容器
         const mediaContainer = mediaView.createDiv('ge-media-container');
-        
+
         // 點擊背景關閉媒體檢視器
         mediaContainer.addEventListener('click', (e) => {
             // 確保點擊的是背景，而不是媒體內容或其他控制元素
@@ -63,18 +63,18 @@ export class MediaModal extends Modal {
                 this.close();
             }
         });
-        
+
         // 註冊左右區域點擊事件
         prevArea.addEventListener('click', (e) => {
             e.stopPropagation();
             this.showPrevMedia();
         });
-        
+
         nextArea.addEventListener('click', (e) => {
             e.stopPropagation();
             this.showNextMedia();
         });
-        
+
         // 註冊滑鼠滾輪事件
         contentEl.addEventListener('wheel', (e) => {
             // 只有在非縮放狀態下才使用滾輪切換圖片
@@ -87,21 +87,21 @@ export class MediaModal extends Modal {
                 }
             }
         });
-        
+
         // 註冊鍵盤快捷鍵
         this.scope.register(null, 'ArrowLeft', () => {
             this.showPrevMedia();
             return false;
         });
-        
+
         this.scope.register(null, 'ArrowRight', () => {
             this.showNextMedia();
             return false;
         });
-        
+
         // 註冊觸控事件（行動裝置拖曳翻頁）
-        this.registerTouchEvents(mediaContainer);
-        
+        this.registerTouchEvents(this.contentEl);
+
         // 顯示當前媒體檔案
         this.showMediaAtIndex(this.currentIndex);
     }
@@ -109,7 +109,7 @@ export class MediaModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
+
         // 如果存在之前的滾輪事件處理程序，先移除它
         if (this.handleWheel) {
             const mediaView = contentEl.querySelector('.ge-media-view');
@@ -118,15 +118,15 @@ export class MediaModal extends Modal {
             }
             this.handleWheel = null;
         }
-        
+
         // 如果有 GridView 實例，跳轉到當前選中的項目
         if (this.gridView) {
             // 找到當前媒體檔案在 GridView 中的索引
             const currentFile = this.mediaFiles[this.currentIndex];
-            const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) => 
+            const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) =>
                 item.dataset.filePath === currentFile.path
             );
-            
+
             // 如果找到了對應的項目，選中它並設置鍵盤焦點
             if (gridItemIndex >= 0) {
                 this.gridView.hasKeyboardFocus = true;
@@ -138,14 +138,14 @@ export class MediaModal extends Modal {
     // 顯示指定索引的媒體檔案
     showMediaAtIndex(index: number) {
         if (index < 0 || index >= this.mediaFiles.length) return;
-        
+
         const { contentEl } = this;
         const mediaContainer = contentEl.querySelector('.ge-media-container');
         if (!mediaContainer) return;
-        
+
         // 更新當前顯示的索引
         this.currentIndex = index;
-        
+
         // 如果存在之前的滾輪事件處理程序，先移除它
         if (this.handleWheel) {
             const mediaView = contentEl.querySelector('.ge-media-view');
@@ -154,9 +154,10 @@ export class MediaModal extends Modal {
             }
             this.handleWheel = null;
         }
-        
+
         this.isZoomed = false;
-        
+        this.contentEl.removeClass('is-zoomed');
+
         const mediaFile = this.mediaFiles[index];
 
         if (isImageFile(mediaFile)) {
@@ -165,7 +166,7 @@ export class MediaModal extends Modal {
             img.className = 'ge-fullscreen-image';
             img.style.display = 'none'; // 先隱藏新圖片
             img.src = this.app.vault.getResourcePath(mediaFile);
-            
+
             // 等待新圖片載入完成
             img.onload = () => {
                 // 移除舊的媒體元素
@@ -178,15 +179,15 @@ export class MediaModal extends Modal {
                 // 顯示新圖片
                 img.style.display = '';
             };
-            
+
             mediaContainer.appendChild(img);
-            
+
             // 圖片點擊事件（放大/縮小）
             img.addEventListener('click', (event) => {
                 event.stopPropagation();
                 this.toggleImageZoom(img, event);
             });
-            
+
         } else if (isVideoFile(mediaFile) || isAudioFile(mediaFile)) {
             // 對於影片和音樂，維持原有的處理方式
             if (this.currentMediaElement) {
@@ -207,7 +208,7 @@ export class MediaModal extends Modal {
             oldFileNameElement.remove();
         }
 
-        if(isAudioFile(mediaFile)) {
+        if (isAudioFile(mediaFile)) {
             //顯示檔案名稱
             const fileName = mediaFile.name;
             const fileNameElement = document.createElement('div');
@@ -222,7 +223,7 @@ export class MediaModal extends Modal {
         const nextIndex = (this.currentIndex + 1) % this.mediaFiles.length;
         this.showMediaAtIndex(nextIndex);
     }
-    
+
     // 顯示上一個媒體檔案
     showPrevMedia() {
         const prevIndex = (this.currentIndex - 1 + this.mediaFiles.length) % this.mediaFiles.length;
@@ -233,7 +234,7 @@ export class MediaModal extends Modal {
     resetImageStyles(img: HTMLImageElement) {
         const mediaView = this.contentEl.querySelector('.ge-media-view');
         if (!mediaView) return;
-        
+
         img.style.width = 'auto';
         img.style.height = 'auto';
         img.style.maxWidth = '100vw';
@@ -243,10 +244,10 @@ export class MediaModal extends Modal {
         img.style.top = '50%';
         img.style.transform = 'translate(-50%, -50%)';
         img.style.cursor = 'zoom-in';
-        
+
         (mediaView as HTMLElement).style.overflowX = 'hidden';
         (mediaView as HTMLElement).style.overflowY = 'hidden';
-        
+
         // 等待圖片載入完成後調整大小
         img.onload = () => {
             if (mediaView.clientWidth > mediaView.clientHeight) {
@@ -259,7 +260,7 @@ export class MediaModal extends Modal {
                 }
             }
         };
-        
+
         // 如果圖片已經載入，立即調整大小
         if (img.complete) {
             if (mediaView.clientWidth > mediaView.clientHeight) {
@@ -278,34 +279,30 @@ export class MediaModal extends Modal {
     toggleImageZoom(img: HTMLImageElement, event?: MouseEvent) {
         const mediaView = this.contentEl.querySelector('.ge-media-view');
         if (!mediaView) return;
-        
+
         if (!this.isZoomed) { // 放大
             // 保存點擊位置相對於圖片的比例
             let clickX = 0.5;
             let clickY = 0.5;
-            
+
             if (event) {
                 const rect = img.getBoundingClientRect();
                 clickX = (event.clientX - rect.left) / rect.width;
                 clickY = (event.clientY - rect.top) / rect.height;
             }
-            
-            if (mediaView.clientWidth > mediaView.clientHeight) {
-                if (img.naturalHeight < mediaView.clientHeight) {
-                    img.style.maxWidth = 'none';
-                }
-            } else {
-                if (img.naturalWidth < mediaView.clientWidth) {
-                    img.style.maxHeight = 'none';
-                }
-            }
 
-            if (img.offsetWidth < mediaView.clientWidth) {
+            // 根據圖片與視窗的長寬比來決定放大模式
+            const imageAspect = img.naturalWidth / img.naturalHeight;
+            const screenAspect = mediaView.clientWidth / mediaView.clientHeight;
+
+            // 如果圖片比視窗更"細長" (Aspect Ratio 較小)，則寬度填滿 (Fit Width)，垂直捲動
+            // 如果圖片比視窗更"扁平" (Aspect Ratio 較大)，則高度填滿 (Fit Height)，水平捲動
+            if (imageAspect < screenAspect) {
                 img.style.width = '100vw';
                 img.style.height = 'auto';
                 (mediaView as HTMLElement).style.overflowX = 'hidden';
                 (mediaView as HTMLElement).style.overflowY = 'scroll';
-                
+
                 // 計算滾動位置
                 requestAnimationFrame(() => {
                     const newHeight = img.offsetHeight;
@@ -317,7 +314,7 @@ export class MediaModal extends Modal {
                 img.style.height = '100vh';
                 (mediaView as HTMLElement).style.overflowX = 'scroll';
                 (mediaView as HTMLElement).style.overflowY = 'hidden';
-                
+
                 // 計算滾動位置
                 requestAnimationFrame(() => {
                     const newWidth = img.offsetWidth;
@@ -332,7 +329,7 @@ export class MediaModal extends Modal {
                 };
                 mediaView.addEventListener('wheel', this.handleWheel);
             }
-            
+
             img.style.maxWidth = 'none';
             img.style.maxHeight = 'none';
             img.style.position = 'relative';
@@ -342,65 +339,82 @@ export class MediaModal extends Modal {
             img.style.transform = 'none';
             img.style.cursor = 'zoom-out';
             this.isZoomed = true;
+            this.contentEl.addClass('is-zoomed');
         } else { // 縮小
             // 如果存在之前的滾輪事件處理程序，先移除它
             if (this.handleWheel) {
                 mediaView.removeEventListener('wheel', this.handleWheel);
                 this.handleWheel = null;
             }
-            
+
             this.resetImageStyles(img);
             this.isZoomed = false;
+            this.contentEl.removeClass('is-zoomed');
         }
     }
-    
+
     // 註冊觸控事件處理器（行動裝置拖曳翻頁）
     private registerTouchEvents(element: HTMLElement) {
         element.addEventListener('touchstart', (e) => {
             // 只有在非縮放狀態下才處理觸控事件
             if (this.isZoomed) return;
-            
+
+            // 排除控制項相關元素，避免干擾原生點擊功能
+            const target = e.target as HTMLElement;
+            if (target.closest('.ge-media-close-button')) {
+                this.touchStartX = -1; // 標記為忽略
+                return;
+            }
+
             const touch = e.touches[0];
             this.touchStartX = touch.clientX;
             this.touchStartY = touch.clientY;
             this.touchStartTime = Date.now();
             this.isDragging = false;
         }, { passive: true });
-        
+
         element.addEventListener('touchmove', (e) => {
-            // 只有在非縮放狀態下才處理觸控事件
-            if (this.isZoomed) return;
-            
+            // 只有在非縮放狀態下且非忽略目標時才處理觸控事件
+            if (this.isZoomed || this.touchStartX === -1) return;
+
             const touch = e.touches[0];
             const deltaX = Math.abs(touch.clientX - this.touchStartX);
             const deltaY = Math.abs(touch.clientY - this.touchStartY);
-            
+
             // 如果水平移動距離大於垂直移動距離，則認為是水平拖曳
             // 如果垂直移動距離大於水平移動距離，則認為是垂直拖曳
             if ((deltaX > deltaY && deltaX > 10) || (deltaY > deltaX && deltaY > 10)) {
                 this.isDragging = true;
-                // 阻止預設的滾動行為
-                e.preventDefault();
+
+                // 如果是在影片/音訊上，只有在明顯滑動時才阻止預設行為（避免干擾控制條點擊）
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'VIDEO' || target.tagName === 'AUDIO') {
+                    if (deltaX > 20 || deltaY > 20) {
+                        e.preventDefault();
+                    }
+                } else {
+                    e.preventDefault();
+                }
             }
         }, { passive: false });
-        
+
         element.addEventListener('touchend', (e) => {
-            // 只有在非縮放狀態下才處理觸控事件
-            if (this.isZoomed) return;
-            
+            // 只有在非縮放狀態下且非忽略目標時才處理觸控事件
+            if (this.isZoomed || this.touchStartX === -1) return;
+
             if (!this.isDragging) return;
-            
+
             const touch = e.changedTouches[0];
             const deltaX = touch.clientX - this.touchStartX;
             const deltaY = touch.clientY - this.touchStartY;
             const deltaTime = Date.now() - this.touchStartTime;
-            
+
             // 檢查是否符合滑動條件
             const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
             const isVerticalSwipe = Math.abs(deltaY) > Math.abs(deltaX);
             const isValidDistance = Math.abs(deltaX) >= this.minSwipeDistance || Math.abs(deltaY) >= this.minSwipeDistance;
             const isValidTime = deltaTime <= this.maxSwipeTime;
-            
+
             if (isValidDistance && isValidTime) {
                 if (isHorizontalSwipe) {
                     if (deltaX > 0) {
@@ -415,7 +429,7 @@ export class MediaModal extends Modal {
                     this.close();
                 }
             }
-            
+
             // 重置拖曳狀態
             this.isDragging = false;
         }, { passive: true });
