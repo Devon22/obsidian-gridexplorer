@@ -179,6 +179,7 @@ export default {
     'default': '預設',
     'hidden': '隱藏',
     'all_bookmarks': '全部書籤',
+    'ungrouped_bookmarks': '無群組書籤',
 
     // 隱藏頂部元素
     'hide_header_elements': '隱藏頂部元素',

@@ -649,7 +649,15 @@ export function renderModePath(gridView: GridView) {
 
         switch (gridView.sourceMode) {
             case 'bookmarks':
-                const bookmarkGroupName = gridView.bookmarkGroupId === 'all' ? t('all_bookmarks') : gridView.bookmarkGroupId;
+                let bookmarkGroupName = '';
+                if (gridView.bookmarkGroupId === 'all') {
+                    bookmarkGroupName = t('all_bookmarks');
+                } else if (gridView.bookmarkGroupId === 'ungrouped') {
+                    bookmarkGroupName = t('ungrouped_bookmarks');
+                } else {
+                    bookmarkGroupName = gridView.bookmarkGroupId || t('all_bookmarks');
+                }
+
                 const bookmarkGroupSpan = modenameContainer.createEl('a', { text: bookmarkGroupName, cls: 'ge-sub-option' });
                 bookmarkGroupSpan.addEventListener('click', (evt) => {
                     const menu = new Menu();
@@ -661,6 +669,16 @@ export function renderModePath(gridView: GridView) {
                             .setChecked(gridView.bookmarkGroupId === 'all')
                             .onClick(() => {
                                 gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'all');
+                            });
+                    });
+
+                    // "無群組" 選項
+                    menu.addItem((item) => {
+                        item.setTitle(t('ungrouped_bookmarks'))
+                            .setIcon('bookmark')
+                            .setChecked(gridView.bookmarkGroupId === 'ungrouped')
+                            .onClick(() => {
+                                gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'ungrouped');
                             });
                     });
 

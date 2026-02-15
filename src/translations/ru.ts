@@ -177,7 +177,8 @@ export default {
     'all': 'Все',
     'default': 'По умолчанию',
     'hidden': 'Скрытые',
-    'bookmark_groups': 'Букмарк группы',
+    'all_bookmarks': 'Все закладки',
+    'ungrouped_bookmarks': 'Без группы',
 
     // Hide header elements setting
     'hide_header_elements': 'Скрыть элементы заголовка',

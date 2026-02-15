@@ -177,7 +177,8 @@ export default {
     'all': 'すべて',
     'default': 'デフォルト',
     'hidden': '隠す',
-    'bookmark_groups': 'ブックマーク群組',
+    'all_bookmarks': 'すべてのブックマーク',
+    'ungrouped_bookmarks': 'グループなし',
 
     // 隠すヘッダー要素
     'hide_header_elements': 'ヘッダー要素を隠す',

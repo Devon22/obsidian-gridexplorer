@@ -390,6 +390,13 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         const bookmarkGroupId = gridView.bookmarkGroupId;
         if (!bookmarkGroupId || bookmarkGroupId === 'all') {
             bookmarks.forEach(processBookmarkItem);
+        } else if (bookmarkGroupId === 'ungrouped') {
+            // 只處理根目錄下的檔案項目
+            bookmarks.forEach((item: any) => {
+                if (item.type === 'file') {
+                    processBookmarkItem(item);
+                }
+            });
         } else {
             // 遞迴尋找指定的群組
             const findAndProcessGroup = (items: any[]) => {

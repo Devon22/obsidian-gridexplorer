@@ -178,7 +178,8 @@ export default {
     'all': '전체',
     'default': '기본값',
     'hidden': '숨김',
-    'bookmark_groups': '북마크群組',
+    'all_bookmarks': '모든 북마크',
+    'ungrouped_bookmarks': '그룹 해제됨',
 
     // Hide header elements setting
     'hide_header_elements': '헤더 요소 숨기기',
