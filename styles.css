@@ -889,8 +889,16 @@ span.ge-mode-title {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    overflow: hidden;
-    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
+}
+
+.ge-path-container::-webkit-scrollbar {
+    display: none;
 }
 
 /* 上層資料夾連結樣式 Parent Folder Link */
@@ -900,6 +908,7 @@ span.ge-mode-title {
     white-space: nowrap;
     overflow: hidden;
     max-width: 200px;
+    flex-shrink: 0;
     border-radius: 6px;
     border: 1px solid var(--background-modifier-hover);
     color: var(--text-normal);
@@ -931,6 +940,7 @@ span.ge-mode-title {
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+    flex-shrink: 0;
     color: var(--text-normal);
     border-radius: 4px;
     display: inline-flex;
@@ -954,27 +964,41 @@ a.ge-current-folder:hover {
 
 /* --------------------------------------------------------------------------- */
 
-/* 搜尋對話框樣式 Search Container */
+/* 搜尋對話框容器結構 */
 .ge-search-container {
     margin-bottom: 8px;
-    position: relative;
     display: flex;
     align-items: center;
+    gap: 8px;
 }
 
 .ge-search-input-wrapper {
-    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    min-width: 0; /* 防止 flex 項目溢出 */
 }
 
-.ge-input-container {
+/* 合併式搜尋欄容器 */
+.ge-search-bar {
     position: relative;
-    width: 100%;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 6px;
+    padding: 6px 36px 6px 10px;
+    min-height: 38px;
+    width: 100%;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--input-radius, 4px);
+    background-color: var(--background-modifier-form-field);
+    cursor: text;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.ge-search-bar:focus-within {
+    box-shadow: 0 0 0 1px var(--background-modifier-border-focus);
+    border-color: var(--background-modifier-border-focus);
 }
 
 .ge-search-clear-button {
@@ -1001,34 +1025,29 @@ a.ge-current-folder:hover {
     height: 16px;
 }
 
-/* 標籤顯示區域 Search Tag Display Area */
-.ge-search-tag-display-area {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 5px;
-    margin-bottom: 10px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-primary);
-    align-items: center;
-}
-
+/* 標籤顯示區域 Search Tag Buttons */
 .ge-search-tag-button {
     display: inline-flex;
     align-items: center;
-    padding: 3px 7px;
+    padding: 3px 6px;
     background-color: var(--background-modifier-active-hover);
-    border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     position: relative;
-    padding-right: 24px;
+    padding-right: 22px;
     height: 24px;
-    border: none;
     font-size: var(--font-ui-small);
+    color: var(--text-muted);
+}
+
+.ge-search-tag-button:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.ge-search-tag-button.is-tag {
+    color: var(--interactive-accent);
+    background-color: var(--background-modifier-active);
 }
 
 .ge-search-tag-delete-button {
@@ -1084,25 +1103,34 @@ a.ge-current-folder:hover {
     color: var(--text-on-accent, white);
 }
 
-.ge-search-container input {
+/* 搜尋輸入框通用樣式 */
+.ge-search-input {
     width: 100%;
-    padding: 8px 12px;
+    height: 30px;
+    padding: 6px 10px;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-primary);
+    border-radius: var(--input-radius, 4px);
+    background-color: var(--background-modifier-form-field);
     color: var(--text-normal);
     font-size: var(--font-ui-medium);
     outline: none;
-    transition: border-color 0.2s;
-    padding-right: 25px;
 }
 
-.ge-search-container input:focus {
+.ge-search-input:focus {
     border-color: var(--interactive-accent);
 }
 
-.ge-search-container input::placeholder {
-    color: var(--text-muted);
+/* 合併模式下（搜尋欄內）的輸入框微調 */
+.ge-search-bar .ge-search-input {
+    flex: 1 0 40px;
+    width: 0 !important;
+    min-width: 40px;
+    height: 24px;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 /* 搜尋選項容器 Search Options Container */
@@ -1158,6 +1186,14 @@ a.ge-current-folder:hover {
 
 .ge-search-media-files-checkbox {
     cursor: pointer;
+}
+
+.ge-search-scope-container:focus-visible,
+.ge-search-name-container:focus-visible,
+.ge-search-media-files-container:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .ge-search-media-files-label {
@@ -1851,8 +1887,10 @@ a.ge-current-folder:hover {
 }
 
 .is-phone .ge-popup-modal-reset.modal {
-    max-width: fit-content;
-    max-height: fit-content;
+    max-width: calc(100vw - 32px);
+    width: calc(100vw - 32px) !important;
+    left: 16px !important;
+    margin: 0 auto;
 }
 
 .ge-popup-content {
@@ -1862,10 +1900,16 @@ a.ge-current-folder:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     padding: 10px 8px;
     position: relative;
-    max-height: 450px;
+    max-height: 80vh;
     overflow-y: auto;
-    min-width: 250px;
-    max-width: 300px;
+    min-width: 280px;
+    max-width: 450px;
+    width: 100%;
+}
+
+.is-phone .ge-popup-content {
+    max-width: 100%;
+    max-height: 85vh;
 }
 
 /* Popup modal 中的資料夾選項樣式 */
@@ -1893,19 +1937,8 @@ a.ge-current-folder:hover {
 
 .ge-popup-content .ge-folder-search-input {
     width: 100%;
-    padding: 6px 8px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    background-color: var(--background-primary);
-    color: var(--text-normal);
-    font-size: var(--font-ui-medium);
 }
-
-.ge-popup-content .ge-folder-search-input:focus {
-    outline: none;
-    border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
-}
+/* 不需要額外屬性，因為它可以繼承 .ge-search-input 的基礎樣式 */
 
 .ge-popup-content .ge-folder-options-container {
     max-height: 350px;

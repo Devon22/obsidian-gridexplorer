@@ -23,33 +23,63 @@ export class SearchModal extends Modal {
             this.positionAsPopup();
         }
 
+        let searchTerms = this.defaultQuery.trim().split(/\s+/).filter(t => t.length > 0);
+        let currentInputIndex = searchTerms.length;
+
         // 創建搜尋輸入框容器
         const searchContainer = contentEl.createDiv('ge-search-container');
-
-        // 創建搜尋輸入框容器
         const searchInputWrapper = searchContainer.createDiv('ge-search-input-wrapper');
         
-        // 創建標籤顯示區域
-        const tagDisplayArea = searchInputWrapper.createDiv('ge-search-tag-display-area');
+        // 創建輸入框容器包裝層 (合併顯示)
+        const inputContainer = searchInputWrapper.createDiv('ge-search-bar');
+        
+        const flushInput = (appendRemaining = false) => {
+            const val = searchInput.value;
+            const parts = val.split(/\s+/);
+            const completeParts = appendRemaining ? parts.filter(p => p.length > 0) : parts.slice(0, -1).filter(p => p.length > 0);
+            const remaining = appendRemaining ? '' : parts[parts.length - 1];
+            
+            if (completeParts.length > 0) {
+                searchTerms.splice(currentInputIndex, 0, ...completeParts);
+                currentInputIndex += completeParts.length;
+                searchInput.value = remaining;
+                return true;
+            } else {
+                searchInput.value = remaining;
+                return false;
+            }
+        };
+
+        // 點擊容器時聚焦輸入框
+        inputContainer.addEventListener('click', (e) => {
+            if (e.target === inputContainer) {
+                if (currentInputIndex !== searchTerms.length) {
+                    flushInput(true);
+                    currentInputIndex = searchTerms.length;
+                    searchInput.value = '';
+                    renderTagButtons();
+                }
+                searchInput.focus();
+            }
+        });
         
         // 創建搜尋輸入框
-        const searchInput = searchInputWrapper.createEl('input', {
+        const searchInput = inputContainer.createEl('input', {
             type: 'text',
-            value: this.defaultQuery,
-            placeholder: t('search_placeholder'),
+            value: '',
+            placeholder: searchTerms.length === 0 ? t('search_placeholder') : '',
             cls: 'ge-search-input'
         });
-
-        // 創建輸入框容器包裝層
-        const inputContainer = searchInputWrapper.createDiv('ge-input-container');
-        
-        // 將輸入框移動到容器中
-        inputContainer.appendChild(searchInput);
         
         // 創建清空按鈕
-        const clearButton = inputContainer.createDiv('ge-search-clear-button'); //這裡不是用 ge-clear-button
-        clearButton.style.display = this.defaultQuery ? 'flex' : 'none';
+        const clearButton = inputContainer.createDiv('ge-search-clear-button');
+        clearButton.style.display = searchTerms.length > 0 ? 'flex' : 'none';
         setIcon(clearButton, 'x');
+
+        const updateClearButton = () => {
+            const hasContent = searchTerms.length > 0 || searchInput.value.trim().length > 0;
+            clearButton.style.display = hasContent ? 'flex' : 'none';
+        };
 
         // 建立標籤建議容器
         const tagSuggestionContainer = contentEl.createDiv('ge-search-tag-suggestions');
@@ -105,57 +135,25 @@ export class SearchModal extends Modal {
 
         const applySuggestion = (index: number) => {
             if (index < 0 || index >= tagSuggestions.length) return;
-            const value = searchInput.value.trim();
+            const newTerm = `#${tagSuggestions[index]}`;
+            
+            const value = searchInput.value;
             const cursor = searchInput.selectionStart || 0;
-            const beforeMatch = value.substring(0, cursor).replace(/#([^#\\s]*)$/, `#${tagSuggestions[index]} `);
+            const beforeMatch = value.substring(0, cursor).replace(/#([^#\s]*)$/, '');
             const afterCursor = value.substring(cursor);
-            searchInput.value = beforeMatch + afterCursor;
-            searchInput.value = searchInput.value.trim();
-            const newCursorPos = beforeMatch.length;
-            searchInput.setSelectionRange(newCursorPos, newCursorPos);
+            
+            searchInput.value = beforeMatch + newTerm + ' ' + afterCursor;
+            
+            flushInput(false);
+            
             tagSuggestionContainer.style.display = 'none';
             tagSuggestionContainer.empty();
             selectedSuggestionIndex = -1;
-            clearButton.style.display = searchInput.value ? 'flex' : 'none';
             
-            // 更新標籤按鈕顯示
+            updateClearButton();
             renderTagButtons();
-        };
-
-        // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
-        searchInput.addEventListener('input', () => {
-            clearButton.style.display = searchInput.value ? 'flex' : 'none';
-            updateTagSuggestions();
-            renderTagButtons();
-        });
-
-        // 處理上下鍵及 Enter 選擇建議
-        searchInput.addEventListener('keydown', (e) => {
-            if (tagSuggestionContainer.style.display === 'none') return;
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % tagSuggestions.length;
-                updateTagSuggestions();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex - 1 + tagSuggestions.length) % tagSuggestions.length;
-                updateTagSuggestions();
-            } else if (e.key === 'Enter') {
-                if (selectedSuggestionIndex >= 0) {
-                    e.preventDefault();
-                    applySuggestion(selectedSuggestionIndex);
-                }
-            }
-        });
-
-        // 清空按鈕點擊事件
-        clearButton.addEventListener('click', () => {
-            searchInput.value = '';
-            clearButton.style.display = 'none';
-            tagDisplayArea.empty();
-            tagDisplayArea.style.display = 'none';
             searchInput.focus();
-        });
+        };
 
         const searchOptionsContainer = contentEl.createDiv('ge-search-options-container');
 
@@ -206,24 +204,147 @@ export class SearchModal extends Modal {
             this.gridView.searchMediaFiles = false;
         }
 
+        const optionsList = [searchScopeContainer, searchNameContainer, searchMediaFilesContainer];
+
+        // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
+        searchInput.addEventListener('input', () => {
+            if (/\s/.test(searchInput.value)) {
+                if (flushInput(false)) {
+                    renderTagButtons();
+                }
+            }
+            updateClearButton();
+            updateTagSuggestions();
+        });
+
+        // 處理上下鍵及 Enter 選擇建議
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && searchInput.value === '') {
+                if (currentInputIndex > 0) {
+                    currentInputIndex--;
+                    searchInput.value = searchTerms.splice(currentInputIndex, 1)[0];
+                    renderTagButtons();
+                    e.preventDefault();
+                }
+                return;
+            }
+            if (e.key === 'Delete' && searchInput.value === '') {
+                if (currentInputIndex < searchTerms.length) {
+                    searchTerms.splice(currentInputIndex, 1);
+                    renderTagButtons();
+                    e.preventDefault();
+                }
+                return;
+            }
+            if (e.key === 'ArrowLeft' && searchInput.selectionStart === 0 && searchInput.selectionEnd === 0) {
+                if (currentInputIndex > 0) {
+                    flushInput(true);
+                    currentInputIndex--;
+                    searchInput.value = searchTerms.splice(currentInputIndex, 1)[0];
+                    renderTagButtons();
+                    e.preventDefault();
+                    setTimeout(() => searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length), 0);
+                }
+                return;
+            }
+            if (e.key === 'ArrowRight' && searchInput.selectionStart === searchInput.value.length && searchInput.selectionEnd === searchInput.value.length) {
+                if (currentInputIndex < searchTerms.length) {
+                    flushInput(true);
+                    searchInput.value = searchTerms.splice(currentInputIndex, 1)[0];
+                    renderTagButtons();
+                    e.preventDefault();
+                    setTimeout(() => searchInput.setSelectionRange(0, 0), 0);
+                }
+                return;
+            }
+
+            if (tagSuggestionContainer.style.display !== 'none') {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedSuggestionIndex = (selectedSuggestionIndex + 1) % tagSuggestions.length;
+                    updateTagSuggestions();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedSuggestionIndex = (selectedSuggestionIndex - 1 + tagSuggestions.length) % tagSuggestions.length;
+                    updateTagSuggestions();
+                } else if (e.key === 'Enter') {
+                    if (selectedSuggestionIndex >= 0) {
+                        e.preventDefault();
+                        applySuggestion(selectedSuggestionIndex);
+                    }
+                }
+            } else {
+                if (e.key === 'ArrowDown') {
+                    const firstVisible = optionsList.find(o => o.style.display !== 'none');
+                    if (firstVisible) {
+                        e.preventDefault();
+                        firstVisible.focus();
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performSearch();
+                }
+            }
+        });
+
+        // 清空按鈕點擊事件
+        clearButton.addEventListener('click', () => {
+            searchInput.value = '';
+            searchTerms = [];
+            currentInputIndex = 0;
+            updateClearButton();
+            renderTagButtons();
+            tagSuggestionContainer.style.display = 'none';
+            searchInput.focus();
+        });
+        optionsList.forEach((container, index) => {
+            container.setAttribute('tabindex', '0');
+            container.addEventListener('keydown', (e) => {
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    container.click();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    for (let i = index + 1; i < optionsList.length; i++) {
+                        if (optionsList[i].style.display !== 'none') {
+                            optionsList[i].focus();
+                            return;
+                        }
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    for (let i = index - 1; i >= 0; i--) {
+                        if (optionsList[i].style.display !== 'none') {
+                            optionsList[i].focus();
+                            return;
+                        }
+                    }
+                    searchInput.focus();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+        });
+
         // 點擊容器時切換勾選框狀態
         searchScopeContainer.addEventListener('click', (e) => {
             if (e.target !== searchScopeCheckbox) {
                 searchScopeCheckbox.checked = !searchScopeCheckbox.checked;
-                this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
             }
+            this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
         });
         searchNameContainer.addEventListener('click', (e) => {
             if (e.target !== searchNameCheckbox) {
                 searchNameCheckbox.checked = !searchNameCheckbox.checked;
-                this.gridView.searchFilesNameOnly = !searchNameCheckbox.checked;
             }
+            this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
         });
         searchMediaFilesContainer.addEventListener('click', (e) => {
             if (e.target !== searchMediaFilesCheckbox) {
                 searchMediaFilesCheckbox.checked = !searchMediaFilesCheckbox.checked;
-                this.gridView.searchMediaFiles = !searchMediaFilesCheckbox.checked;
             }
+            this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
         });
 
         // 勾選框變更時更新搜尋範圍
@@ -232,7 +353,11 @@ export class SearchModal extends Modal {
         });
 
         searchMediaFilesCheckbox.addEventListener('change', () => {
-            this.gridView.searchMediaFiles = !searchMediaFilesCheckbox.checked;
+            this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
+        });
+
+        searchNameCheckbox.addEventListener('change', () => {
+            this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
         });
 
         // 創建按鈕容器
@@ -248,84 +373,96 @@ export class SearchModal extends Modal {
             text: t('cancel')
         });
 
-        // 解析輸入內容並渲染成按鈕
-        const renderTagButtons = () => {
-            // 清空現有標籤顯示區域
-            tagDisplayArea.empty();
-            
-            // 獲取輸入值
-            const inputValue = searchInput.value.trim();
-            
-            // 如果輸入為空，隱藏標籤顯示區域
-            if (!inputValue) {
-                tagDisplayArea.style.display = 'none';
-                return;
+        // 創建單一標籤按鈕
+        const createTagButton = (term: string, index: number) => {
+            const tagDiv = document.createElement('div');
+            tagDiv.className = 'ge-search-tag-button';
+            if (term.startsWith('#')) {
+                tagDiv.classList.add('is-tag');
             }
+            tagDiv.textContent = term;
             
-            // 使用空格分割輸入內容
-            const terms = inputValue.split(/\s+/);
+            const deleteButton = document.createElement('div');
+            deleteButton.className = 'ge-search-tag-delete-button';
+            setIcon(deleteButton, 'x');
+            tagDiv.appendChild(deleteButton);
             
-            // 如果沒有分割出任何詞彙，隱藏標籤顯示區域
-            if (terms.length === 0) {
-                tagDisplayArea.style.display = 'none';
-                return;
-            }
-            
-            // 顯示標籤顯示區域
-            tagDisplayArea.style.display = 'flex';
-            
-            // 分析輸入內容中各詞彙的位置
-            let currentIndex = 0;
-            const termPositions: {term: string, startIndex: number, endIndex: number}[] = [];
-            
-            terms.forEach(term => {
-                if (!term) return; // 跳過空詞彙
-                
-                // 尋找該詞彙在原始輸入中的位置
-                const startIndex = inputValue.indexOf(term, currentIndex);
-                if (startIndex === -1) return; // 如果找不到，跳過
-                
-                const endIndex = startIndex + term.length;
-                
-                termPositions.push({
-                    term: term,
-                    startIndex: startIndex,
-                    endIndex: endIndex
-                });
-                
-                currentIndex = endIndex;
+            // 刪除按鈕
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                searchTerms.splice(index, 1);
+                if (index < currentInputIndex) {
+                    currentInputIndex--;
+                }
+                renderTagButtons();
+                updateClearButton();
+                searchInput.focus();
             });
             
-            // 為每個詞彙創建按鈕
-            termPositions.forEach(termInfo => {
-                const tagButton = tagDisplayArea.createDiv('ge-search-tag-button');
-                tagButton.textContent = termInfo.term;
-                
-                // 判斷是否為標籤，如果是則添加特殊樣式
-                if (termInfo.term.startsWith('#')) {
-                    tagButton.addClass('is-tag');
+            // 點擊標籤本身轉為編輯狀態
+            tagDiv.addEventListener('click', (e) => {
+                let targetIndex = index;
+                flushInput(true);
+                // 調整 targetIndex 因為 flush 可能改變了 searchTerms 的長度與位置
+                if (targetIndex >= currentInputIndex && searchTerms.length > index) {
+                    // 如果我們插入了新詞彙在 target 之前，target 往後移動
+                    // 這裡的邏輯：因為我們用 closure 記錄了原本的 index，
+                    // 如果 flushed 在 index 前面，也就是我們剛才正在 index 前面的輸入框打字，
+                    // 那麼 flush 會增加 elements 到 currentInputIndex。
+                    // 為了簡化，因為 flushInput(true) 已經執行了，我們需要找到這個詞彙
+                    // 最簡單的方式是用傳入時綁定的 index 來直接計算偏移
+                    targetIndex += (searchTerms.length - searchTerms.length); // logic simplification
+                    // Wait, let's trace:
+                }
+                // Correction on index logic after flush
+                // It's safer to just re-evaluate targetIndex by passing the bound index logic
+                // Actually the safest is:
+            });
+            
+            // Re-implementing correctly: click event
+            tagDiv.addEventListener('click', (e) => {
+                let shift = 0;
+                const val = searchInput.value;
+                const parts = val.split(/\s+/).filter(p => !!p);
+                if (parts.length > 0) {
+                    shift = parts.length;
+                    searchTerms.splice(currentInputIndex, 0, ...parts);
                 }
                 
-                // 創建刪除按鈕
-                const deleteButton = tagButton.createDiv('ge-search-tag-delete-button');
-                setIcon(deleteButton, 'x');
+                let targetIndex = index;
+                if (targetIndex >= currentInputIndex) {
+                    targetIndex += shift;
+                }
                 
-                // 點擊刪除按鈕時從輸入框中移除該詞彙
-                deleteButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const newValue = 
-                        inputValue.substring(0, termInfo.startIndex) + 
-                        inputValue.substring(termInfo.endIndex);
-                    searchInput.value = newValue.trim();
-                    
-                    // 觸發輸入事件以更新UI
-                    const inputEvent = new Event('input', { bubbles: true });
-                    searchInput.dispatchEvent(inputEvent);
-                    
-                    // 聚焦回輸入框
-                    searchInput.focus();
-                });
+                searchInput.value = searchTerms.splice(targetIndex, 1)[0];
+                currentInputIndex = targetIndex;
+                renderTagButtons();
+                updateClearButton();
+                searchInput.focus();
             });
+            
+            return tagDiv;
+        };
+
+        // 渲染成按鈕
+        const renderTagButtons = () => {
+            inputContainer.querySelectorAll('.ge-search-tag-button').forEach(el => el.remove());
+            
+            if (searchTerms.length === 0 && currentInputIndex === 0) {
+                searchInput.placeholder = t('search_placeholder');
+            } else {
+                searchInput.placeholder = '';
+            }
+            
+            for (let i = 0; i < currentInputIndex; i++) {
+                inputContainer.insertBefore(createTagButton(searchTerms[i], i), searchInput);
+            }
+            
+            for (let i = currentInputIndex; i < searchTerms.length; i++) {
+                inputContainer.insertBefore(createTagButton(searchTerms[i], i), clearButton);
+            }
+            
+            updateClearButton();
         };
 
         // 先保存開啟 Modal 時的原始狀態
@@ -336,6 +473,8 @@ export class SearchModal extends Modal {
 
         // 綁定搜尋事件
         const performSearch = () => {
+            flushInput(true);
+            
             // 在執行新搜尋之前，將當前狀態寫入歷史
             this.gridView.pushHistory(
                 this.gridView.sourceMode,
@@ -345,7 +484,7 @@ export class SearchModal extends Modal {
                 originalSearchFilesNameOnly,
                 originalSearchMediaFiles,
             );
-            this.gridView.searchQuery = searchInput.value;
+            this.gridView.searchQuery = searchTerms.join(' ');
             this.gridView.searchCurrentLocationOnly = searchScopeCheckbox.checked;
             this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
@@ -356,11 +495,6 @@ export class SearchModal extends Modal {
         };
 
         searchButton.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
 
         cancelButton.addEventListener('click', () => {
             this.close();
@@ -369,9 +503,8 @@ export class SearchModal extends Modal {
         // 初始渲染標籤按鈕
         renderTagButtons();
         
-        // 自動聚焦到搜尋輸入框，並將游標移到最後
+        // 自動聚焦到搜尋輸入框
         searchInput.focus();
-        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
     }
 
     onClose() {

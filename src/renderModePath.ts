@@ -335,8 +335,8 @@ export function renderModePath(gridView: GridView) {
                 }
             }
 
-            if (el.className === 'ge-current-folder') {
-                el.addEventListener('click', (event) => {
+            if (el.className === 'ge-current-folder' || (el instanceof HTMLAnchorElement && el.className.includes('ge-current-folder'))) {
+                const showCurrentFolderMenu = (event: MouseEvent) => {
                     event.preventDefault();
                     event.stopPropagation();
 
@@ -536,9 +536,27 @@ export function renderModePath(gridView: GridView) {
                         // 非根目錄維持原本行為：顯示選單
                         menu.showAtMouseEvent(event);
                     }
-                });
+                };
+                el.addEventListener('click', showCurrentFolderMenu);
+                el.addEventListener('contextmenu', showCurrentFolderMenu);
             }
         }
+
+        // 添加滾動事件支援水平捲動
+        pathContainer.addEventListener('wheel', (evt: WheelEvent) => {
+            if (evt.deltaY !== 0) {
+                pathContainer.scrollLeft += evt.deltaY;
+                evt.preventDefault();
+            }
+        });
+
+        // 自動捲動到最右側，確保顯示當前資料夾的前端
+        requestAnimationFrame(() => {
+            const lastEl = pathElements[pathElements.length - 1];
+            if (lastEl) {
+                pathContainer.scrollLeft = lastEl.offsetLeft;
+            }
+        });
     } else if (!(gridView.searchQuery && !gridView.searchCurrentLocationOnly)) {
         // 顯示目前模式名稱
 
