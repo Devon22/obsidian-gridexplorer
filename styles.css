@@ -40,14 +40,20 @@
     height: var(--grid-item-height);
 }
 
-.ge-grid-item:hover {
-    transform: translateY(-2px);
-    background-color: var(--text-selection) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+@media (hover: hover) {
+    .ge-grid-item:hover {
+        transform: translateY(-2px);
+        background-color: var(--text-selection) !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .ge-grid-item:hover p {
+        color: var(--text-muted);
+    }
 }
 
-.ge-grid-item:hover p {
-    color: var(--text-muted);
+.ge-grid-item {
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button */
@@ -287,8 +293,10 @@
 }
 
 /* 鼠標懸停效果：整張卡片微抬升 */
-.ge-vertical-card .ge-grid-item:hover {
-    transform: translateY(-2px);
+@media (hover: hover) {
+    .ge-vertical-card .ge-grid-item:hover {
+        transform: translateY(-2px);
+    }
 }
 
 /* 僅圖片/影片的直向卡片 Media Card */
@@ -391,10 +399,12 @@
     height: 100%;
 }
 
-.ge-grid-item.ge-folder-item:hover {
-    background-color: var(--background-modifier-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+@media (hover: hover) {
+    .ge-grid-item.ge-folder-item:hover {
+        background-color: var(--background-modifier-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 }
 
 /* 直向卡片模式下的資料夾項目補正 */
@@ -525,8 +535,10 @@
     background-color: var(--background-modifier-border);
 }
 
-.ge-grid-item.ge-note-hidden:hover {
-    opacity: 0.7;
+@media (hover: hover) {
+    .ge-grid-item.ge-note-hidden:hover {
+        opacity: 0.7;
+    }
 }
 
 .ge-grid-item.ge-note-hidden .ge-title {

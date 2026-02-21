@@ -67,6 +67,7 @@ export class GridView extends ItemView {
     isShowingNote: boolean = false; // 是否正在顯示筆記
     noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
     eventCleanupFunctions: (() => void)[] = []; // 存儲事件清理函數
+    targetFocusPath: string | null = null; // 指定下次渲染要對焦的檔案路徑
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
@@ -1063,45 +1064,102 @@ export class GridView extends ItemView {
             const state: DividerState = { lastDateString: lastDateString, pinDividerAdded: pinDividerAdded, blankDividerAdded: blankDividerAdded };
             const paramsBase: FileRenderParams = { container, observer, files, dateDividerMode, sortType, shouldShowDateDividers, state };
             const selfRef = this;
-
-            if (Platform.isIosApp) {
-                // iOS 專用：以 time-slice 方式分批，避免阻塞點擊事件
-                const TIME_BUDGET_MS = 6; // 每幀最多執行 6ms
-                const processChunk = (start: number) => {
-                    if (currentToken !== this.renderToken) return;
+            const batchSize = 50;
+            let currentIndex = 0;
+            
+            // 建立哨兵元素，用於觸發後續載入
+            const sentinel = container.createDiv('ge-load-more-sentinel');
+            sentinel.style.height = '1px';
+            sentinel.style.width = '100%';
+            sentinel.style.flexShrink = '0';
+            
+            let isLoading = false;
+            
+            const loadMore = (entries?: IntersectionObserverEntry[]) => {
+                if (currentToken !== selfRef.renderToken) return;
+                
+                if (entries && entries[0] && !entries[0].isIntersecting) {
+                    return;
+                }
+                
+                if (isLoading) return;
+                isLoading = true;
+                
+                // 暫時移除哨兵
+                sentinel.remove();
+                
+                let targetMaxEnd = currentIndex + batchSize;
+                if (selfRef.targetFocusPath) {
+                    const tIndex = files.findIndex(f => f.path === selfRef.targetFocusPath);
+                    if (tIndex >= currentIndex) {
+                        targetMaxEnd = Math.max(targetMaxEnd, tIndex + 1);
+                    }
+                }
+                const end = Math.min(targetMaxEnd, files.length);
+                const TIME_BUDGET_MS = Platform.isIosApp ? 6 : 16;
+                
+                const renderChunk = () => {
+                    if (currentToken !== selfRef.renderToken) return;
+                    
                     const startTime = performance.now();
-                    let i = start;
-                    for (; i < files.length; i++) {
-                        selfRef.processFile(files[i], paramsBase);
-                        if (performance.now() - startTime > TIME_BUDGET_MS) {
-                            break; // 超過時間預算，讓出主執行緒
-                        }
+                    while (currentIndex < end && (performance.now() - startTime) < TIME_BUDGET_MS) {
+                        selfRef.processFile(files[currentIndex], paramsBase);
+                        currentIndex++;
                     }
-                    if (i < files.length) {
-                        requestAnimationFrame(() => processChunk(i)); // 下一幀繼續
+                    
+                    if (currentIndex < end) {
+                        requestAnimationFrame(renderChunk);
+                    } else {
+                        // 這一批次處理完畢
+                        if (selfRef.targetFocusPath) {
+                            // 尋找剛剛載入的目標項目並捲動到該位置
+                            const gridItem = Array.from(container.querySelectorAll('.ge-grid-item')).find(
+                                item => (item as HTMLElement).dataset.filePath === selfRef.targetFocusPath
+                            ) as HTMLElement;
+                            
+                            if (gridItem) {
+                                gridItem.scrollIntoView({ block: 'nearest' });
+                                const itemIndex = selfRef.gridItems.indexOf(gridItem);
+                                if (itemIndex >= 0) {
+                                    selfRef.selectItem(itemIndex);
+                                }
+                                selfRef.targetFocusPath = null; // 處理完清除目標
+                            }
+                        }
+
+                        if (currentIndex < files.length) {
+                            // 還有剩餘檔案，將哨兵加回底部
+                            container.appendChild(sentinel);
+                            
+                            // 主動判斷是否仍在可視範圍內（解決捲動跳轉後 IntersectionObserver 未觸發的問題）
+                            setTimeout(() => {
+                                if (currentToken !== selfRef.renderToken) return;
+                                // 由於不一定是在 root container，也可以透過 getBoundingClientRect 簡單測算
+                                const rect = sentinel.getBoundingClientRect();
+                                const containerRect = container.getBoundingClientRect();
+                                if (rect.top - containerRect.bottom < 400) {
+                                    loadMore();
+                                }
+                            }, 50);
+                        }
+                        
+                        isLoading = false;
                     }
                 };
-                processChunk(0);
-            } else {
-                // 其他平台維持原本固定 batchSize 的邏輯
-                const batchSize = 50;
-                const processBatch = (start: number) => {
-                    if (currentToken !== this.renderToken) return;
-                    const end = Math.min(start + batchSize, files.length);
-                    for (let i = start; i < end; i++) {
-                        selfRef.processFile(files[i], paramsBase);
-                    }
-                    if (end < files.length) {
-                        const cb = () => processBatch(end);
-                        if (typeof (window as any).requestIdleCallback === 'function') {
-                            (window as any).requestIdleCallback(cb);
-                        } else {
-                            setTimeout(cb, 0);
-                        }
-                    }
-                };
-                processBatch(0);
-            }
+                
+                renderChunk();
+            };
+            
+            const sentinelObserver = new IntersectionObserver(loadMore, {
+                root: container,
+                rootMargin: '400px', // 提早 400px 載入
+                threshold: 0
+            });
+            
+            sentinelObserver.observe(sentinel);
+            
+            // 初始載入
+            loadMore();
         }
 
         if (this.plugin.statusBarItem) {

@@ -629,30 +629,8 @@ export default class GridExplorerPlugin extends Plugin {
     async openNoteInRecentFiles(file: TFile) {
         const view = await this.activateView();
         if (view instanceof GridView) {
+            view.targetFocusPath = file instanceof TFile ? file.path : null;
             await view.setSource('recent-files');
-            // 如果是文件，等待視圖渲染完成後捲動到該文件位置
-            if (file instanceof TFile) {
-                // 等待下一個事件循環以確保視圖已完全渲染
-                requestAnimationFrame(() => {
-                    const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
-                    if (!gridContainer) return;
-                    
-                    // 找到對應的網格項目
-                    const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
-                        item => (item as HTMLElement).dataset.filePath === file.path
-                    ) as HTMLElement;
-                    
-                    if (gridItem) {
-                        // 捲動到該項目的位置
-                        gridItem.scrollIntoView({ block: 'nearest' });
-                        // 選中該項目
-                        const itemIndex = view.gridItems.indexOf(gridItem);
-                        if (itemIndex >= 0) {
-                            view.selectItem(itemIndex);
-                        }
-                    }
-                });
-            }
         }
     }
 
@@ -662,30 +640,8 @@ export default class GridExplorerPlugin extends Plugin {
         const folderPath = file ? (file instanceof TFile ? file.parent?.path : file.path) : "/";
         const view = await this.activateView();
         if (view instanceof GridView) {
+            view.targetFocusPath = file instanceof TFile ? file.path : null;
             await view.setSource('folder', folderPath);
-            // 如果是文件，等待視圖渲染完成後捲動到該文件位置
-            if (file instanceof TFile) {
-                // 等待下一個事件循環以確保視圖已完全渲染
-                requestAnimationFrame(() => {
-                    const gridContainer = view.containerEl.querySelector('.ge-grid-container') as HTMLElement;
-                    if (!gridContainer) return;
-                    
-                    // 找到對應的網格項目
-                    const gridItem = Array.from(gridContainer.querySelectorAll('.ge-grid-item')).find(
-                        item => (item as HTMLElement).dataset.filePath === file.path
-                    ) as HTMLElement;
-                    
-                    if (gridItem) {
-                        // 捲動到該項目的位置
-                        gridItem.scrollIntoView({ block: 'nearest' });
-                        // 選中該項目
-                        const itemIndex = view.gridItems.indexOf(gridItem);
-                        if (itemIndex >= 0) {
-                            view.selectItem(itemIndex);
-                        }
-                    }
-                });
-            }
         }
     }
 
