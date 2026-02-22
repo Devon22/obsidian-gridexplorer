@@ -1059,7 +1059,6 @@ a.ge-current-folder:hover {
 
 .ge-search-tag-button.is-tag {
     color: var(--interactive-accent);
-    background-color: var(--background-modifier-active);
 }
 
 .ge-search-tag-delete-button {
@@ -2830,6 +2829,14 @@ a.ge-current-folder:hover {
     padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
 }
 
+.is-tablet .ge-grid-view-container .view-content {
+    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3)) !important;
+}
+
 .is-phone .ge-note-content {
     padding-bottom: var(--view-bottom-spacing) !important;
+}
+
+.is-tablet .ge-note-content {
+    padding-bottom: var(--safe-area-inset-bottom) !important;
 }
