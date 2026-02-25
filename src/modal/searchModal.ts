@@ -332,32 +332,16 @@ export class SearchModal extends Modal {
             if (e.target !== searchScopeCheckbox) {
                 searchScopeCheckbox.checked = !searchScopeCheckbox.checked;
             }
-            this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
         });
         searchNameContainer.addEventListener('click', (e) => {
             if (e.target !== searchNameCheckbox) {
                 searchNameCheckbox.checked = !searchNameCheckbox.checked;
             }
-            this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
         });
         searchMediaFilesContainer.addEventListener('click', (e) => {
             if (e.target !== searchMediaFilesCheckbox) {
                 searchMediaFilesCheckbox.checked = !searchMediaFilesCheckbox.checked;
             }
-            this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
-        });
-
-        // 勾選框變更時更新搜尋範圍
-        searchScopeCheckbox.addEventListener('change', () => {
-            this.gridView.searchCurrentLocationOnly = !searchScopeCheckbox.checked;
-        });
-
-        searchMediaFilesCheckbox.addEventListener('change', () => {
-            this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
-        });
-
-        searchNameCheckbox.addEventListener('change', () => {
-            this.gridView.searchFilesNameOnly = searchNameCheckbox.checked;
         });
 
         // 創建按鈕容器
@@ -558,6 +542,6 @@ export class SearchModal extends Modal {
 }
 
 // 顯示搜尋 modal
-export function showSearchModal(app:App, gridView: GridView, defaultQuery = '', buttonElement?: HTMLElement) {
+export function showSearchModal(app: App, gridView: GridView, defaultQuery = '', buttonElement?: HTMLElement) {
     new SearchModal(app, gridView, defaultQuery, buttonElement).open();
 }

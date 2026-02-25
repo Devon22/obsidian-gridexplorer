@@ -585,8 +585,8 @@ export class GridView extends ItemView {
             files = [...pinnedFiles, ...otherFiles];
         }
 
-        // 如果資料夾筆記設定為隱藏，則隱藏資料夾筆記
-        if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
+        // 如果資料夾筆記設定為隱藏，則隱藏資料夾筆記（僅在非搜尋模式下執行）
+        if (this.sourceMode === 'folder' && this.sourcePath !== '/' && this.searchQuery === '') {
             if (this.plugin.settings.folderNoteDisplaySettings === 'hidden') {
                 const currentFolder = this.app.vault.getAbstractFileByPath(this.sourcePath);
                 if (currentFolder instanceof TFolder) {
