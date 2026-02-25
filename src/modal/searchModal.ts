@@ -16,7 +16,7 @@ export class SearchModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        
+
         // 如果有提供按鈕元素，則設置為 popup 樣式
         if (this.buttonElement) {
             this.modalEl.addClass('ge-popup-modal');
@@ -29,23 +29,42 @@ export class SearchModal extends Modal {
         // 創建搜尋輸入框容器
         const searchContainer = contentEl.createDiv('ge-search-container');
         const searchInputWrapper = searchContainer.createDiv('ge-search-input-wrapper');
-        
+
         // 創建輸入框容器包裝層 (合併顯示)
         const inputContainer = searchInputWrapper.createDiv('ge-search-bar');
-        
-        const flushInput = (appendRemaining = false) => {
+
+        const flushInput = (appendRemaining = false, onlyTags = false) => {
             const val = searchInput.value;
             const parts = val.split(/\s+/);
             const completeParts = appendRemaining ? parts.filter(p => p.length > 0) : parts.slice(0, -1).filter(p => p.length > 0);
             const remaining = appendRemaining ? '' : parts[parts.length - 1];
-            
+
             if (completeParts.length > 0) {
+                if (onlyTags) {
+                    const tags = completeParts.filter(p => p.startsWith('#'));
+                    if (tags.length > 0) {
+                        const nonTags = completeParts.filter(p => !p.startsWith('#'));
+                        searchTerms.splice(currentInputIndex, 0, ...tags);
+                        currentInputIndex += tags.length;
+
+                        let newVal = nonTags.join(' ');
+                        if (newVal && (remaining || val.endsWith(' '))) {
+                            newVal += ' ';
+                        }
+                        newVal += remaining;
+                        searchInput.value = newVal;
+                        return true;
+                    }
+                    return false;
+                }
                 searchTerms.splice(currentInputIndex, 0, ...completeParts);
                 currentInputIndex += completeParts.length;
                 searchInput.value = remaining;
                 return true;
             } else {
-                searchInput.value = remaining;
+                if (!onlyTags) {
+                    searchInput.value = remaining;
+                }
                 return false;
             }
         };
@@ -62,7 +81,7 @@ export class SearchModal extends Modal {
                 searchInput.focus();
             }
         });
-        
+
         // 創建搜尋輸入框
         const searchInput = inputContainer.createEl('input', {
             type: 'text',
@@ -70,7 +89,7 @@ export class SearchModal extends Modal {
             placeholder: searchTerms.length === 0 ? t('search_placeholder') : '',
             cls: 'ge-search-input'
         });
-        
+
         // 創建清空按鈕
         const clearButton = inputContainer.createDiv('ge-search-clear-button');
         clearButton.style.display = searchTerms.length > 0 ? 'flex' : 'none';
@@ -101,14 +120,14 @@ export class SearchModal extends Modal {
             }
             const query = match[1].toLowerCase();
             const filteredTags = allTagsArr.filter((t) => t.toLowerCase().includes(query));
-            
+
             // 排序：優先顯示前綴匹配的標籤，其次按字母順序排序
             tagSuggestions = filteredTags.sort((a, b) => {
                 const aLower = a.toLowerCase();
                 const bLower = b.toLowerCase();
                 const aStartsWith = aLower.startsWith(query);
                 const bStartsWith = bLower.startsWith(query);
-                
+
                 if (aStartsWith && !bStartsWith) return -1;
                 if (!aStartsWith && bStartsWith) return 1;
                 return aLower.localeCompare(bLower);
@@ -136,20 +155,20 @@ export class SearchModal extends Modal {
         const applySuggestion = (index: number) => {
             if (index < 0 || index >= tagSuggestions.length) return;
             const newTerm = `#${tagSuggestions[index]}`;
-            
+
             const value = searchInput.value;
             const cursor = searchInput.selectionStart || 0;
             const beforeMatch = value.substring(0, cursor).replace(/#([^#\s]*)$/, '');
             const afterCursor = value.substring(cursor);
-            
+
             searchInput.value = beforeMatch + newTerm + ' ' + afterCursor;
-            
+
             flushInput(false);
-            
+
             tagSuggestionContainer.style.display = 'none';
             tagSuggestionContainer.empty();
             selectedSuggestionIndex = -1;
-            
+
             updateClearButton();
             renderTagButtons();
             searchInput.focus();
@@ -209,7 +228,7 @@ export class SearchModal extends Modal {
         // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
         searchInput.addEventListener('input', () => {
             if (/\s/.test(searchInput.value)) {
-                if (flushInput(false)) {
+                if (flushInput(false, true)) {
                     renderTagButtons();
                 }
             }
@@ -365,12 +384,12 @@ export class SearchModal extends Modal {
                 tagDiv.classList.add('is-tag');
             }
             tagDiv.textContent = term;
-            
+
             const deleteButton = document.createElement('div');
             deleteButton.className = 'ge-search-tag-delete-button';
             setIcon(deleteButton, 'x');
             tagDiv.appendChild(deleteButton);
-            
+
             // 刪除按鈕
             deleteButton.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -382,7 +401,7 @@ export class SearchModal extends Modal {
                 updateClearButton();
                 searchInput.focus();
             });
-            
+
             // 點擊標籤本身轉為編輯狀態
             tagDiv.addEventListener('click', (e) => {
                 let targetIndex = index;
@@ -402,7 +421,7 @@ export class SearchModal extends Modal {
                 // It's safer to just re-evaluate targetIndex by passing the bound index logic
                 // Actually the safest is:
             });
-            
+
             // Re-implementing correctly: click event
             tagDiv.addEventListener('click', (e) => {
                 let shift = 0;
@@ -412,40 +431,40 @@ export class SearchModal extends Modal {
                     shift = parts.length;
                     searchTerms.splice(currentInputIndex, 0, ...parts);
                 }
-                
+
                 let targetIndex = index;
                 if (targetIndex >= currentInputIndex) {
                     targetIndex += shift;
                 }
-                
+
                 searchInput.value = searchTerms.splice(targetIndex, 1)[0];
                 currentInputIndex = targetIndex;
                 renderTagButtons();
                 updateClearButton();
                 searchInput.focus();
             });
-            
+
             return tagDiv;
         };
 
         // 渲染成按鈕
         const renderTagButtons = () => {
             inputContainer.querySelectorAll('.ge-search-tag-button').forEach(el => el.remove());
-            
+
             if (searchTerms.length === 0 && currentInputIndex === 0) {
                 searchInput.placeholder = t('search_placeholder');
             } else {
                 searchInput.placeholder = '';
             }
-            
+
             for (let i = 0; i < currentInputIndex; i++) {
                 inputContainer.insertBefore(createTagButton(searchTerms[i], i), searchInput);
             }
-            
+
             for (let i = currentInputIndex; i < searchTerms.length; i++) {
                 inputContainer.insertBefore(createTagButton(searchTerms[i], i), clearButton);
             }
-            
+
             updateClearButton();
         };
 
@@ -458,7 +477,7 @@ export class SearchModal extends Modal {
         // 綁定搜尋事件
         const performSearch = () => {
             flushInput(true);
-            
+
             // 在執行新搜尋之前，將當前狀態寫入歷史
             this.gridView.pushHistory(
                 this.gridView.sourceMode,
@@ -486,7 +505,7 @@ export class SearchModal extends Modal {
 
         // 初始渲染標籤按鈕
         renderTagButtons();
-        
+
         // 自動聚焦到搜尋輸入框
         searchInput.focus();
     }
