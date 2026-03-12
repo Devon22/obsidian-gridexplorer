@@ -599,7 +599,7 @@
     margin-bottom: -2px;
 }
 
-/* 置頂分隔器圖示 
+/* 日期分隔器圖示 
 .ge-date-divider::before {
     content: "📆";
     margin-right: 6px;
@@ -775,7 +775,6 @@
     white-space: nowrap;
     overflow: hidden;
     color: var(--text-normal);
-    /* keep size; beautify look */
     border: 1px solid var(--background-secondary) !important;
     font-size: var(--font-ui-small);
     display: inline-flex;

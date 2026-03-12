@@ -2329,6 +2329,127 @@ export class GridView extends ItemView {
             console.error('Error loading note content:', error);
         }
 
+        // 行動裝置下拉或上拉關閉筆記
+        if (Platform.isMobile && this.noteViewContainer) {
+            let startY = 0;
+            let startX = 0;
+            let currentY = 0;
+            let isPulling = false;
+            let isPullingUp = false;
+            let isDragging = false;
+            let initialScrollTop = 0;
+            let isAtTop = false;
+            let isAtBottom = false;
+
+            const handleTouchStart = (e: TouchEvent) => {
+                const target = e.target as HTMLElement;
+                // 避開按鈕、連結等可互動元素，以免影響正常點擊
+                if (target.closest('button') || target.closest('a') || target.closest('input') || target.closest('textarea')) {
+                    return;
+                }
+
+                initialScrollTop = scrollContainer.scrollTop;
+                isAtTop = initialScrollTop <= 0;
+                // 考量誤差，留 1px 空間
+                isAtBottom = initialScrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1;
+
+                // 只有在筆記滾動到最頂部或最底部時才記錄起始位置
+                if (isAtTop || isAtBottom) {
+                    startY = e.touches[0].clientY;
+                    startX = e.touches[0].clientX;
+                    isPulling = true;
+                    isDragging = false;
+                    isPullingUp = false;
+                }
+            };
+
+            const handleTouchMove = (e: TouchEvent) => {
+                if (!isPulling || !this.noteViewContainer) return;
+
+                currentY = e.touches[0].clientY;
+                const currentX = e.touches[0].clientX;
+                const deltaY = currentY - startY;
+                const deltaX = currentX - startX;
+
+                // 如果還沒開始拖曳，先判斷滑動方向和距離
+                if (!isDragging) {
+                    // 水平滑動取消
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        isPulling = false;
+                        return;
+                    }
+                    
+                    // 根據位置判斷是否允許滑動方向
+                    let canPullDown = isAtTop && deltaY > 5;
+                    let canPullUp = isAtBottom && deltaY < -5;
+
+                    if (canPullDown || canPullUp) {
+                        isDragging = true;
+                        // 當同時符合（例如內容很短）且往上拉時，視為上拉
+                        isPullingUp = canPullUp && deltaY < 0; 
+                        if (this.noteViewContainer) {
+                            this.noteViewContainer.style.transition = 'none';
+                        }
+                    } else if ((isAtTop && !isAtBottom && deltaY < 0) || (isAtBottom && !isAtTop && deltaY > 0)) {
+                        // 往反方向正常滑動閱讀時，取消攔截
+                        isPulling = false;
+                        return;
+                    }
+                }
+
+                // 在拖曳狀態下進行視窗移動
+                if (isDragging) {
+                    // 防止觸發瀏覽器預設滾動或下拉更新
+                    if (e.cancelable) {
+                        e.preventDefault();
+                    }
+                    const resistance = 0.5;
+                    const translateY = deltaY * resistance;
+                    this.noteViewContainer.style.transform = `translateY(${translateY}px)`;
+                }
+            };
+
+            const handleTouchEnd = () => {
+                if (!isPulling || !this.noteViewContainer) return;
+                isPulling = false;
+                
+                // 如果沒有真正拖曳，就當作一般點擊，不執行後續動畫
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+
+                // 判斷下拉或上拉距離是否夠大
+                if ((!isPullingUp && deltaY > 80) || (isPullingUp && deltaY < -80)) {
+                    // 關閉筆記
+                    const targetY = isPullingUp ? '-100vh' : '100vh';
+                    this.noteViewContainer.style.transition = 'transform 0.2s ease-out';
+                    this.noteViewContainer.style.transform = `translateY(${targetY})`;
+                    setTimeout(() => {
+                        this.hideNoteInGrid();
+                        if (this.noteViewContainer) {
+                            this.noteViewContainer.style.transform = '';
+                            this.noteViewContainer.style.transition = '';
+                        }
+                    }, 200);
+                } else {
+                    // 距離不夠，彈回原位
+                    this.noteViewContainer.style.transition = 'transform 0.3s ease-out';
+                    this.noteViewContainer.style.transform = `translateY(0)`;
+                    setTimeout(() => {
+                        if (this.noteViewContainer) {
+                            this.noteViewContainer.style.transform = '';
+                            this.noteViewContainer.style.transition = '';
+                        }
+                    }, 300);
+                }
+            };
+
+            this.noteViewContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+            this.noteViewContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            this.noteViewContainer.addEventListener('touchend', handleTouchEnd);
+        }
+
         // 設定狀態
         this.isShowingNote = true;
 
