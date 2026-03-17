@@ -226,8 +226,25 @@ export class SearchModal extends Modal {
         const optionsList = [searchScopeContainer, searchNameContainer, searchMediaFilesContainer];
 
         // 監聽輸入框變化來控制清空按鈕的顯示並更新標籤建議
-        searchInput.addEventListener('input', () => {
+        let isComposing = false;
+        searchInput.addEventListener('compositionstart', () => {
+            isComposing = true;
+        });
+        searchInput.addEventListener('compositionend', () => {
+            isComposing = false;
+            // 合成結束後檢查是否需要 flush 標籤 (處理拼音選詞後的空格)
             if (/\s/.test(searchInput.value)) {
+                if (flushInput(false, true)) {
+                    renderTagButtons();
+                }
+            }
+            updateClearButton();
+            updateTagSuggestions();
+        });
+
+        searchInput.addEventListener('input', () => {
+            // 如果正在合成（如拼音輸入中），不執行會中斷輸入的 flush 操作
+            if (!isComposing && /\s/.test(searchInput.value)) {
                 if (flushInput(false, true)) {
                     renderTagButtons();
                 }
@@ -238,6 +255,7 @@ export class SearchModal extends Modal {
 
         // 處理上下鍵及 Enter 選擇建議
         searchInput.addEventListener('keydown', (e) => {
+            if (isComposing) return;
             if (e.key === 'Backspace' && searchInput.value === '') {
                 if (currentInputIndex > 0) {
                     currentInputIndex--;
