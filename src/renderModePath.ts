@@ -448,6 +448,21 @@ export function renderModePath(gridView: GridView) {
                             });
                         }
                     }
+                    
+                    // 在系統檔案總管開啟
+                    if (Platform.isDesktop) {
+                        menu.addSeparator();
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('open_in_file_explorer'))
+                                .setIcon('arrow-up-right')
+                                .onClick(() => {
+                                    if (folder instanceof TFolder) {    
+                                        (gridView.app as any).showInFolder(folder.path);
+                                    }
+                                });
+                        });
+                    }
 
                     if (gridView.plugin.settings.folderDisplayStyle !== 'show' && gridView.sourcePath !== '/') {
                         menu.addSeparator();
