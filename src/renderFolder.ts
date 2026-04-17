@@ -252,6 +252,17 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 openFolderInNewView(gridView, folder.path);
                             });
                     });
+                    // 在系統檔案總管開啟
+                    if (Platform.isDesktop) {
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('open_in_file_explorer'))
+                                .setIcon('arrow-up-right')
+                                .onClick(() => {
+                                    (gridView.app as any).showInFolder(folder.path);
+                                });
+                        });
+                    }
                     menu.addSeparator();
 
                     // 新增筆記相關選項

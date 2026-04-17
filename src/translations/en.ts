@@ -219,6 +219,7 @@ export default {
     'show_ignored_items': 'Show ignored folders and files',
     'delete_note': 'Delete file',
     'open_folder_note': 'Open folder note',
+    'open_in_file_explorer': 'Show in system explorer',
     'create_folder_note': 'Create folder note',
     'delete_folder_note': 'Delete folder note',
     'edit_folder_note_settings': 'Edit folder note settings',

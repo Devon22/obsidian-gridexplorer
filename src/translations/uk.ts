@@ -218,6 +218,7 @@ export default {
     'show_ignored_items': 'Показати ігноровані папки та файли',
     'delete_note': 'Видалити файл',
     'open_folder_note': 'Відкрити нотатку папки',
+    'open_in_file_explorer': 'Відкрити в системному провіднику',
     'create_folder_note': 'Створити нотатку папки',
     'delete_folder_note': 'Видалити нотатку папки',
     'edit_folder_note_settings': 'Редагувати налаштування нотатки папки',

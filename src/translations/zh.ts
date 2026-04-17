@@ -218,6 +218,7 @@ export default {
     'show_ignored_items': '显示忽略的文件夹及文件',
     'delete_note': '删除文件',
     'open_folder_note': '打开文件夹笔记',
+    'open_in_file_explorer': '在系统文件资源管理器中打开',
     'create_folder_note': '创建文件夹笔记',
     'delete_folder_note': '删除文件夹笔记',
     'edit_folder_note_settings': '编辑文件夹笔记设置',

@@ -219,6 +219,7 @@ export default {
     'show_ignored_items': '顯示忽略的資料夾及檔案',
     'delete_note': '刪除檔案',
     'open_folder_note': '開啟資料夾筆記',
+    'open_in_file_explorer': '在系統檔案總管開啟',
     'create_folder_note': '建立資料夾筆記',
     'delete_folder_note': '刪除資料夾筆記',
     'edit_folder_note_settings': '編輯資料夾筆記設定',

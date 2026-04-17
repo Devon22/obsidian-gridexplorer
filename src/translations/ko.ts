@@ -219,6 +219,7 @@ export default {
     'show_ignored_items': '무시된 폴더 및 파일 표시',
     'delete_note': '파일 삭제',
     'open_folder_note': '폴더 노트 열기',
+    'open_in_file_explorer': '시스템 파일 탐색기에서 열기',
     'create_folder_note': '폴더 노트 만들기',
     'delete_folder_note': '폴더 노트 삭제',
     'edit_folder_note_settings': '폴더 노트 설정 편집',

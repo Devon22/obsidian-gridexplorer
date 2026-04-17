@@ -218,6 +218,7 @@ export default {
     'show_ignored_items': '無視するフォルダーとファイルを表示',
     'delete_note': 'ファイルを削除',
     'open_folder_note': 'フォルダーノートを開く',
+    'open_in_file_explorer': 'システムファイルエクスプローラーで開く',
     'create_folder_note': 'フォルダーノートを作成',
     'delete_folder_note': 'フォルダーノートを削除',
     'edit_folder_note_settings': 'フォルダーノート設定を編集',
