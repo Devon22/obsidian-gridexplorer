@@ -30,9 +30,6 @@ interface FileRenderParams {
     state: DividerState;
 }
 
-// 導入顏色輔助函數
-
-
 // 定義網格視圖
 export class GridView extends ItemView {
     plugin: GridExplorerPlugin;
@@ -49,7 +46,7 @@ export class GridView extends ItemView {
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
     gridItems: HTMLElement[] = []; // 存儲所有網格項目的引用
     hasKeyboardFocus: boolean = false; // 是否有鍵盤焦點
-    fileWatcher: FileWatcher; // 檔案監聽器
+    fileWatcher: FileWatcher | null = null; // 檔案監聽器
     recentSources: string[] = []; // 歷史記錄
     futureSources: string[] = []; // 未來紀錄（前進堆疊）
     minMode: boolean = false; // 最小模式

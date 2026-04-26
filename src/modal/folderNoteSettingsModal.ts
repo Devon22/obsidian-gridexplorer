@@ -156,8 +156,8 @@ export class FolderNoteSettingsModal extends Modal {
                 drop.addOption('horizontal', t('horizontal_card'));
                 drop.addOption('vertical', t('vertical_card'));
                 drop.setValue(this.settings.cardLayout);
-                drop.onChange(async (value: 'horizontal' | 'vertical') => {
-                    this.settings.cardLayout = value as any;
+                drop.onChange(async (value) => {
+                    this.settings.cardLayout = value as 'horizontal' | 'vertical';
                 });
             });
 

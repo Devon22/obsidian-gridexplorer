@@ -15,7 +15,7 @@ export class FolderSelectionModal extends Modal {
     folderOptionsContainer: HTMLElement;
     folderOptions: HTMLElement[] = [];
     selectedIndex: number = -1; // 當前選中的選項索引
-    searchInput: HTMLInputElement;
+    searchInput: HTMLInputElement | undefined;
     buttonElement: HTMLElement | undefined;
     searchOption: HTMLElement | null = null; // 搜尋選項元素
 
@@ -24,6 +24,7 @@ export class FolderSelectionModal extends Modal {
         this.plugin = plugin;
         this.activeView = activeView;
         this.buttonElement = buttonElement;
+        this.folderOptionsContainer = document.createElement('div');
     }
 
     onOpen() {
@@ -57,9 +58,9 @@ export class FolderSelectionModal extends Modal {
 
         // 搜尋輸入事件處理
         this.searchInput.addEventListener('input', () => {
-            const searchTerm = this.searchInput.value.toLowerCase();
+            const searchTerm = this.searchInput?.value.toLowerCase() ?? '';
             this.filterFolderOptions(searchTerm);
-            this.updateSearchOption(this.searchInput.value.trim());
+            this.updateSearchOption(this.searchInput?.value.trim() ?? '');
         });
 
         // 鍵盤事件處理

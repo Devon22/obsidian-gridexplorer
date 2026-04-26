@@ -232,6 +232,11 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
     private sectionStates: Map<string, boolean> = new Map();
 
+    constructor(app: App, plugin: GridExplorerPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+
     private createSection(title: string, defaultExpanded = false): HTMLElement {
         const isExpanded = this.sectionStates.has(title) ? this.sectionStates.get(title) : defaultExpanded;
         const details = this.containerEl.createEl('details', { cls: 'ge-settings-section' });
@@ -685,8 +690,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .addOption('menu', t('folder_display_style_menu'))
                     .addOption('hide', t('folder_display_style_hide'))
                     .setValue(this.plugin.settings.folderDisplayStyle)
-                    .onChange(async (value: 'show' | 'menu' | 'hide') => {
-                        this.plugin.settings.folderDisplayStyle = value;
+                    .onChange(async (value) => {
+                        this.plugin.settings.folderDisplayStyle = value as 'show' | 'menu' | 'hide';
                         await this.plugin.saveSettings();
                     });
             });
@@ -741,8 +746,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .addOption('split', t('open_note_layout_split'))
                     .addOption('newWindow', t('open_note_layout_newWindow'))
                     .setValue(this.plugin.settings.openNoteLayout)
-                    .onChange(async (value: 'default' | 'newTab' | 'split' | 'newWindow') => {
-                        this.plugin.settings.openNoteLayout = value;
+                    .onChange(async (value) => {
+                        this.plugin.settings.openNoteLayout = value as 'default' | 'newTab' | 'split' | 'newWindow';
                         await this.plugin.saveSettings();
                     });
             });
@@ -873,8 +878,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 drop.addOption('horizontal', t('horizontal_card'));
                 drop.addOption('vertical', t('vertical_card'));
                 drop.setValue(this.plugin.settings.cardLayout);
-                drop.onChange(async (value: 'horizontal' | 'vertical') => {
-                    this.plugin.settings.cardLayout = value as any;
+                drop.onChange(async (value) => {
+                    this.plugin.settings.cardLayout = value as 'horizontal' | 'vertical';
                     await this.plugin.saveSettings();
                 });
             });
@@ -1009,8 +1014,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 dropdown.addOption('top', t('top'));
                 dropdown.addOption('bottom', t('bottom'));
                 dropdown.setValue(this.plugin.settings.verticalCardImagePosition);
-                dropdown.onChange(async (value: 'top' | 'bottom') => {
-                    this.plugin.settings.verticalCardImagePosition = value;
+                dropdown.onChange(async (value) => {
+                    this.plugin.settings.verticalCardImagePosition = value as 'top' | 'bottom';
                     await this.plugin.saveSettings();
                 });
             });
@@ -1183,8 +1188,8 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .addOption('folder', t('use_quick_access_folder'))
                     .addOption('mode', t('use_quick_access_mode'))
                     .setValue(this.plugin.settings.useQuickAccessAsNewTabMode)
-                    .onChange(async (value: 'default' | 'folder' | 'mode') => {
-                        this.plugin.settings.useQuickAccessAsNewTabMode = value;
+                    .onChange(async (value) => {
+                        this.plugin.settings.useQuickAccessAsNewTabMode = value as 'default' | 'folder' | 'mode';
                         await this.plugin.saveSettings(false);
                     });
             });

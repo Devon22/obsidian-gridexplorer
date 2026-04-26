@@ -420,7 +420,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
     } else if (sourceMode === 'tasks') {
         // 任務模式
         const filesWithTasks = new Set<TFile>();
-        const dv = this.app.plugins.plugins.dataview?.api;
+        const dv = app.plugins.plugins.dataview?.api;
         const tasksPlugin = app.plugins.plugins['obsidian-tasks-plugin'];
         if (tasksPlugin) {
             // 任務模式 - 使用 Tasks 插件 API

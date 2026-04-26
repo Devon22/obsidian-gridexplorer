@@ -8,9 +8,8 @@ import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './set
 import { t } from './translations';
 
 export default class GridExplorerPlugin extends Plugin {
-    settings: GallerySettings;
-    statusBarItem: HTMLElement;
-    app: App;
+    settings: GallerySettings = DEFAULT_SETTINGS;
+    statusBarItem: HTMLElement | null = null;
 
     async onload() {
         await this.loadSettings();

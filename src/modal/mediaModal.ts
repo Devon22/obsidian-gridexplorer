@@ -7,7 +7,7 @@ export class MediaModal extends Modal {
     private currentIndex: number;
     private currentMediaElement: HTMLElement | null = null;
     private isZoomed = false;
-    private handleWheel: ((event: WheelEvent) => void) | null = null;
+    private handleWheel: EventListener | null = null;
     private gridView: any; // 儲存 GridView 實例的引用
 
     // 觸控拖曳相關屬性
@@ -112,7 +112,7 @@ export class MediaModal extends Modal {
 
         // 如果存在之前的滾輪事件處理程序，先移除它
         if (this.handleWheel) {
-            const mediaView = contentEl.querySelector('.ge-media-view');
+            const mediaView = contentEl.querySelector('.ge-media-view') as HTMLElement | null;
             if (mediaView) {
                 mediaView.removeEventListener('wheel', this.handleWheel);
             }
@@ -232,7 +232,7 @@ export class MediaModal extends Modal {
 
     // 重設圖片樣式
     resetImageStyles(img: HTMLImageElement) {
-        const mediaView = this.contentEl.querySelector('.ge-media-view');
+        const mediaView = this.contentEl.querySelector('.ge-media-view') as HTMLElement | null;
         if (!mediaView) return;
 
         img.style.width = 'auto';
@@ -323,9 +323,10 @@ export class MediaModal extends Modal {
                 });
 
                 // 將事件處理程序存儲在變數中
-                this.handleWheel = (wheelEvent) => {
+                this.handleWheel = (event) => {
+                    const wheelEvent = event as WheelEvent;
                     wheelEvent.preventDefault();
-                    (mediaView as HTMLElement).scrollLeft += wheelEvent.deltaY;
+                    mediaView.scrollLeft += wheelEvent.deltaY;
                 };
                 mediaView.addEventListener('wheel', this.handleWheel);
             }

@@ -3,11 +3,11 @@ import { App, TFile, setIcon } from 'obsidian';
 export class FloatingAudioPlayer {
     private app: App;
     private currentFile: TFile;
-    private containerEl: HTMLElement;
-    private audioEl: HTMLAudioElement;
-    private titleEl: HTMLElement;
-    private closeButtonEl: HTMLElement;
-    private handleEl: HTMLElement;
+    private containerEl!: HTMLElement;
+    private audioEl!: HTMLAudioElement;
+    private titleEl!: HTMLElement;
+    private closeButtonEl!: HTMLElement;
+    private handleEl!: HTMLElement;
 
     private isDragging = false;
     private offsetX = 0;
