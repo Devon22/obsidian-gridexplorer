@@ -1,4 +1,4 @@
-import { App, Modal, TFile, setIcon } from 'obsidian';
+import { App, Modal, TFile, Menu, setIcon } from 'obsidian';
 import { isImageFile, isVideoFile, isAudioFile } from '../utils/fileUtils';
 
 export class MediaModal extends Modal {
@@ -101,6 +101,14 @@ export class MediaModal extends Modal {
 
         // 註冊觸控事件（行動裝置拖曳翻頁）
         this.registerTouchEvents(this.contentEl);
+
+        // 註冊右鍵選單事件
+        this.contentEl.addEventListener('contextmenu', (e) => {
+            const currentFile = this.mediaFiles[this.currentIndex];
+            if (currentFile) {
+                this.onMediaContextMenu(e, currentFile);
+            }
+        });
 
         // 顯示當前媒體檔案
         this.showMediaAtIndex(this.currentIndex);
@@ -352,6 +360,14 @@ export class MediaModal extends Modal {
             this.isZoomed = false;
             this.contentEl.removeClass('is-zoomed');
         }
+    }
+
+    // 處理媒體右鍵選單
+    private onMediaContextMenu(event: MouseEvent, file: TFile) {
+        event.preventDefault();
+        const menu = new Menu();
+        this.app.workspace.trigger('file-menu', menu, file, 'media-viewer');
+        menu.showAtMouseEvent(event);
     }
 
     // 註冊觸控事件處理器（行動裝置拖曳翻頁）

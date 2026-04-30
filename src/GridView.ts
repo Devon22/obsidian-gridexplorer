@@ -12,6 +12,7 @@ import { isHexColor, hexToRgba } from './utils/colorUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { MediaModal } from './modal/mediaModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
+import { showSearchModal } from './modal/searchModal';
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { t } from './translations';
@@ -41,6 +42,7 @@ export class GridView extends ItemView {
     searchCurrentLocationOnly: boolean = false; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean = false; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean = false; // 是否搜尋媒體檔案
+    fileNameFilterQuery: string = ''; // 目前列表的檔名篩選關鍵字
     includeMedia: boolean = false; // 是否包含媒體檔案
     selectedItemIndex: number = -1; // 當前選中的項目索引
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
@@ -53,11 +55,12 @@ export class GridView extends ItemView {
     showIgnoredItems: boolean = false; // 顯示忽略的資料夾及檔案
     showDateDividers: boolean = false; // 顯示日期分隔器
     showNoteTags: boolean = false; // 顯示筆記標籤
+    showFileNameFilter: boolean = true; // 顯示檔名篩選輸入框
     pinnedList: string[] = []; // 置頂清單
     taskFilter: string = 'uncompleted'; // 任務分類
     hideHeaderElements: boolean = false; // 是否隱藏標題列元素（模式名稱和按鈕）
     bookmarkGroupId: string = 'all'; // 書籤群組 ID
-    customOptionIndex: number = -1; // 自訂模式選項索引    
+    customOptionIndex: number = -1; // 自訂模式選項索引
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
     renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
@@ -76,6 +79,7 @@ export class GridView extends ItemView {
         this.cardLayout = this.baseCardLayout;
         this.showDateDividers = this.plugin.settings.dateDividerMode !== 'none';
         this.showNoteTags = this.plugin.settings.showNoteTags;
+        this.showFileNameFilter = this.plugin.settings.showFileNameFilter;
         this.searchCurrentLocationOnly = this.plugin.settings.searchCurrentLocationOnly;
         this.searchFilesNameOnly = this.plugin.settings.searchFilesNameOnly;
         this.searchMediaFiles = this.plugin.settings.searchMediaFiles;
@@ -402,6 +406,11 @@ export class GridView extends ItemView {
         // 顯示路徑 / 模式名稱
         renderModePath(this);
 
+        if (this.showFileNameFilter) {
+            // 顯示目前列表的檔名篩選輸入框
+            this.renderFileNameFilter();
+        }
+
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
 
@@ -450,18 +459,141 @@ export class GridView extends ItemView {
         // new Notice('GridExplorer: ' + this.sourceMode + ' ' + this.sourcePath);
     }
 
+    // 渲染檔名篩選框
+    renderFileNameFilter() {
+        const filterContainer = this.containerEl.createDiv('ge-file-filter-container');
+        const contentEl = this.containerEl.querySelector('.view-content');
+        if (contentEl) {
+            this.containerEl.insertBefore(filterContainer, contentEl);
+        }
+        const inputWrapper = filterContainer.createDiv('ge-file-filter-input-wrapper');
+        const filterInput = inputWrapper.createEl('input', {
+            type: 'text',
+            cls: 'ge-file-filter-input',
+            attr: {
+                placeholder: t('file_name_filter_placeholder')
+            }
+        }) as HTMLInputElement;
+        const searchButton = inputWrapper.createEl('button', {
+            cls: 'ge-file-filter-search clickable-icon',
+            attr: {
+                'aria-label': t('search')
+            }
+        });
+        setIcon(searchButton, 'arrow-right');
+        const clearButton = inputWrapper.createEl('button', {
+            cls: 'ge-file-filter-clear clickable-icon',
+            attr: {
+                'aria-label': t('clear_file_name_filter')
+            }
+        });
+        setIcon(clearButton, 'x');
+
+        const updateClearButton = () => {
+            const hasContent = filterInput.value.length > 0;
+            searchButton.toggleClass('is-visible', hasContent);
+            clearButton.toggleClass('is-visible', hasContent);
+        };
+        let filterRenderTimer: number | null = null;
+        const renderFilteredFiles = async () => {
+            filterRenderTimer = null;
+            this.clearSelection();
+            await this.grid_render();
+        };
+        const scheduleFilteredRender = () => {
+            if (filterRenderTimer !== null) {
+                window.clearTimeout(filterRenderTimer);
+            }
+            filterRenderTimer = window.setTimeout(renderFilteredFiles, 250);
+        };
+        let isComposingFilterText = false;
+
+        filterInput.value = this.fileNameFilterQuery;
+        updateClearButton();
+        filterInput.addEventListener('compositionstart', () => {
+            isComposingFilterText = true;
+            if (filterRenderTimer !== null) {
+                window.clearTimeout(filterRenderTimer);
+                filterRenderTimer = null;
+            }
+        });
+        filterInput.addEventListener('compositionend', () => {
+            isComposingFilterText = false;
+            this.fileNameFilterQuery = filterInput.value;
+            updateClearButton();
+            scheduleFilteredRender();
+        });
+        filterInput.addEventListener('input', (event) => {
+            if (isComposingFilterText || (event as InputEvent).isComposing) return;
+            this.fileNameFilterQuery = filterInput.value;
+            updateClearButton();
+            scheduleFilteredRender();
+        });
+        searchButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const query = filterInput.value.trim();
+            if (!query) return;
+            if (filterRenderTimer !== null) {
+                window.clearTimeout(filterRenderTimer);
+                filterRenderTimer = null;
+            }
+            // filterInput.value = '';
+            // this.fileNameFilterQuery = '';
+            updateClearButton();
+            showSearchModal(this.app, this, query, searchButton);
+        });
+        clearButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!filterInput.value) return;
+            if (filterRenderTimer !== null) {
+                window.clearTimeout(filterRenderTimer);
+                filterRenderTimer = null;
+            }
+            filterInput.value = '';
+            this.fileNameFilterQuery = '';
+            updateClearButton();
+            this.clearSelection();
+            await this.grid_render();
+            filterInput.focus();
+        });
+    }
+
     // 渲染網格內容
+    setFileNameFilterVisibility(show: boolean, filterButton?: HTMLElement) {
+        this.showFileNameFilter = show;
+        filterButton?.toggleClass('is-active', show);
+
+        let fileNameFilterContainer = this.containerEl.querySelector('.ge-file-filter-container') as HTMLElement;
+        if (!fileNameFilterContainer && show) {
+            this.renderFileNameFilter();
+            fileNameFilterContainer = this.containerEl.querySelector('.ge-file-filter-container') as HTMLElement;
+        }
+
+        if (fileNameFilterContainer) {
+            fileNameFilterContainer.style.display = this.hideHeaderElements || !show ? 'none' : 'block';
+            if (show && !this.hideHeaderElements) {
+                const filterInput = fileNameFilterContainer.querySelector('.ge-file-filter-input') as HTMLInputElement | null;
+                filterInput?.focus();
+            }
+        }
+    }
+
     async grid_render() {
         const container = this.containerEl.querySelector('.view-content') as HTMLElement;
         container.empty();
+        this.renderToken++;
         container.addClass('ge-grid-container');
 
         // 隱藏頂部元素
         const displayValue = this.hideHeaderElements ? 'none' : 'flex';
         const headerButtons = this.containerEl.querySelector('.ge-header-buttons') as HTMLElement;
+        const fileNameFilterContainer = this.containerEl.querySelector('.ge-file-filter-container') as HTMLElement;
         const modeHeaderContainer = this.containerEl.querySelector('.ge-mode-header-container') as HTMLElement;
 
         if (headerButtons) headerButtons.style.display = displayValue;
+        if (fileNameFilterContainer) fileNameFilterContainer.style.display = this.hideHeaderElements || !this.showFileNameFilter ? 'none' : 'block';
         if (modeHeaderContainer) modeHeaderContainer.style.display = displayValue;
 
         // 根據設定決定是否啟用卡片模式
@@ -558,6 +690,19 @@ export class GridView extends ItemView {
 
         // 顯示檔案
         let files = await renderFiles(this, container);
+
+        // 根據輸入框內容篩選目前列表中的檔案名稱
+        const fileNameFilterKeywords = this.fileNameFilterQuery
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+        if (this.showFileNameFilter && fileNameFilterKeywords.length > 0) {
+            files = files.filter(file => {
+                const fileName = file.name.toLowerCase();
+                return fileNameFilterKeywords.every(keyword => fileName.includes(keyword));
+            });
+        }
 
         // 如果沒有檔案，顯示提示訊息
         if (files.length === 0) {
@@ -1063,28 +1208,28 @@ export class GridView extends ItemView {
             const selfRef = this;
             const batchSize = 50;
             let currentIndex = 0;
-            
+
             // 建立哨兵元素，用於觸發後續載入
             const sentinel = container.createDiv('ge-load-more-sentinel');
             sentinel.style.height = '1px';
             sentinel.style.width = '100%';
             sentinel.style.flexShrink = '0';
-            
+
             let isLoading = false;
-            
+
             const loadMore = (entries?: IntersectionObserverEntry[]) => {
                 if (currentToken !== selfRef.renderToken) return;
-                
+
                 if (entries && entries[0] && !entries[0].isIntersecting) {
                     return;
                 }
-                
+
                 if (isLoading) return;
                 isLoading = true;
-                
+
                 // 暫時移除哨兵
                 sentinel.remove();
-                
+
                 let targetMaxEnd = currentIndex + batchSize;
                 if (selfRef.targetFocusPath) {
                     const tIndex = files.findIndex(f => f.path === selfRef.targetFocusPath);
@@ -1094,16 +1239,16 @@ export class GridView extends ItemView {
                 }
                 const end = Math.min(targetMaxEnd, files.length);
                 const TIME_BUDGET_MS = Platform.isIosApp ? 6 : 16;
-                
+
                 const renderChunk = () => {
                     if (currentToken !== selfRef.renderToken) return;
-                    
+
                     const startTime = performance.now();
                     while (currentIndex < end && (performance.now() - startTime) < TIME_BUDGET_MS) {
                         selfRef.processFile(files[currentIndex], paramsBase);
                         currentIndex++;
                     }
-                    
+
                     if (currentIndex < end) {
                         requestAnimationFrame(renderChunk);
                     } else {
@@ -1113,7 +1258,7 @@ export class GridView extends ItemView {
                             const gridItem = Array.from(container.querySelectorAll('.ge-grid-item')).find(
                                 item => (item as HTMLElement).dataset.filePath === selfRef.targetFocusPath
                             ) as HTMLElement;
-                            
+
                             if (gridItem) {
                                 gridItem.scrollIntoView({ block: 'nearest' });
                                 const itemIndex = selfRef.gridItems.indexOf(gridItem);
@@ -1127,7 +1272,7 @@ export class GridView extends ItemView {
                         if (currentIndex < files.length) {
                             // 還有剩餘檔案，將哨兵加回底部
                             container.appendChild(sentinel);
-                            
+
                             // 主動判斷是否仍在可視範圍內（解決捲動跳轉後 IntersectionObserver 未觸發的問題）
                             setTimeout(() => {
                                 if (currentToken !== selfRef.renderToken) return;
@@ -1139,22 +1284,22 @@ export class GridView extends ItemView {
                                 }
                             }, 50);
                         }
-                        
+
                         isLoading = false;
                     }
                 };
-                
+
                 renderChunk();
             };
-            
+
             const sentinelObserver = new IntersectionObserver(loadMore, {
                 root: container,
                 rootMargin: '400px', // 提早 400px 載入
                 threshold: 0
             });
-            
+
             sentinelObserver.observe(sentinel);
-            
+
             // 初始載入
             loadMore();
         }
@@ -2375,7 +2520,7 @@ export class GridView extends ItemView {
                         isPulling = false;
                         return;
                     }
-                    
+
                     // 根據位置判斷是否允許滑動方向
                     let canPullDown = isAtTop && deltaY > 5;
                     let canPullUp = isAtBottom && deltaY < -5;
@@ -2383,7 +2528,7 @@ export class GridView extends ItemView {
                     if (canPullDown || canPullUp) {
                         isDragging = true;
                         // 當同時符合（例如內容很短）且往上拉時，視為上拉
-                        isPullingUp = canPullUp && deltaY < 0; 
+                        isPullingUp = canPullUp && deltaY < 0;
                         if (this.noteViewContainer) {
                             this.noteViewContainer.style.transition = 'none';
                         }
@@ -2409,7 +2554,7 @@ export class GridView extends ItemView {
             const handleTouchEnd = () => {
                 if (!isPulling || !this.noteViewContainer) return;
                 isPulling = false;
-                
+
                 // 如果沒有真正拖曳，就當作一般點擊，不執行後續動畫
                 if (!isDragging) return;
                 isDragging = false;
@@ -2504,12 +2649,14 @@ export class GridView extends ItemView {
                 searchCurrentLocationOnly: this.searchCurrentLocationOnly,
                 searchFilesNameOnly: this.searchFilesNameOnly,
                 searchMediaFiles: this.searchMediaFiles,
+                fileNameFilterQuery: this.fileNameFilterQuery,
                 includeMedia: this.includeMedia,
                 minMode: this.minMode,
                 showIgnoredItems: this.showIgnoredItems,
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
                 hideHeaderElements: this.hideHeaderElements,
+                showFileNameFilter: this.showFileNameFilter,
                 showDateDividers: this.showDateDividers,
                 showNoteTags: this.showNoteTags,
                 recentSources: this.recentSources,
@@ -2530,12 +2677,14 @@ export class GridView extends ItemView {
             this.searchCurrentLocationOnly = state.state.searchCurrentLocationOnly ?? false;
             this.searchFilesNameOnly = state.state.searchFilesNameOnly ?? false;
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
+            this.fileNameFilterQuery = state.state.fileNameFilterQuery ?? '';
             this.includeMedia = state.state.includeMedia ?? false;
             this.minMode = state.state.minMode ?? false;
             this.showIgnoredItems = state.state.showIgnoredItems ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout;
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;
+            this.showFileNameFilter = state.state.showFileNameFilter ?? this.plugin.settings.showFileNameFilter;
             this.showDateDividers = state.state.showDateDividers ?? this.plugin.settings.dateDividerMode !== 'none';
             this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
             this.recentSources = state.state.recentSources ?? [];

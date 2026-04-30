@@ -1,5 +1,5 @@
 # vscode
-.vscode 
+.vscode
 
 # Intellij
 *.iml
@@ -21,6 +21,12 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 
+# AI development tools
+AGENTS.md
+
+# Batch files
 *.bat
 *.sh
+
+# Changelog
 Changelog.md

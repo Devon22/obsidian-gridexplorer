@@ -66,6 +66,23 @@ export function renderModePath(gridView: GridView) {
         });
     }
 
+    const filterButton = rightActions.createEl('a', {
+        cls: 'ge-filter-button',
+        attr: {
+            'aria-label': t('show_file_name_filter'),
+            'href': '#'
+        }
+    });
+    setIcon(filterButton, 'filter');
+    filterButton.toggleClass('is-active', gridView.showFileNameFilter);
+    setTooltip(filterButton, t('show_file_name_filter'));
+    filterButton.addEventListener('click', (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        gridView.setFileNameFilterVisibility(!gridView.showFileNameFilter, filterButton);
+        gridView.app.workspace.requestSaveLayout();
+    });
+
     // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
     modenameContainer.addEventListener('click', (event: MouseEvent) => {
         // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動

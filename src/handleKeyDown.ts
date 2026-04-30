@@ -1,6 +1,14 @@
 import type { GridView } from "./GridView";
 
 export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
+    const target = event.target as HTMLElement | null;
+    if (target && (
+        target.isContentEditable ||
+        target.closest('input, textarea, select, [contenteditable="true"]')
+    )) {
+        return;
+    }
+
     // 如果沒有項目或正在檢視筆記，直接返回
     if (gridView.gridItems.length === 0 || gridView.isShowingNote) return;
 

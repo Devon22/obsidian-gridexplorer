@@ -599,7 +599,7 @@
     margin-bottom: -2px;
 }
 
-/* 日期分隔器圖示 
+/* 日期分隔器圖示
 .ge-date-divider::before {
     content: "📆";
     margin-right: 6px;
@@ -700,6 +700,56 @@
     align-items: center;
 }
 
+.ge-file-filter-container {
+    display: block;
+    padding: 8px 10px;
+    background: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+}
+
+.ge-file-filter-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ge-file-filter-input {
+    width: 100%;
+    min-height: 30px;
+    padding-right: 60px;
+}
+
+.ge-file-filter-search,
+.ge-file-filter-clear {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    opacity: 0;
+    pointer-events: none;
+    color: var(--text-muted);
+}
+
+.ge-file-filter-search {
+    right: 30px;
+}
+
+.ge-file-filter-clear {
+    right: 4px;
+}
+
+.ge-file-filter-search.is-visible,
+.ge-file-filter-clear.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ge-file-filter-search:hover,
+.ge-file-filter-clear:hover {
+    color: var(--text-normal);
+}
+
 /* 針對非常窄的側邊欄（寬度小於 350px）進一步優化 */
 @container (max-width: 350px) {
     .ge-header-buttons {
@@ -744,8 +794,9 @@
     padding-right: 8px;
 }
 
-/* 排序按鈕樣式 */
-.ge-sort-button {
+/* 模式列操作按鈕樣式 */
+.ge-sort-button,
+.ge-filter-button {
     background: none;
     border: none;
     color: var(--text-muted);
@@ -758,13 +809,20 @@
     transition: opacity 0.2s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ge-sort-button:hover {
+.ge-sort-button:hover,
+.ge-filter-button:hover,
+.ge-filter-button.is-active {
     opacity: 1;
     background-color: var(--background-modifier-hover);
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05) inset;
 }
 
-.ge-sort-button svg {
+.ge-filter-button.is-active {
+    color: var(--text-accent);
+}
+
+.ge-sort-button svg,
+.ge-filter-button svg {
     width: 16px;
     height: 16px;
 }
@@ -802,7 +860,7 @@ a.ge-mode-title:hover {
 /* Root span mode title should look plain: no chip background/border */
 span.ge-mode-title {
     background: transparent !important;
-    border: none !important;
+    border: 1px solid transparent !important;
     box-shadow: none !important;
 }
 

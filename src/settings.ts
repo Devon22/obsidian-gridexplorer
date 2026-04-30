@@ -58,6 +58,7 @@ export interface GallerySettings {
     createdDateField: string;   // 建立時間的欄位名稱
     recentFilesCount: number; // 最近筆記模式顯示的筆數
     randomNoteCount: number; // 隨機筆記模式顯示的筆數
+    showFileNameFilter: boolean; // 預設是否顯示檔名篩選輸入框
     showNoteTags: boolean; // 是否顯示筆記標籤
     cardLayout: 'horizontal' | 'vertical'; // 卡片排列方向
     dateDividerMode: string; // 日期分隔器模式：none, year, month, day
@@ -109,6 +110,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     showTasksMode: false, // 預設不顯示任務模式
     recentFilesCount: 30, // 預設最近筆記模式顯示的筆數
     randomNoteCount: 10, // 預設隨機筆記模式顯示的筆數
+    showFileNameFilter: false, // 預設不顯示檔名篩選輸入框
     customFolderIcon: '📁', // 自訂資料夾圖示
     customDocumentExtensions: '', // 自訂文件副檔名（用逗號分隔）
     recentSources: [], // 預設最近的瀏覽記錄
@@ -676,6 +678,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.dateDividerMode)
                     .onChange(async (value) => {
                         this.plugin.settings.dateDividerMode = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 預設是否顯示檔名篩選輸入框
+        new Setting(sectionEl)
+            .setName(t('show_file_name_filter'))
+            .setDesc(t('show_file_name_filter_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.showFileNameFilter)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showFileNameFilter = value;
                         await this.plugin.saveSettings();
                     });
             });
