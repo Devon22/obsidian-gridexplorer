@@ -1,4 +1,4 @@
-import { Plugin, TFolder, TFile, App, Menu, WorkspaceLeaf } from 'obsidian';
+import { Plugin, TFolder, TFile, Menu, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { updateCustomDocumentExtensions, isMediaFile } from './utils/fileUtils';
@@ -46,7 +46,7 @@ export default class GridExplorerPlugin extends Plugin {
                 // 若已存在 ExplorerView，直接聚焦現有的 leaf
                 const existingLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
                 if (existingLeaves.length > 0) {
-                    this.app.workspace.revealLeaf(existingLeaves[0]);
+                    void this.app.workspace.revealLeaf(existingLeaves[0]);
                     return;
                 }
 
@@ -55,7 +55,7 @@ export default class GridExplorerPlugin extends Plugin {
                 if (!leaf) leaf = this.app.workspace.getLeftLeaf(true);
                 if (!leaf) leaf = this.app.workspace.getLeaf('tab');
                 await leaf.setViewState({ type: EXPLORER_VIEW_TYPE, active: true });
-                this.app.workspace.revealLeaf(leaf);
+                void this.app.workspace.revealLeaf(leaf);
             }
         });
 
@@ -63,13 +63,13 @@ export default class GridExplorerPlugin extends Plugin {
         this.addCommand({
             id: 'view-current-note-in-grid-view',
             name: t('open_note_in_grid_view'),
-            callback: () => {
+            callback: async () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (activeFile) {
-                    this.openNoteInFolder(activeFile);
+                    await this.openNoteInFolder(activeFile);
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openNoteInFolder(this.app.vault.getRoot());
+                    await this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -87,7 +87,7 @@ export default class GridExplorerPlugin extends Plugin {
                     }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openNoteInFolder(this.app.vault.getRoot());
+                    await this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -105,7 +105,7 @@ export default class GridExplorerPlugin extends Plugin {
                     }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openNoteInFolder(this.app.vault.getRoot());
+                    await this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -114,13 +114,13 @@ export default class GridExplorerPlugin extends Plugin {
         this.addCommand({
             id: 'view-recent-files-in-grid-view',
             name: t('open_recent_files_in_grid_view'),
-            callback: () => {
+            callback: async () => {
                 const activeFile = this.app.workspace.getActiveFile();
                 if (activeFile) {
-                    this.openNoteInRecentFiles(activeFile);
+                    await this.openNoteInRecentFiles(activeFile);
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
-                    this.openNoteInFolder(this.app.vault.getRoot());
+                    await this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -138,9 +138,9 @@ export default class GridExplorerPlugin extends Plugin {
                 const targetFile = this.app.vault.getAbstractFileByPath(targetPath);
 
                 if (targetFile instanceof TFolder) {
-                    this.openNoteInFolder(targetFile);
+                    await this.openNoteInFolder(targetFile);
                 } else {
-                    this.openNoteInFolder(this.app.vault.getRoot());
+                    await this.openNoteInFolder(this.app.vault.getRoot());
                 }
             }
         });
@@ -174,8 +174,8 @@ export default class GridExplorerPlugin extends Plugin {
                             .setTitle(t('open_in_grid_view'))
                             .setIcon('grid')
                             .setSection?.("open")
-                            .onClick(() => {
-                                this.openNoteInFolder(file);
+                            .onClick(async () => {
+                                await this.openNoteInFolder(file);
                             });
                     });
                 }
@@ -198,7 +198,7 @@ export default class GridExplorerPlugin extends Plugin {
                                     const view = activeView ?? await this.activateView();
                                     if (view instanceof GridView) {
                                         if (!view.openShortcutFile(file)) {
-                                            view.showNoteInGrid(file);
+                                            await view.showNoteInGrid(file);
                                         }
                                     }
                                 });
@@ -208,8 +208,8 @@ export default class GridExplorerPlugin extends Plugin {
                             item
                                 .setTitle(t('open_note_in_grid_view'))
                                 .setIcon('folder')
-                                .onClick(() => {
-                                    this.openNoteInFolder(file);
+                                .onClick(async () => {
+                                    await this.openNoteInFolder(file);
                                 });
                         });
                         ogSubmenu.addItem((item) => {
@@ -217,7 +217,7 @@ export default class GridExplorerPlugin extends Plugin {
                                 .setTitle(t('open_backlinks_in_grid_view'))
                                 .setIcon('links-coming-in')
                                 .onClick(async () => {
-                                    this.app.workspace.getLeaf().openFile(file);
+                                    await this.app.workspace.getLeaf().openFile(file);
                                     const view = await this.activateView();
                                     if (view instanceof GridView) {
                                         await view.setSource('backlinks');
@@ -229,7 +229,7 @@ export default class GridExplorerPlugin extends Plugin {
                                 .setTitle(t('open_outgoinglinks_in_grid_view'))
                                 .setIcon('links-going-out')
                                 .onClick(async () => {
-                                    this.app.workspace.getLeaf().openFile(file);
+                                    await this.app.workspace.getLeaf().openFile(file);
                                     const view = await this.activateView();
                                     if (view instanceof GridView) {
                                         await view.setSource('outgoinglinks');
@@ -241,8 +241,8 @@ export default class GridExplorerPlugin extends Plugin {
                                 item
                                     .setTitle(t('open_recent_files_in_grid_view'))
                                     .setIcon('calendar-days')
-                                    .onClick(() => {
-                                        this.openNoteInRecentFiles(file);
+                                    .onClick(async () => {
+                                        await this.openNoteInRecentFiles(file);
                                     });
                             });
                         }
@@ -329,7 +329,7 @@ export default class GridExplorerPlugin extends Plugin {
         );
 
         // 攔截所有tag點擊事件
-        this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
+        this.registerDomEvent(activeDocument, 'click', async (evt: MouseEvent) => {
             // 如果未啟用攔截所有tag點擊事件，則跳過
             if (!this.settings.interceptAllTagClicks) return;
             // 只處理左鍵
@@ -393,7 +393,7 @@ export default class GridExplorerPlugin extends Plugin {
 
         
         // 攔截Breadcrumb導航點擊事件
-        this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
+        this.registerDomEvent(activeDocument, 'click', async (evt: MouseEvent) => {
             // 如果未啟用攔截Breadcrumb導航點擊事件，則跳過
             if (!this.settings.interceptBreadcrumbClicks) return;
 
@@ -679,7 +679,7 @@ export default class GridExplorerPlugin extends Plugin {
         await leaf.setViewState({ type: 'grid-view', active: true });
 
         // 確保視圖是活躍的
-        workspace.revealLeaf(leaf);
+        await workspace.revealLeaf(leaf);
         return leaf.view;
     }
 
@@ -721,10 +721,10 @@ export default class GridExplorerPlugin extends Plugin {
                 // If the only view is in the sidebar, ignore to prevent infinite loop
                 if (!isSidebarLeaf) {
                     if (leafToReuse.view instanceof GridView) {
-                        leafToReuse.view.setSource(mode, path);
+                        void leafToReuse.view.setSource(mode, path);
                     }
 
-                    this.app.workspace.revealLeaf(leafToReuse);
+                    void this.app.workspace.revealLeaf(leafToReuse);
 
                     // Close the new empty tab
                     leaf.detach();
@@ -734,10 +734,10 @@ export default class GridExplorerPlugin extends Plugin {
             }
 
             // Convert the new empty tab into a grid-view if all conditions are met
-            leaf.setViewState({ type: 'grid-view', active: true }).then(() => {
-                if (leaf.view instanceof GridView) {
-                    leaf.view.setSource(mode, path);
-                }
+            void leaf.setViewState({ type: 'grid-view', active: true }).then(() => {
+            if (leaf.view instanceof GridView) {
+                    void leaf.view.setSource(mode, path);
+            }
             });
         });
     }
@@ -761,7 +761,7 @@ export default class GridExplorerPlugin extends Plugin {
             const gridLeaves = this.app.workspace.getLeavesOfType('grid-view');
             gridLeaves.forEach(leaf => {
                 if (leaf.view instanceof GridView) {
-                    leaf.view.render();
+                    void leaf.view.render();
                 }
             });
 
@@ -769,7 +769,7 @@ export default class GridExplorerPlugin extends Plugin {
             const explorerLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
             explorerLeaves.forEach(leaf => {
                 if (leaf.view instanceof ExplorerView) {
-                    (leaf.view as ExplorerView).refresh();
+                    void (leaf.view as ExplorerView).refresh();
                 }
             });
         }

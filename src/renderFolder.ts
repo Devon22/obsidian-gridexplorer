@@ -25,7 +25,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         return;
                     }
                     // 防止預設行為以允許放置
-                    event.preventDefault();
+                event.preventDefault();
                     // 設定拖曳效果為移動
                     (event as any).dataTransfer!.dropEffect = 'move';
                     // 顯示可放置的視覺提示
@@ -41,109 +41,111 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     container.removeClass('ge-dragover');
                 });
 
-                container.addEventListener('drop', async (event) => {
-                    // 如果拖曳目標是資料夾項目，則不處理
-                    if ((event.target as HTMLElement).closest('.ge-folder-item')) {
-                        return;
-                    }
+                container.addEventListener('drop', (event) => {
+                    void (async () => {
+                        // 如果拖曳目標是資料夾項目，則不處理
+                        if ((event.target as HTMLElement).closest('.ge-folder-item')) {
+                            return;
+                        }
 
-                    // 防止預設行為
-                    event.preventDefault();
-                    // 移除視覺提示
-                    container.removeClass('ge-dragover');
+                        // 防止預設行為
+                        event.preventDefault();
+                        // 移除視覺提示
+                        container.removeClass('ge-dragover');
 
-                    // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
-                    const dt = (event as DragEvent).dataTransfer;
-                    console.log(dt);
-                    if (dt) {
-                        try {
-                            const obsidianPaths = await extractObsidianPathsFromDT(dt);
-                            if (obsidianPaths.length) {
-                                for (const p of obsidianPaths) {
-                                    let resolved: TFile | null = null;
+                        // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
+                        const dt = (event as DragEvent).dataTransfer;
+                        console.log(dt);
+                        if (dt) {
+                            try {
+                                const obsidianPaths = await extractObsidianPathsFromDT(dt);
+                                if (obsidianPaths.length) {
+                                    for (const p of obsidianPaths) {
+                                        let resolved: TFile | null = null;
 
-                                    // 1) 直接以路徑查找
-                                    const direct = gridView.app.vault.getAbstractFileByPath(p);
-                                    if (direct instanceof TFile) {
-                                        resolved = direct;
-                                    }
-
-                                    // 2) 若沒有副檔名，嘗試補 .md
-                                    if (!resolved && !p.includes('.')) {
-                                        const tryMd = normalizePath(`${p}.md`);
-                                        const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
-                                        if (f2 instanceof TFile) resolved = f2;
-                                    }
-
-                                    // 3) 使用 Obsidian 的連結解析（支援不含副檔名與子資料夾）
-                                    if (!resolved) {
-                                        const srcPath = currentFolder.path || '/';
-                                        const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
-                                        if (dest instanceof TFile) resolved = dest;
-                                    }
-
-                                    if (resolved instanceof TFile) {
-                                        try {
-                                            const newPath = normalizePath(`${currentFolder.path}/${resolved.name}`);
-                                            if (resolved.path !== newPath) {
-                                                await gridView.app.fileManager.renameFile(resolved, newPath);
-                                            }
-                                        } catch (error) {
-                                            console.error(`An error occurred while moving the file ${p}:`, error);
+                                        // 1) 直接以路徑查找
+                                        const direct = gridView.app.vault.getAbstractFileByPath(p);
+                                        if (direct instanceof TFile) {
+                                            resolved = direct;
                                         }
+
+                                        // 2) 若沒有副檔名，嘗試補 .md
+                                        if (!resolved && !p.includes('.')) {
+                                            const tryMd = normalizePath(`${p}.md`);
+                                            const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
+                                            if (f2 instanceof TFile) resolved = f2;
+                                        }
+
+                                        // 3) 使用 Obsidian 的連結解析（支援不含副檔名與子資料夾）
+                                        if (!resolved) {
+                                            const srcPath = currentFolder.path || '/';
+                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
+                                            if (dest instanceof TFile) resolved = dest;
+                                        }
+
+                                        if (resolved instanceof TFile) {
+                                            try {
+                                                const newPath = normalizePath(`${currentFolder.path}/${resolved.name}`);
+                                                if (resolved.path !== newPath) {
+                                                    await gridView.app.fileManager.renameFile(resolved, newPath);
+                                                }
+                                            } catch (error) {
+                                                console.error(`An error occurred while moving the file ${p}:`, error);
+                                            }
+                                        } else {
+                                            console.warn('[GridExplorer] Unable to resolve dragged obsidian file (container drop):', p);
+                                        }
+                                    }
+                                    return;
+                                }
+                            } catch (e) {
+                                console.error('Error handling obsidian:// URIs (container drop):', e);
+                            }
+                        }
+
+                        // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
+                        const filePath = (event as any).dataTransfer?.getData('text/plain');
+                        if (!filePath) return;
+
+                        const srcPath = currentFolder.path || '/';
+                        const lines = filePath
+                            .split(/\r?\n/)
+                            .map((s: string) => s.trim())
+                            .filter((v: string): v is string => v.length > 0);
+
+                        for (const line of lines) {
+                            try {
+                                let text = line;
+                                if (text.startsWith('!')) text = text.substring(1);
+
+                                let resolvedFile: TFile | null = null;
+                                if (text.startsWith('[[') && text.endsWith(']]')) {
+                                    const inner = text.slice(2, -2);
+                                    const parsed = parseLinktext(inner);
+                                    const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                                    if (dest instanceof TFile) resolvedFile = dest;
+                                } else {
+                                    const direct = gridView.app.vault.getAbstractFileByPath(text);
+                                    if (direct instanceof TFile) {
+                                        resolvedFile = direct;
                                     } else {
-                                        console.warn('[GridExplorer] Unable to resolve dragged obsidian file (container drop):', p);
+                                        const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                        if (dest instanceof TFile) resolvedFile = dest;
                                     }
                                 }
-                                return;
-                            }
-                        } catch (e) {
-                            console.error('Error handling obsidian:// URIs (container drop):', e);
-                        }
-                    }
 
-                    // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
-                    const filePath = (event as any).dataTransfer?.getData('text/plain');
-                    if (!filePath) return;
-
-                    const srcPath = currentFolder.path || '/';
-                    const lines = filePath
-                        .split(/\r?\n/)
-                        .map((s: string) => s.trim())
-                        .filter((v: string): v is string => v.length > 0);
-
-                    for (const line of lines) {
-                        try {
-                            let text = line;
-                            if (text.startsWith('!')) text = text.substring(1);
-
-                            let resolvedFile: TFile | null = null;
-                            if (text.startsWith('[[') && text.endsWith(']]')) {
-                                const inner = text.slice(2, -2);
-                                const parsed = parseLinktext(inner);
-                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
-                                if (dest instanceof TFile) resolvedFile = dest;
-                            } else {
-                                const direct = gridView.app.vault.getAbstractFileByPath(text);
-                                if (direct instanceof TFile) {
-                                    resolvedFile = direct;
-                                } else {
-                                    const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
-                                    if (dest instanceof TFile) resolvedFile = dest;
+                                if (resolvedFile instanceof TFile) {
+                                    const newPath = normalizePath(`${currentFolder.path}/${resolvedFile.name}`);
+                                    if (resolvedFile.path !== newPath) {
+                                        await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                    }
                                 }
+                            } catch (error) {
+                                console.error('An error occurred while moving one of the files (container):', error);
+                                // 繼續處理其他檔案
                             }
-
-                            if (resolvedFile instanceof TFile) {
-                                const newPath = normalizePath(`${currentFolder.path}/${resolvedFile.name}`);
-                                if (resolvedFile.path !== newPath) {
-                                    await gridView.app.fileManager.renameFile(resolvedFile, newPath);
-                                }
-                            }
-                        } catch (error) {
-                            console.error('An error occurred while moving one of the files (container):', error);
-                            // 繼續處理其他檔案
                         }
-                    }
+                    })();
                 });
             }
 
@@ -196,7 +198,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     noteIcon.addEventListener('click', (e) => {
                         e.stopPropagation(); // 防止觸發資料夾的點擊事件
                         if (!gridView.openShortcutFile(noteFile)) {
-                            gridView.app.workspace.getLeaf().openFile(noteFile);
+                            void gridView.app.workspace.getLeaf().openFile(noteFile);
                         }
                     });
 
@@ -233,7 +235,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         event.stopPropagation();
                         openFolderInNewView(gridView, folder.path);
                     } else {
-                        gridView.setSource('folder', folder.path);
+                        void gridView.setSource('folder', folder.path);
                         gridView.clearSelection();
                     }
                 });
@@ -269,41 +271,43 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     menu.addItem((item) => {
                         item.setTitle(t('new_note'))
                             .setIcon('square-pen')
-                            .onClick(async () => {
-                                await createNewNote(gridView.app, folder.path);
+                            .onClick(() => {
+                                void createNewNote(gridView.app, folder.path);
                             });
                     });
                     menu.addItem((item) => {
                         item.setTitle(t('new_folder'))
                             .setIcon('folder-plus')
-                            .onClick(async () => {
-                                await createNewFolder(gridView.app, folder.path);
+                            .onClick(() => {
+                                void (async () => {
+                                    await createNewFolder(gridView.app, folder.path);
                                 // 重新渲染視圖
-                                requestAnimationFrame(() => {
-                                    gridView.render();
-                                });
+                                    window.requestAnimationFrame(() => {
+                                        void gridView.render();
+                                    });
+                                })();
                             });
                     });
                     menu.addItem((item) => {
                         item.setTitle(t('new_canvas'))
                             .setIcon('layout-dashboard')
-                            .onClick(async () => {
-                                await createNewCanvas(gridView.app, folder.path);
+                            .onClick(() => {
+                                void createNewCanvas(gridView.app, folder.path);
                             });
                     });
                     menu.addItem((item) => {
                         item.setTitle(t('new_base'))
                             .setIcon('database')
-                            .onClick(async () => {
-                                await createNewBase(gridView.app, folder.path);
+                            .onClick(() => {
+                                void createNewBase(gridView.app, folder.path);
                             });
                     });
                     menu.addItem((item) => {
                         item.setTitle(t('new_shortcut'))
                             .setIcon('link')
-                            .onClick(async () => {
-                                new ShortcutSelectionModal(gridView.app, gridView.plugin, async (option) => {
-                                    await createShortcut(gridView.app, folder.path, option);
+                            .onClick(() => {
+                                new ShortcutSelectionModal(gridView.app, gridView.plugin, (option) => {
+                                    void createShortcut(gridView.app, folder.path, option);
                                 }).open();
                             });
                     });
@@ -321,7 +325,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 .onClick(() => {
                                     if (noteFile instanceof TFile) {
                                         if (!gridView.openShortcutFile(noteFile)) {
-                                            gridView.app.workspace.getLeaf().openFile(noteFile);
+                                            void gridView.app.workspace.getLeaf().openFile(noteFile);
                                         }
                                     }
                                 });
@@ -343,7 +347,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 .setTitle(t('delete_folder_note'))
                                 .setIcon('folder-x')
                                 .onClick(() => {
-                                    gridView.app.fileManager.trashFile(noteFile as TFile);
+                                    void gridView.app.fileManager.trashFile(noteFile as TFile);
                                 });
                         });
                     } else {
@@ -369,7 +373,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 .setIcon('folder-x')
                                 .onClick(() => {
                                     gridView.plugin.settings.ignoredFolders.push(folder.path);
-                                    gridView.plugin.saveSettings();
+                                    void gridView.plugin.saveSettings();
                                 });
                         });
                     } else {
@@ -380,7 +384,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                 .setIcon('folder-up')
                                 .onClick(() => {
                                     gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
-                                    gridView.plugin.saveSettings();
+                                    void gridView.plugin.saveSettings();
                                 });
                         });
                     }
@@ -412,14 +416,16 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         item
                             .setTitle(t('delete_folder'))
                             .setIcon('trash')
-                            .onClick(async () => {
-                                if (folder instanceof TFolder) {
-                                    await gridView.app.fileManager.trashFile(folder);
-                                    // 重新渲染視圖
-                                    requestAnimationFrame(() => {
-                                        gridView.render();
-                                    });
-                                }
+                            .onClick(() => {
+                                void (async () => {
+                                    if (folder instanceof TFolder) {
+                                        await gridView.app.fileManager.trashFile(folder);
+                                        // 重新渲染視圖
+                                        window.requestAnimationFrame(() => {
+                                            void gridView.render();
+                                        });
+                                    }
+                                })();
                             });
                     });
                     menu.showAtMouseEvent(event);
@@ -451,24 +457,25 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 folderItem.removeClass('ge-dragover');
             });
 
-            folderItem.addEventListener('drop', async (event) => {
-                // 防止預設行為
-                event.preventDefault();
-                // 移除視覺提示
-                folderItem.removeClass('ge-dragover');
+            folderItem.addEventListener('drop', (event) => {
+                void (async () => {
+                    // 防止預設行為
+                    event.preventDefault();
+                    // 移除視覺提示
+                    folderItem.removeClass('ge-dragover');
 
-                // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
-                const dt = (event as DragEvent).dataTransfer;
-                if (dt) {
-                    try {
-                        const obsidianPaths = await extractObsidianPathsFromDT(dt);
-                        if (obsidianPaths.length) {
-                            const folderPath = (folderItem as any).dataset.folderPath;
-                            if (!folderPath) return;
-                            const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
-                            if (!(folder instanceof TFolder)) return;
+                    // 處理從 Obsidian 檔案總管拖來的 obsidian://open URI（單檔/多檔）
+                    const dt = (event as DragEvent).dataTransfer;
+                    if (dt) {
+                        try {
+                            const obsidianPaths = await extractObsidianPathsFromDT(dt);
+                            if (obsidianPaths.length) {
+                                const folderPath = (folderItem as any).dataset.folderPath;
+                                if (!folderPath) return;
+                                const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
+                                if (!(folder instanceof TFolder)) return;
 
-                            for (const p of obsidianPaths) {
+                                for (const p of obsidianPaths) {
                                 let resolved: TFile | null = null;
 
                                 // 1) 直接以路徑查找
@@ -504,30 +511,30 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                     console.warn('[GridExplorer] Unable to resolve dragged obsidian file:', p);
                                 }
                             }
-                            return;
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Error handling obsidian:// URIs:', e);
                         }
-                    } catch (e) {
-                        console.error('Error handling obsidian:// URIs:', e);
                     }
-                }
 
-                // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
-                const filePath = (event as any).dataTransfer?.getData('text/plain');
-                if (!filePath) return;
+                    // 如果沒有檔案路徑列表，則使用檔案路徑（支援多行多檔）
+                    const filePath = (event as any).dataTransfer?.getData('text/plain');
+                    if (!filePath) return;
 
-                // 獲取目標資料夾路徑
-                const folderPath = (folderItem as any).dataset.folderPath;
-                if (!folderPath) return;
-                const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
-                if (!(folder instanceof TFolder)) return;
+                    // 獲取目標資料夾路徑
+                    const folderPath = (folderItem as any).dataset.folderPath;
+                    if (!folderPath) return;
+                    const folder = gridView.app.vault.getAbstractFileByPath(folderPath);
+                    if (!(folder instanceof TFolder)) return;
 
-                // 使用 Obsidian API 解析每一行的連結或路徑
-                const srcPath = (folderItem as any).dataset.folderPath || '/';
-                const lines = filePath
+                    // 使用 Obsidian API 解析每一行的連結或路徑
+                    const srcPath = (folderItem as any).dataset.folderPath || '/';
+                    const lines = filePath
                     .split(/\r?\n/)
                     .map((s: string) => s.trim())
                     .filter((v: string): v is string => v.length > 0);
-                for (const line of lines) {
+                    for (const line of lines) {
                     try {
                         let text = line;
                         if (text.startsWith('!')) text = text.substring(1); // 去除 '!'
@@ -559,6 +566,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                         // 繼續處理其他檔案
                     }
                 }
+                })();
             });
         });
     }
@@ -585,11 +593,11 @@ function openFolderInNewView(gridview: GridView, folderPath: string) {
         // 如果無法獲取指定位置的 leaf，則回退到新分頁
         leaf = workspace.getLeaf('tab');
     }
-    leaf.setViewState({ type: 'grid-view', active: true });
+    void leaf.setViewState({ type: 'grid-view', active: true });
     // 設定資料來源
     if (leaf.view instanceof GridView) {
-        leaf.view.setSource('folder', folderPath);
+        void leaf.view.setSource('folder', folderPath);
     }
     // 確保視圖是活躍的
-    workspace.revealLeaf(leaf);
+    void workspace.revealLeaf(leaf);
 }

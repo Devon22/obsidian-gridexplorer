@@ -32,7 +32,11 @@ export class showFolderMoveModal extends SuggestModal<string> {
         el.setText(value);
     }
 
-    async onChooseSuggestion(value: string): Promise<void> {
+    onChooseSuggestion(value: string): void {
+        void this.moveFolder(value);
+    }
+
+    private async moveFolder(value: string): Promise<void> {
         try {
             const dest = value === '/' ? '' : value.replace(/\/$/, '');
             const newPath = normalizePath(dest ? `${dest}/${this.folder.name}` : this.folder.name);
@@ -40,11 +44,11 @@ export class showFolderMoveModal extends SuggestModal<string> {
 
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 給檔案系統一點時間處理，然後重新整理視圖
-            setTimeout(() => {
+            window.setTimeout(() => {
                 if (this.plugin.settings.folderDisplayStyle !== 'show') {
-                    this.gridView.setSource('folder', newPath || '/');
+                    void this.gridView.setSource('folder', newPath || '/');
                 } else {
-                    this.gridView.render();
+                    void this.gridView.render();
                 }
             }, 100);
         } catch (err) {

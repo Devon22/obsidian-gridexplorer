@@ -58,7 +58,7 @@ export function renderModePath(gridView: GridView) {
                             gridView.baseSortType = option.value;
                             gridView.sortType = option.value;
                             gridView.app.workspace.requestSaveLayout();
-                            gridView.render();
+                            void gridView.render();
                         });
                 });
             });
@@ -188,60 +188,62 @@ export function renderModePath(gridView: GridView) {
                 const pathIndex = i; // 直接使用索引，因為不再有分隔符
                 if (pathIndex < paths.length) {
                     const path = paths[pathIndex];
-                    el.addEventListener('click', async (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
+                    el.addEventListener('click', (event) => {
+                        void (async () => {
+                            event.preventDefault();
+                            event.stopPropagation();
 
-                        if (gridView.plugin.settings.folderDisplayStyle === 'menu') {
-                            const menu = new Menu();
+                            if (gridView.plugin.settings.folderDisplayStyle === 'menu') {
+                                const menu = new Menu();
 
-                            // 1. 當前資料夾
-                            menu.addItem((item) => {
-                                item.setTitle(`${customFolderIcon} ${path.name}`)
-                                    .onClick(() => {
-                                        gridView.setSource('folder', path.path);
-                                        gridView.clearSelection();
-                                    });
-                            });
-
-                            // 2. 子資料夾
-                            const currentFolder = gridView.app.vault.getAbstractFileByPath(path.path);
-                            if (currentFolder && currentFolder instanceof TFolder) {
-                                const subFolders = currentFolder.children
-                                    .filter(child => child instanceof TFolder && !isFolderIgnored(
-                                        child as TFolder,
-                                        gridView.plugin.settings.ignoredFolders,
-                                        gridView.plugin.settings.ignoredFolderPatterns,
-                                        gridView.showIgnoredItems
-                                    ))
-                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
-
-                                if (subFolders.length > 0) {
-                                    menu.addSeparator();
-                                    menu.addItem((item) =>
-                                        item.setTitle(t('sub_folders'))
-                                            .setIcon('folder-symlink')
-                                            .setDisabled(true)
-                                    );
-
-                                    subFolders.forEach((folder: any) => {
-                                        menu.addItem((item) => {
-                                            item.setTitle(`${customFolderIcon} ${folder.name}`)
-                                                .setIcon('corner-down-right')
-                                                .onClick(() => {
-                                                    gridView.setSource('folder', folder.path);
-                                                    gridView.clearSelection();
-                                                });
+                                // 1. 當前資料夾
+                                menu.addItem((item) => {
+                                    item.setTitle(`${customFolderIcon} ${path.name}`)
+                                        .onClick(() => {
+                                            void gridView.setSource('folder', path.path);
+                                            gridView.clearSelection();
                                         });
-                                    });
-                                }
-                            }
+                                });
 
-                            menu.showAtMouseEvent(event as MouseEvent);
-                        } else {
-                            gridView.setSource('folder', path.path);
-                            gridView.clearSelection();
-                        }
+                                // 2. 子資料夾
+                                const currentFolder = gridView.app.vault.getAbstractFileByPath(path.path);
+                                if (currentFolder && currentFolder instanceof TFolder) {
+                                    const subFolders = currentFolder.children
+                                        .filter((child): child is TFolder => child instanceof TFolder && !isFolderIgnored(
+                                            child,
+                                            gridView.plugin.settings.ignoredFolders,
+                                            gridView.plugin.settings.ignoredFolderPatterns,
+                                            gridView.showIgnoredItems
+                                        ))
+                                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                                    if (subFolders.length > 0) {
+                                        menu.addSeparator();
+                                        menu.addItem((item) =>
+                                            item.setTitle(t('sub_folders'))
+                                                .setIcon('folder-symlink')
+                                                .setDisabled(true)
+                                        );
+
+                                        subFolders.forEach((folder: any) => {
+                                            menu.addItem((item) => {
+                                                item.setTitle(`${customFolderIcon} ${folder.name}`)
+                                                    .setIcon('corner-down-right')
+                                                    .onClick(() => {
+                                                        void gridView.setSource('folder', folder.path);
+                                                        gridView.clearSelection();
+                                                    });
+                                            });
+                                        });
+                                    }
+                                }
+
+                                menu.showAtMouseEvent(event as MouseEvent);
+                            } else {
+                                void gridView.setSource('folder', path.path);
+                                gridView.clearSelection();
+                            }
+                        })();
                     });
 
                     // 為最後一個路徑以外的路徑添加拖曳功能
@@ -257,96 +259,98 @@ export function renderModePath(gridView: GridView) {
                             el.removeClass('ge-dragover');
                         });
 
-                        el.addEventListener('drop', async (event) => {
-                            event.preventDefault();
-                            el.removeClass('ge-dragover');
+                        el.addEventListener('drop', (event) => {
+                            void (async () => {
+                                event.preventDefault();
+                                el.removeClass('ge-dragover');
 
-                            if (!path.path) return;
+                                if (!path.path) return;
 
-                            const folder = gridView.app.vault.getAbstractFileByPath(path.path);
-                            if (!(folder instanceof TFolder)) return;
+                                const folder = gridView.app.vault.getAbstractFileByPath(path.path);
+                                if (!(folder instanceof TFolder)) return;
 
-                            // 處理 obsidian:// URI 格式（單檔/多檔）
-                            const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
-                            if (obsidianPaths.length > 0) {
-                                try {
-                                    for (const filePath of obsidianPaths) {
-                                        let resolved: TFile | null = null;
+                                // 處理 obsidian:// URI 格式（單檔/多檔）
+                                const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
+                                if (obsidianPaths.length > 0) {
+                                    try {
+                                        for (const filePath of obsidianPaths) {
+                                            let resolved: TFile | null = null;
 
-                                        // 1) 直接以路徑查找
-                                        const direct = gridView.app.vault.getAbstractFileByPath(filePath);
-                                        if (direct instanceof TFile) {
-                                            resolved = direct;
-                                        }
+                                            // 1) 直接以路徑查找
+                                            const direct = gridView.app.vault.getAbstractFileByPath(filePath);
+                                            if (direct instanceof TFile) {
+                                                resolved = direct;
+                                            }
 
-                                        // 2) 若沒有副檔名，嘗試補 .md
-                                        if (!resolved && !filePath.includes('.')) {
-                                            const tryMd = normalizePath(`${filePath}.md`);
-                                            const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
-                                            if (f2 instanceof TFile) resolved = f2;
-                                        }
+                                            // 2) 若沒有副檔名，嘗試補 .md
+                                            if (!resolved && !filePath.includes('.')) {
+                                                const tryMd = normalizePath(`${filePath}.md`);
+                                                const f2 = gridView.app.vault.getAbstractFileByPath(tryMd);
+                                                if (f2 instanceof TFile) resolved = f2;
+                                            }
 
-                                        // 3) 使用 Obsidian 的連結解析
-                                        if (!resolved) {
-                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(filePath, path.path);
-                                            if (dest instanceof TFile) resolved = dest;
-                                        }
+                                            // 3) 使用 Obsidian 的連結解析
+                                            if (!resolved) {
+                                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(filePath, path.path);
+                                                if (dest instanceof TFile) resolved = dest;
+                                            }
 
-                                        if (resolved instanceof TFile) {
-                                            const newPath = normalizePath(`${path.path}/${resolved.name}`);
-                                            if (resolved.path !== newPath) {
-                                                await gridView.app.fileManager.renameFile(resolved, newPath);
+                                            if (resolved instanceof TFile) {
+                                                const newPath = normalizePath(`${path.path}/${resolved.name}`);
+                                                if (resolved.path !== newPath) {
+                                                    await gridView.app.fileManager.renameFile(resolved, newPath);
+                                                }
                                             }
                                         }
+                                    } catch (error) {
+                                        console.error('An error occurred while moving multiple files to folder:', error);
                                     }
-                                } catch (error) {
-                                    console.error('An error occurred while moving multiple files to folder:', error);
+                                    return;
                                 }
-                                return;
-                            }
 
-                            const filePath = event.dataTransfer?.getData('text/plain');
-                            if (!filePath) return;
+                                const filePath = event.dataTransfer?.getData('text/plain');
+                                if (!filePath) return;
 
-                            // 支援多行多檔，使用 Obsidian API 解析每一行
-                            const srcPath = path.path || '/';
-                            const lines = filePath
-                                .split(/\r?\n/)
-                                .map((s: string) => s.trim())
-                                .filter((v: string): v is string => v.length > 0);
+                                // 支援多行多檔，使用 Obsidian API 解析每一行
+                                const srcPath = path.path || '/';
+                                const lines = filePath
+                                    .split(/\r?\n/)
+                                    .map((s: string) => s.trim())
+                                    .filter((v: string): v is string => v.length > 0);
 
-                            for (const line of lines) {
-                                try {
-                                    let text = line;
-                                    if (text.startsWith('!')) text = text.substring(1);
+                                for (const line of lines) {
+                                    try {
+                                        let text = line;
+                                        if (text.startsWith('!')) text = text.substring(1);
 
-                                    let resolvedFile: TFile | null = null;
-                                    if (text.startsWith('[[') && text.endsWith(']]')) {
-                                        const inner = text.slice(2, -2);
-                                        const parsed = parseLinktext(inner);
-                                        const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
-                                        if (dest instanceof TFile) resolvedFile = dest;
-                                    } else {
-                                        const direct = gridView.app.vault.getAbstractFileByPath(text);
-                                        if (direct instanceof TFile) {
-                                            resolvedFile = direct;
-                                        } else {
-                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                        let resolvedFile: TFile | null = null;
+                                        if (text.startsWith('[[') && text.endsWith(']]')) {
+                                            const inner = text.slice(2, -2);
+                                            const parsed = parseLinktext(inner);
+                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
                                             if (dest instanceof TFile) resolvedFile = dest;
+                                        } else {
+                                            const direct = gridView.app.vault.getAbstractFileByPath(text);
+                                            if (direct instanceof TFile) {
+                                                resolvedFile = direct;
+                                            } else {
+                                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                                if (dest instanceof TFile) resolvedFile = dest;
+                                            }
                                         }
-                                    }
 
-                                    if (resolvedFile instanceof TFile) {
-                                        const newPath = normalizePath(`${path.path}/${resolvedFile.name}`);
-                                        if (resolvedFile.path !== newPath) {
-                                            await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                        if (resolvedFile instanceof TFile) {
+                                            const newPath = normalizePath(`${path.path}/${resolvedFile.name}`);
+                                            if (resolvedFile.path !== newPath) {
+                                                await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                            }
                                         }
+                                    } catch (error) {
+                                        console.error('An error occurred while moving one of the files to folder:', error);
+                                        // 繼續處理其他檔案
                                     }
-                                } catch (error) {
-                                    console.error('An error occurred while moving one of the files to folder:', error);
-                                    // 繼續處理其他檔案
                                 }
-                            }
+                            })();
                         });
                     }
                 }
@@ -386,13 +390,14 @@ export function renderModePath(gridView: GridView) {
                     // 'hide' 模式下 current 保持為 null，不顯示任何資料夾
 
                     if (current) {
-                        const subFolders = current.children
-                            .filter(child => child instanceof TFolder && !isFolderIgnored(
-                                child as TFolder,
+                        const subFolders = current.children.filter((child): child is TFolder =>
+                            child instanceof TFolder && !isFolderIgnored(
+                                child,
                                 gridView.plugin.settings.ignoredFolders,
                                 gridView.plugin.settings.ignoredFolderPatterns,
                                 gridView.showIgnoredItems
-                            )) as TFolder[];
+                            )
+                        );
 
                         if (subFolders.length > 0) {
                             menu.addSeparator();
@@ -407,7 +412,7 @@ export function renderModePath(gridView: GridView) {
                                     item.setTitle(`${customFolderIcon} ${sf.name}`)
                                         .setIcon('corner-down-right')
                                         .onClick(() => {
-                                            gridView.setSource('folder', sf.path);
+                                            void gridView.setSource('folder', sf.path);
                                             gridView.clearSelection();
                                         });
                                 });
@@ -427,7 +432,9 @@ export function renderModePath(gridView: GridView) {
                                 .setTitle(t('open_folder_note'))
                                 .setIcon('panel-left-open')
                                 .onClick(() => {
-                                    gridView.app.workspace.getLeaf().openFile(noteFile);
+                                    if (noteFile instanceof TFile) {
+                                        void gridView.app.workspace.getLeaf().openFile(noteFile);
+                                    }
                                 });
                         });
                         // 編輯資料夾筆記設定選項
@@ -447,7 +454,9 @@ export function renderModePath(gridView: GridView) {
                                 .setTitle(t('delete_folder_note'))
                                 .setIcon('folder-x')
                                 .onClick(() => {
-                                    gridView.app.fileManager.trashFile(noteFile as TFile);
+                                    if (noteFile instanceof TFile) {
+                                        void gridView.app.fileManager.trashFile(noteFile);
+                                    }
                                 });
                         });
                     } else {
@@ -492,10 +501,10 @@ export function renderModePath(gridView: GridView) {
                                         .setIcon('folder-x')
                                         .onClick(() => {
                                             gridView.plugin.settings.ignoredFolders.push(folder.path);
-                                            gridView.plugin.saveSettings();
-                                            requestAnimationFrame(() => {
+                                            void gridView.plugin.saveSettings();
+                                            window.requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                                void gridView.setSource('folder', parentFolder?.path || '/');
                                             });
                                         });
                                 });
@@ -507,10 +516,10 @@ export function renderModePath(gridView: GridView) {
                                         .setIcon('folder-up')
                                         .onClick(() => {
                                             gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
-                                            gridView.plugin.saveSettings();
-                                            requestAnimationFrame(() => {
+                                            void gridView.plugin.saveSettings();
+                                            window.requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                                void gridView.setSource('folder', parentFolder?.path || '/');
                                             });
                                         });
                                 });
@@ -546,9 +555,9 @@ export function renderModePath(gridView: GridView) {
                                     .onClick(async () => {
                                         if (folder instanceof TFolder) {
                                             await gridView.app.fileManager.trashFile(folder);
-                                            requestAnimationFrame(() => {
+                                            window.requestAnimationFrame(() => {
                                                 // 回上層資料夾
-                                                gridView.setSource('folder', parentFolder?.path || '/');
+                                                void gridView.setSource('folder', parentFolder?.path || '/');
                                             });
                                         }
                                     });
@@ -583,7 +592,7 @@ export function renderModePath(gridView: GridView) {
         });
 
         // 自動捲動到最右側，確保顯示當前資料夾的前端
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             const lastEl = pathElements[pathElements.length - 1];
             if (lastEl) {
                 pathContainer.scrollLeft = lastEl.offsetLeft;
@@ -683,7 +692,7 @@ export function renderModePath(gridView: GridView) {
                                 .setChecked(m.internalName === gridView.sourceMode)
                                 .onClick(() => {
                                     // 切換至選取的自訂模式並重新渲染
-                                    gridView.setSource(m.internalName);
+                                    void gridView.setSource(m.internalName);
                                 });
                         });
                     });
@@ -718,7 +727,7 @@ export function renderModePath(gridView: GridView) {
                             .setIcon('layers')
                             .setChecked(gridView.bookmarkGroupId === 'all')
                             .onClick(() => {
-                                gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'all');
+                                void gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'all');
                             });
                     });
 
@@ -728,7 +737,7 @@ export function renderModePath(gridView: GridView) {
                             .setIcon('bookmark')
                             .setChecked(gridView.bookmarkGroupId === 'ungrouped')
                             .onClick(() => {
-                                gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'ungrouped');
+                                void gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, 'ungrouped');
                             });
                     });
 
@@ -755,7 +764,7 @@ export function renderModePath(gridView: GridView) {
                                     .setIcon('folder')
                                     .setChecked(gridView.bookmarkGroupId === groupTitle)
                                     .onClick(() => {
-                                        gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, groupTitle);
+                                        void gridView.setSource('bookmarks', '', false, undefined, undefined, undefined, undefined, groupTitle);
                                     });
                             });
                         });
@@ -778,7 +787,7 @@ export function renderModePath(gridView: GridView) {
                                 .setChecked(!gridView.includeMedia)
                                 .onClick(() => {
                                     gridView.includeMedia = false;
-                                    gridView.render();
+                                    void gridView.render();
                                 });
                         });
                         menu.addItem((item) => {
@@ -787,7 +796,7 @@ export function renderModePath(gridView: GridView) {
                                 .setChecked(gridView.includeMedia)
                                 .onClick(() => {
                                     gridView.includeMedia = true;
-                                    gridView.render();
+                                    void gridView.render();
                                 });
                         });
                         menu.showAtMouseEvent(evt);
@@ -804,7 +813,7 @@ export function renderModePath(gridView: GridView) {
                             .setIcon('square')
                             .onClick(() => {
                                 gridView.taskFilter = 'uncompleted';
-                                gridView.render();
+                                void gridView.render();
                             });
                     });
                     menu.addItem((item) => {
@@ -813,7 +822,7 @@ export function renderModePath(gridView: GridView) {
                             .setIcon('square-check-big')
                             .onClick(() => {
                                 gridView.taskFilter = 'completed';
-                                gridView.render();
+                                void gridView.render();
                             });
                     });
                     menu.addItem((item) => {
@@ -822,7 +831,7 @@ export function renderModePath(gridView: GridView) {
                             .setIcon('square-asterisk')
                             .onClick(() => {
                                 gridView.taskFilter = 'all';
-                                gridView.render();
+                                void gridView.render();
                             });
                     });
                     menu.addSeparator();
@@ -862,7 +871,7 @@ export function renderModePath(gridView: GridView) {
                                         .setChecked(gridView.customOptionIndex === -1)
                                         .onClick(() => {
                                             gridView.customOptionIndex = -1;
-                                            gridView.render();
+                                            void gridView.render();
                                         });
                                 });
                                 mode.options!.forEach((opt, idx) => {
@@ -872,7 +881,7 @@ export function renderModePath(gridView: GridView) {
                                             .setChecked(idx === gridView.customOptionIndex)
                                             .onClick(() => {
                                                 gridView.customOptionIndex = idx;
-                                                gridView.render();
+                                                void gridView.render();
                                             });
                                     });
                                 });
@@ -888,8 +897,8 @@ export function renderModePath(gridView: GridView) {
                             if (modeIndex === -1) return;
                             new CustomModeModal(gridView.app, gridView.plugin, gridView.plugin.settings.customModes[modeIndex], (result) => {
                                 gridView.plugin.settings.customModes[modeIndex] = result;
-                                gridView.plugin.saveSettings();
-                                gridView.render();
+                                void gridView.plugin.saveSettings();
+                                void gridView.render();
                             }).open();
                         });
                     }
@@ -940,7 +949,7 @@ export function renderModePath(gridView: GridView) {
             gridView.searchQuery = '';
             gridView.clearSelection();
             gridView.app.workspace.requestSaveLayout();
-            gridView.render();
+            void gridView.render();
         });
     }
 }

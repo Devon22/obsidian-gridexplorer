@@ -1,7 +1,21 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, EventRef } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isDocumentFile, isMediaFile } from './utils/fileUtils';
+
+interface BookmarksPlugin {
+    instance: {
+        on(name: string, callback: () => void): EventRef;
+    };
+}
+
+interface AppWithInternalPlugins extends App {
+    internalPlugins: {
+        plugins: {
+            bookmarks: BookmarksPlugin;
+        };
+    };
+}
 
 //檔案監聽器
 export class FileWatcher {
@@ -130,13 +144,16 @@ export class FileWatcher {
         );
     
         // 處理書籤變更
-        this.plugin.registerEvent(
-            (this.app as any).internalPlugins.plugins.bookmarks.instance.on('changed', () => {
-                if (this.gridView.sourceMode === 'bookmarks') {
-                    this.scheduleRender();
-                }
-            })
-        );
+        const bookmarks = (this.app as unknown as AppWithInternalPlugins).internalPlugins.plugins.bookmarks;
+        if (bookmarks?.instance) {
+            this.plugin.registerEvent(
+                bookmarks.instance.on('changed', () => {
+                    if (this.gridView.sourceMode === 'bookmarks') {
+                        this.scheduleRender();
+                    }
+                })
+            );
+        }
 
         // 監聽當前開啟的檔案變更，讀取反向連結
         this.plugin.registerEvent(
@@ -173,11 +190,11 @@ export class FileWatcher {
             return;
         }
         if (this.renderTimer !== null) {
-            clearTimeout(this.renderTimer);
+            window.clearTimeout(this.renderTimer);
         }
         // 200ms 延遲，可視需求調整
         this.renderTimer = window.setTimeout((): void => {
-            this.gridView.render();
+            void this.gridView.render();
             this.renderTimer = null;
         }, delay);
     }

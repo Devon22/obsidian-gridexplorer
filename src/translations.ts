@@ -1,3 +1,4 @@
+import { getLanguage } from 'obsidian';
 import zhTW from './translations/zh-TW';
 import en from './translations/en';
 import zh from './translations/zh';
@@ -20,8 +21,7 @@ type LanguageKey = keyof Translations;
 
 // 全域翻譯函式
 export function t(key: string): string {
-    const lang = window.localStorage.getItem('language') as LanguageKey;
-    //const lang: LanguageKey = getLanguage() as LanguageKey;
+    const lang: LanguageKey = getLanguage() as LanguageKey;
     const translations = TRANSLATIONS[lang] || TRANSLATIONS['en'];
     return translations[key] || key;
 }

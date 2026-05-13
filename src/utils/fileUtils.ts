@@ -179,7 +179,7 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
             try {
                 // 嘗試將模式作為正則表達式處理
                 // 如果模式包含特殊字符，使用正則表達式處理
-                if (/[\^\$\*\+\?\(\)\[\]\{\}\|\\]/.test(pattern)) {
+                if (/[$*+?()[\]{}|\\]/.test(pattern)) {
                     const regex = new RegExp(pattern);
                     return regex.test(folder.path);
                 } else {
@@ -356,7 +356,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                         }
                     }
                 }
-            } catch (e) {
+            } catch (_e) {
                 // 忽略讀取錯誤
             }
         }

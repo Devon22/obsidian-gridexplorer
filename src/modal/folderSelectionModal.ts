@@ -24,7 +24,7 @@ export class FolderSelectionModal extends Modal {
         this.plugin = plugin;
         this.activeView = activeView;
         this.buttonElement = buttonElement;
-        this.folderOptionsContainer = document.createElement('div');
+        this.folderOptionsContainer = activeDocument.createElement('div');
     }
 
     onOpen() {
@@ -75,16 +75,18 @@ export class FolderSelectionModal extends Modal {
                     text: `${mode.icon} ${mode.displayName}`
                 });
 
-                customOption.addEventListener('click', async () => {
-                    if (this.activeView) {
-                        await this.activeView.setSource(mode.internalName);
-                    } else {
-                        const view = await this.plugin.activateView();
-                        if (view instanceof GridView) {
-                            await view.setSource(mode.internalName);
+                customOption.addEventListener('click', () => {
+                    void (async () => {
+                        if (this.activeView) {
+                            await this.activeView.setSource(mode.internalName);
+                        } else {
+                            const view = await this.plugin.activateView();
+                            if (view instanceof GridView) {
+                                await view.setSource(mode.internalName);
+                            }
                         }
-                    }
-                    this.close();
+                        this.close();
+                    })();
                 });
                 this.folderOptions.push(customOption);
             });
@@ -99,16 +101,18 @@ export class FolderSelectionModal extends Modal {
                     text: `📑 ${t('bookmarks_mode')}`
                 });
 
-                bookmarkOption.addEventListener('click', async () => {
-                    if (this.activeView) {
-                        await this.activeView.setSource('bookmarks');
-                    } else {
-                        const view = await this.plugin.activateView();
-                        if (view instanceof GridView) {
-                            await view.setSource('bookmarks');
+                bookmarkOption.addEventListener('click', () => {
+                    void (async () => {
+                        if (this.activeView) {
+                            await this.activeView.setSource('bookmarks');
+                        } else {
+                            const view = await this.plugin.activateView();
+                            if (view instanceof GridView) {
+                                await view.setSource('bookmarks');
+                            }
                         }
-                    }
-                    this.close();
+                        this.close();
+                    })();
                 });
                 this.folderOptions.push(bookmarkOption);
             }
@@ -127,16 +131,18 @@ export class FolderSelectionModal extends Modal {
                             text: `🔍 ${t('search_results')}: ${searchInputEl.value}`
                         });
 
-                        searchOption.addEventListener('click', async () => {
-                            if (this.activeView) {
-                                await this.activeView.setSource('search');
-                            } else {
-                                const view = await this.plugin.activateView();
-                                if (view instanceof GridView) {
-                                    await view.setSource('search');
+                        searchOption.addEventListener('click', () => {
+                            void (async () => {
+                                if (this.activeView) {
+                                    await this.activeView.setSource('search');
+                                } else {
+                                    const view = await this.plugin.activateView();
+                                    if (view instanceof GridView) {
+                                        await view.setSource('search');
+                                    }
                                 }
-                            }
-                            this.close();
+                                this.close();
+                            })();
                         });
                         this.folderOptions.push(searchOption);
                     }
@@ -154,16 +160,18 @@ export class FolderSelectionModal extends Modal {
                     text: `🔗 ${t('backlinks_mode')}${activeFileName}`
                 });
 
-                backlinksOption.addEventListener('click', async () => {
-                    if (this.activeView) {
-                        await this.activeView.setSource('backlinks');
-                    } else {
-                        const view = await this.plugin.activateView();
-                        if (view instanceof GridView) {
-                            await view.setSource('backlinks');
+                backlinksOption.addEventListener('click', () => {
+                    void (async () => {
+                        if (this.activeView) {
+                            await this.activeView.setSource('backlinks');
+                        } else {
+                            const view = await this.plugin.activateView();
+                            if (view instanceof GridView) {
+                                await view.setSource('backlinks');
+                            }
                         }
-                    }
-                    this.close();
+                        this.close();
+                    })();
                 });
                 this.folderOptions.push(backlinksOption);
             }
@@ -179,16 +187,18 @@ export class FolderSelectionModal extends Modal {
                     text: `🔗 ${t('outgoinglinks_mode')}${activeFileName}`
                 });
 
-                outgoinglinksOption.addEventListener('click', async () => {
-                    if (this.activeView) {
-                        await this.activeView.setSource('outgoinglinks');
-                    } else {
-                        const view = await this.plugin.activateView();
-                        if (view instanceof GridView) {
-                            await view.setSource('outgoinglinks');
+                outgoinglinksOption.addEventListener('click', () => {
+                    void (async () => {
+                        if (this.activeView) {
+                            await this.activeView.setSource('outgoinglinks');
+                        } else {
+                            const view = await this.plugin.activateView();
+                            if (view instanceof GridView) {
+                                await view.setSource('outgoinglinks');
+                            }
                         }
-                    }
-                    this.close();
+                        this.close();
+                    })();
                 });
                 this.folderOptions.push(outgoinglinksOption);
             }
@@ -201,16 +211,18 @@ export class FolderSelectionModal extends Modal {
                 text: `📅 ${t('recent_files_mode')}`
             });
 
-            recentFilesOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('recent-files');
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('recent-files');
+            recentFilesOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('recent-files');
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('recent-files');
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
             this.folderOptions.push(recentFilesOption);
         }
@@ -222,16 +234,18 @@ export class FolderSelectionModal extends Modal {
                 text: `📔 ${t('all_files_mode')}`
             });
 
-            allFilesOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('all-files');
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('all-files');
+            allFilesOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('all-files');
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('all-files');
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
             this.folderOptions.push(allFilesOption);
         }
@@ -243,16 +257,18 @@ export class FolderSelectionModal extends Modal {
                 text: `🎲 ${t('random_note_mode')}`
             });
 
-            randomNoteOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('random-note');
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('random-note');
+            randomNoteOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('random-note');
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('random-note');
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
             this.folderOptions.push(randomNoteOption);
         }
@@ -264,16 +280,18 @@ export class FolderSelectionModal extends Modal {
                 text: `☑️ ${t('tasks_mode')}`
             });
 
-            tasksOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('tasks');
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('tasks');
+            tasksOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('tasks');
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('tasks');
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
             this.folderOptions.push(tasksOption);
         }
@@ -285,16 +303,18 @@ export class FolderSelectionModal extends Modal {
             text: `${customFolderIcon} /`
         });
 
-        rootFolderOption.addEventListener('click', async () => {
-            if (this.activeView) {
-                await this.activeView.setSource('folder', '/');
-            } else {
-                const view = await this.plugin.activateView();
-                if (view instanceof GridView) {
-                    await view.setSource('folder', '/');
+        rootFolderOption.addEventListener('click', () => {
+            void (async () => {
+                if (this.activeView) {
+                    await this.activeView.setSource('folder', '/');
+                } else {
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) {
+                        await view.setSource('folder', '/');
+                    }
                 }
-            }
-            this.close();
+                this.close();
+            })();
         });
         this.folderOptions.push(rootFolderOption);
 
@@ -326,30 +346,32 @@ export class FolderSelectionModal extends Modal {
             });
 
             // 產生 ascii tree 前綴
-            const prefixSpan = document.createElement('span');
+            const prefixSpan = activeDocument.createElement('span');
             prefixSpan.className = 'ge-folder-tree-prefix';
             prefixSpan.textContent = depth > 0 ? '   '.repeat(depth - 1) + '└ ' : '';
             folderOption.appendChild(prefixSpan);
 
             // 資料夾圖示與名稱
-            const icon = document.createElement('span');
+            const icon = activeDocument.createElement('span');
             icon.textContent = `${customFolderIcon} `;
             folderOption.appendChild(icon);
 
-            const nameSpan = document.createElement('span');
+            const nameSpan = activeDocument.createElement('span');
             nameSpan.textContent = displayName;
             folderOption.appendChild(nameSpan);
 
-            folderOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('folder', folder.path);
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('folder', folder.path);
+            folderOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('folder', folder.path);
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('folder', folder.path);
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
             this.folderOptions.push(folderOption);
         });
@@ -381,16 +403,18 @@ export class FolderSelectionModal extends Modal {
                 text: `🔍 ${t('search_for')} "${searchTerm}"`
             });
 
-            this.searchOption.addEventListener('click', async () => {
-                if (this.activeView) {
-                    await this.activeView.setSource('folder', '/', true, searchTerm);
-                } else {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        await view.setSource('folder', '/', true, searchTerm);
+            this.searchOption.addEventListener('click', () => {
+                void (async () => {
+                    if (this.activeView) {
+                        await this.activeView.setSource('folder', '/', true, searchTerm);
+                    } else {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            await view.setSource('folder', '/', true, searchTerm);
+                        }
                     }
-                }
-                this.close();
+                    this.close();
+                })();
             });
 
             this.searchOption.addEventListener('mouseenter', () => {
@@ -423,7 +447,7 @@ export class FolderSelectionModal extends Modal {
                 if (this.selectedIndex >= 0) {
                     const selectedOption = this.folderOptions[this.selectedIndex];
                     if (selectedOption && selectedOption.style.display !== 'none') {
-                        requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
                             selectedOption.click();
                         });
                     }

@@ -13,7 +13,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
     if (gridView.gridItems.length === 0 || gridView.isShowingNote) return;
 
     // 如果有Modal視窗，直接返回
-    if (document.querySelector('.modal-container')) return;
+    if (activeDocument.querySelector('.modal-container')) return;
     
     let newIndex = gridView.selectedItemIndex;
 
@@ -44,7 +44,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
                 if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                     // 獲取上一層資料夾路徑
                     const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    gridView.setSource('folder', parentPath);
+                    void gridView.setSource('folder', parentPath);
                     gridView.clearSelection();
                     event.preventDefault();
                 }
@@ -108,7 +108,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
                 if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                     // 獲取上一層資料夾路徑
                     const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    gridView.setSource('folder', parentPath);
+                    void gridView.setSource('folder', parentPath);
                     gridView.clearSelection();
                     event.preventDefault();
                 }
@@ -184,7 +184,7 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
             if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
                 // 獲取上一層資料夾路徑
                 const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                gridView.setSource('folder', parentPath);
+                void gridView.setSource('folder', parentPath);
                 gridView.clearSelection();
                 event.preventDefault();
             }

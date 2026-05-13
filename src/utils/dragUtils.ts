@@ -23,7 +23,9 @@ export function parseObsidianOpenUris(input: string): Array<{ vault?: string; fi
                 const vault = usp.get('vault') || undefined;
                 const file = usp.get('file') ? decodeURIComponent(usp.get('file') as string) : undefined;
                 results.push({ vault, file });
-            } catch { /* ignore */ }
+            } catch (error) {
+                console.error('GridExplorer: Error parsing obsidian://open URI', error);
+            }
         }
     }
     return results;
@@ -38,7 +40,9 @@ export async function extractObsidianPathsFromDT(dt: DataTransfer | null): Promi
     try {
         const uriList = dt.getData('text/uri-list');
         if (uriList) texts.push(uriList);
-    } catch {}
+    } catch (error) {
+        console.error('GridExplorer: Error getting data from DataTransfer', error);
+    }
 
     const vaultName = (window as any).app?.vault?.getName?.() as string | undefined;
     const paths: string[] = [];

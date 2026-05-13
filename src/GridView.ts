@@ -97,7 +97,7 @@ export class GridView extends ItemView {
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
                 // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
                 if (this.isShowingNote) return;
-                if (document.querySelector('.modal-container')) return;
+                if (activeDocument.querySelector('.modal-container')) return;
                 // 僅在資料夾模式且不是根目錄時才後退
                 if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
                     // 阻止內建快捷鍵與其他監聽器
@@ -109,7 +109,7 @@ export class GridView extends ItemView {
                         event.stopPropagation();
                     }
                     const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    this.setSource('folder', parentPath);
+                    void this.setSource('folder', parentPath);
                     this.clearSelection();
                 }
             } else if (event.key === 'ArrowRight' && event.altKey) {
@@ -118,7 +118,7 @@ export class GridView extends ItemView {
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
                 // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
                 if (this.isShowingNote) return;
-                if (document.querySelector('.modal-container')) return;
+                if (activeDocument.querySelector('.modal-container')) return;
                 if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this.gridItems.length) {
                     // 阻止可能的其他快捷鍵或後續處理，避免重複觸發
                     event.preventDefault();
@@ -144,7 +144,7 @@ export class GridView extends ItemView {
         this.registerEvent(
             (this.app.metadataCache as any).on('dataview:index-ready', () => {
                 if (this.sourceMode.startsWith('custom-')) {
-                    this.render();
+                    void this.render();
                 }
             })
         );
@@ -355,7 +355,9 @@ export class GridView extends ItemView {
                 mode: this.sourceMode,
                 path: this.sourcePath,
             });
-        } catch { }
+        } catch (error) {
+            console.error('GridExplorer: Error triggering ge-grid-source-changed event', error);
+        }
 
         await this.render();
     }
@@ -413,7 +415,6 @@ export class GridView extends ItemView {
 
         // 創建內容區域
         const contentEl = this.containerEl.createDiv('view-content');
-
 
         // 取得置頂清單
         if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
@@ -543,20 +544,22 @@ export class GridView extends ItemView {
             updateClearButton();
             showSearchModal(this.app, this, query, searchButton);
         });
-        clearButton.addEventListener('click', async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!filterInput.value) return;
-            if (filterRenderTimer !== null) {
-                window.clearTimeout(filterRenderTimer);
-                filterRenderTimer = null;
-            }
-            filterInput.value = '';
-            this.fileNameFilterQuery = '';
-            updateClearButton();
-            this.clearSelection();
-            await this.grid_render();
-            filterInput.focus();
+        clearButton.addEventListener('click', (event) => {
+            void (async () => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!filterInput.value) return;
+                if (filterRenderTimer !== null) {
+                    window.clearTimeout(filterRenderTimer);
+                    filterRenderTimer = null;
+                }
+                filterInput.value = '';
+                this.fileNameFilterQuery = '';
+                updateClearButton();
+                this.clearSelection();
+                await this.grid_render();
+                filterInput.focus();
+            })();
         });
     }
 
@@ -740,7 +743,7 @@ export class GridView extends ItemView {
 
         // 創建 Intersection Observer
         const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(async entry => {
+            const loadEntry = async (entry: IntersectionObserverEntry) => {
                 if (entry.isIntersecting) {
                     const fileEl = entry.target as HTMLElement;
                     const filePath = fileEl.dataset.filePath;
@@ -759,7 +762,7 @@ export class GridView extends ItemView {
                             if (summaryLength < 50) {
                                 summaryLength = 100;
                                 this.plugin.settings.summaryLength = 100;
-                                this.plugin.saveSettings();
+                                void this.plugin.saveSettings();
                             }
 
                             // Markdown 檔案顯示內容預覽
@@ -1093,7 +1096,7 @@ export class GridView extends ItemView {
                                                     .setIcon('circle-plus')
                                                     .onClick(() => {
                                                         const searchQuery = this.searchQuery + ` ${tagText}`;
-                                                        this.setSource('', '', true, searchQuery);
+                                                        void this.setSource('', '', true, searchQuery);
                                                         return false;
                                                     })
                                                 );
@@ -1105,7 +1108,7 @@ export class GridView extends ItemView {
                                                     .setIcon('circle-minus')
                                                     .onClick(() => {
                                                         const searchQuery = this.searchQuery.replace(tagText, '');
-                                                        this.setSource('', '', true, searchQuery);
+                                                        void this.setSource('', '', true, searchQuery);
                                                         return false;
                                                     })
                                                 );
@@ -1122,7 +1125,7 @@ export class GridView extends ItemView {
                                             e.stopPropagation(); // 防止事件冒泡到卡片
                                             const tagText = tag.startsWith('#') ? tag : `#${tag}`;
                                             if (this.searchQuery !== tagText) {
-                                                this.setSource('', '', true, tagText);
+                                                void this.setSource('', '', true, tagText);
                                             }
                                             return false;
                                         });
@@ -1178,6 +1181,10 @@ export class GridView extends ItemView {
                     // 一旦載入完成，就不需要再觀察這個元素
                     observer.unobserve(fileEl);
                 }
+            };
+
+            entries.forEach(entry => {
+                void loadEntry(entry);
             });
         }, {
             root: container,
@@ -1205,7 +1212,6 @@ export class GridView extends ItemView {
             // 設定批次渲染狀態
             const state: DividerState = { lastDateString: lastDateString, pinDividerAdded: pinDividerAdded, blankDividerAdded: blankDividerAdded };
             const paramsBase: FileRenderParams = { container, observer, files, dateDividerMode, sortType, shouldShowDateDividers, state };
-            const selfRef = this;
             const batchSize = 50;
             let currentIndex = 0;
 
@@ -1218,7 +1224,7 @@ export class GridView extends ItemView {
             let isLoading = false;
 
             const loadMore = (entries?: IntersectionObserverEntry[]) => {
-                if (currentToken !== selfRef.renderToken) return;
+                if (currentToken !== this.renderToken) return;
 
                 if (entries && entries[0] && !entries[0].isIntersecting) {
                     return;
@@ -1231,8 +1237,8 @@ export class GridView extends ItemView {
                 sentinel.remove();
 
                 let targetMaxEnd = currentIndex + batchSize;
-                if (selfRef.targetFocusPath) {
-                    const tIndex = files.findIndex(f => f.path === selfRef.targetFocusPath);
+                if (this.targetFocusPath) {
+                    const tIndex = files.findIndex(f => f.path === this.targetFocusPath);
                     if (tIndex >= currentIndex) {
                         targetMaxEnd = Math.max(targetMaxEnd, tIndex + 1);
                     }
@@ -1241,31 +1247,31 @@ export class GridView extends ItemView {
                 const TIME_BUDGET_MS = Platform.isIosApp ? 6 : 16;
 
                 const renderChunk = () => {
-                    if (currentToken !== selfRef.renderToken) return;
+                    if (currentToken !== this.renderToken) return;
 
                     const startTime = performance.now();
                     while (currentIndex < end && (performance.now() - startTime) < TIME_BUDGET_MS) {
-                        selfRef.processFile(files[currentIndex], paramsBase);
+                        this.processFile(files[currentIndex], paramsBase);
                         currentIndex++;
                     }
 
                     if (currentIndex < end) {
-                        requestAnimationFrame(renderChunk);
+                        window.requestAnimationFrame(renderChunk);
                     } else {
                         // 這一批次處理完畢
-                        if (selfRef.targetFocusPath) {
+                        if (this.targetFocusPath) {
                             // 尋找剛剛載入的目標項目並捲動到該位置
                             const gridItem = Array.from(container.querySelectorAll('.ge-grid-item')).find(
-                                item => (item as HTMLElement).dataset.filePath === selfRef.targetFocusPath
+                                item => (item as HTMLElement).dataset.filePath === this.targetFocusPath
                             ) as HTMLElement;
 
                             if (gridItem) {
                                 gridItem.scrollIntoView({ block: 'nearest' });
-                                const itemIndex = selfRef.gridItems.indexOf(gridItem);
+                                const itemIndex = this.gridItems.indexOf(gridItem);
                                 if (itemIndex >= 0) {
-                                    selfRef.selectItem(itemIndex);
+                                    this.selectItem(itemIndex);
                                 }
-                                selfRef.targetFocusPath = null; // 處理完清除目標
+                                this.targetFocusPath = null; // 處理完清除目標
                             }
                         }
 
@@ -1274,8 +1280,8 @@ export class GridView extends ItemView {
                             container.appendChild(sentinel);
 
                             // 主動判斷是否仍在可視範圍內（解決捲動跳轉後 IntersectionObserver 未觸發的問題）
-                            setTimeout(() => {
-                                if (currentToken !== selfRef.renderToken) return;
+                            window.setTimeout(() => {
+                                if (currentToken !== this.renderToken) return;
                                 // 由於不一定是在 root container，也可以透過 getBoundingClientRect 簡單測算
                                 const rect = sentinel.getBoundingClientRect();
                                 const containerRect = container.getBoundingClientRect();
@@ -1512,7 +1518,7 @@ export class GridView extends ItemView {
                 if (triggeredInHover || isMouseDown) return; // 如果滑鼠按下則不觸發
                 triggeredInHover = true;
                 if (!this.openShortcutFile(file)) {
-                    this.showNoteInGrid(file);
+                    void this.showNoteInGrid(file);
                 }
             };
 
@@ -1523,7 +1529,7 @@ export class GridView extends ItemView {
                 if (isHovering && e.ctrlKey && !isMouseDown &&
                     this.app.workspace.getActiveViewOfType(GridView) === this) {
                     // 短暫延遲以確保不是 Ctrl+click 操作
-                    setTimeout(() => {
+                    window.setTimeout(() => {
                         if (isHovering && !triggeredInHover && !isMouseDown &&
                             this.app.workspace.getActiveViewOfType(GridView) === this) {
                             trigger();
@@ -1540,7 +1546,7 @@ export class GridView extends ItemView {
             const onMouseUp = () => {
                 isMouseDown = false;
                 // 重置觸發狀態，但稍微延遲以避免立即重新觸發
-                setTimeout(() => {
+                window.setTimeout(() => {
                     if (isHovering) {
                         triggeredInHover = false;
                     }
@@ -1552,7 +1558,7 @@ export class GridView extends ItemView {
                 isHovering = true;
                 if (!keydownListener) {
                     keydownListener = onKeyDown;
-                    document.addEventListener('keydown', keydownListener, { capture: true });
+                    activeDocument.addEventListener('keydown', keydownListener, { capture: true });
                 }
             };
 
@@ -1560,7 +1566,7 @@ export class GridView extends ItemView {
                 isHovering = false;
                 isMouseDown = false;
                 if (keydownListener) {
-                    document.removeEventListener('keydown', keydownListener, { capture: true });
+                    activeDocument.removeEventListener('keydown', keydownListener, { capture: true });
                     keydownListener = null;
                 }
                 triggeredInHover = false;
@@ -1574,7 +1580,7 @@ export class GridView extends ItemView {
             // 添加清理函數到數組中
             this.eventCleanupFunctions.push(() => {
                 if (keydownListener) {
-                    document.removeEventListener('keydown', keydownListener, { capture: true });
+                    activeDocument.removeEventListener('keydown', keydownListener, { capture: true });
                 }
                 fileEl.removeEventListener('mouseenter', onMouseEnter);
                 fileEl.removeEventListener('mouseleave', onMouseLeave);
@@ -1600,10 +1606,10 @@ export class GridView extends ItemView {
                 } else {
                     if (event.ctrlKey && event.altKey) {
                         // Ctrl+Alt：開啟在分割視窗
-                        this.app.workspace.getLeaf('split').openFile(file);
+                        void this.app.workspace.getLeaf('split').openFile(file);
                     } else {
                         // 開啟文件檔案到新分頁
-                        this.app.workspace.getLeaf(true).openFile(file);
+                        void this.app.workspace.getLeaf(true).openFile(file);
                     }
                 }
                 event.preventDefault();
@@ -1632,12 +1638,12 @@ export class GridView extends ItemView {
                         this.openMediaFile(file, files);
                     }
                 } else if (file.extension === 'pdf' || file.extension === 'canvas' || file.extension === 'base') {
-                    this.getLeafByMode(file).openFile(file);
+                    void this.getLeafByMode(file).openFile(file);
                 } else {
                     // 非媒體檔案
                     // 如果是捷徑檔案，則開啟捷徑，否則在網格視圖中直接顯示筆記
                     if (!this.openShortcutFile(file)) {
-                        this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
+                        void this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
                     }
                 }
                 event.preventDefault();
@@ -1662,7 +1668,8 @@ export class GridView extends ItemView {
                         // 非捷徑就正常開啟檔案
                         const leaf = this.getLeafByMode(file);
                         if (this.searchQuery) {
-                            this.app.vault.cachedRead(file).then((content) => {
+                            void (async () => {
+                                const content = await this.app.vault.cachedRead(file);
                                 const searchQuery = this.searchQuery;
                                 const lowerContent = content.toLowerCase();
                                 let idx = -1;
@@ -1688,16 +1695,15 @@ export class GridView extends ItemView {
 
                                 if (idx !== -1) {
                                     lineNumber = content.substring(0, idx).split('\n').length - 1;
-                                    leaf.openFile(file, { eState: { line: lineNumber } }).then(() => {
-                                        (this.app as any)?.commands?.executeCommandById?.('editor:focus');
-                                    });
+                                    await leaf.openFile(file, { eState: { line: lineNumber } });
+                                    (this.app as any)?.commands?.executeCommandById?.('editor:focus');
                                     return;
                                 }
                                 // 若都找不到關鍵字，直接開檔
-                                leaf.openFile(file);
-                            });
+                                await leaf.openFile(file);
+                            })();
                         } else {
-                            leaf.openFile(file);
+                            void leaf.openFile(file);
                         }
                     }
                 }
@@ -1715,7 +1721,7 @@ export class GridView extends ItemView {
             if (event.button === 1) {
                 event.preventDefault();
                 if (!isMediaFile(file)) {
-                    this.app.workspace.getLeaf(true).openFile(file);
+                    void this.app.workspace.getLeaf(true).openFile(file);
                 }
             }
         });
@@ -1765,19 +1771,19 @@ export class GridView extends ItemView {
                     drag_filename = file.basename;
                 }
 
-                const dragImage = document.createElement('div');
+                const dragImage = activeDocument.createElement('div');
                 dragImage.className = 'ge-custom-drag-preview';
                 dragImage.textContent = drag_filename;
 
                 // 將元素暫時加入 DOM
-                document.body.appendChild(dragImage);
+                activeDocument.body.appendChild(dragImage);
 
                 // 設定拖曳圖示
                 event.dataTransfer!.setDragImage(dragImage, 20, 20);
 
                 // 延遲移除元素（讓拖曳圖示正常顯示）
-                setTimeout(() => {
-                    document.body.removeChild(dragImage);
+                window.setTimeout(() => {
+                    activeDocument.body.removeChild(dragImage);
                 }, 0);
 
                 // 設定拖曳效果
@@ -1838,10 +1844,10 @@ export class GridView extends ItemView {
                         if (selectedFiles.length > 1) {
                             // 如果多個檔案被選中，開啟所有檔案
                             for (const f of selectedFiles) {
-                                this.app.workspace.getLeaf(true).openFile(f);
+                                void this.app.workspace.getLeaf(true).openFile(f);
                             }
                         } else {
-                            this.app.workspace.getLeaf(true).openFile(file);
+                            void this.app.workspace.getLeaf(true).openFile(file);
                         }
                     });
             });
@@ -1864,18 +1870,20 @@ export class GridView extends ItemView {
                 item
                     .setTitle(t('delete_note'))
                     .setIcon("trash")
-                    .onClick(async () => {
-                        if (selectedFiles.length > 1) {
+                    .onClick(() => {
+                        void (async () => {
+                            if (selectedFiles.length > 1) {
                             // 刪除多個檔案
-                            for (const f of selectedFiles) {
-                                await this.app.fileManager.trashFile(f);
-                            }
-                        } else {
+                                for (const f of selectedFiles) {
+                                    await this.app.fileManager.trashFile(f);
+                                }
+                            } else {
                             // 刪除單個檔案
-                            await this.app.fileManager.trashFile(file);
-                        }
+                                await this.app.fileManager.trashFile(file);
+                            }
                         // 清除選中狀態
-                        this.clearSelection();
+                            this.clearSelection();
+                        })();
                     });
             });
             menu.showAtMouseEvent(event);
@@ -1922,7 +1930,7 @@ export class GridView extends ItemView {
                 .onClick(() => {
                     this.hideHeaderElements = !this.hideHeaderElements;
                     this.app.workspace.requestSaveLayout();
-                    this.render();
+                    void this.render();
                 });
         });
         menu.addItem((item) => {
@@ -1938,7 +1946,7 @@ export class GridView extends ItemView {
                 .setTitle(t('refresh'))
                 .setIcon("refresh-cw")
                 .onClick(() => {
-                    this.render();
+                    void this.render();
                 });
         });
     }
@@ -2120,7 +2128,7 @@ export class GridView extends ItemView {
                 if (!target) return false;
 
                 if (target instanceof TFile) {
-                    this.getLeafByMode(target).openFile(target);
+                    void this.getLeafByMode(target).openFile(target);
                     return true;
                 } else {
                     new Notice(`${t('target_not_found')}: ${redirectPath}`);
@@ -2131,13 +2139,13 @@ export class GridView extends ItemView {
 
                 // 判斷redirectPath是否為資料夾
                 if (target instanceof TFolder) {
-                    this.setSource('folder', redirectPath);
+                    void this.setSource('folder', redirectPath);
                     this.clearSelection();
-                    requestAnimationFrame(async () => {
+                    window.requestAnimationFrame(() => {
                         const cardLayout = fileCache?.frontmatter?.cardLayout;
                         if (cardLayout && cardLayout !== this.cardLayout) {
                             this.cardLayout = cardLayout;
-                            this.render();
+                            void this.render();
                         }
                     });
                     return true;
@@ -2146,13 +2154,13 @@ export class GridView extends ItemView {
                 }
             } else if (redirectType === 'mode') {
                 // 判斷redirectPath是否為模式
-                this.setSource(redirectPath);
+                void this.setSource(redirectPath);
                 this.clearSelection();
-                requestAnimationFrame(async () => {
+                window.requestAnimationFrame(() => {
                     const cardLayout = fileCache?.frontmatter?.cardLayout;
                     if (cardLayout && cardLayout !== this.cardLayout) {
                         this.cardLayout = cardLayout;
-                        this.render();
+                        void this.render();
                     }
                 });
                 return true;
@@ -2160,7 +2168,7 @@ export class GridView extends ItemView {
                 const searchCurrentLocationOnly = fileCache?.frontmatter?.searchCurrentLocationOnly || false;
                 const searchFilesNameOnly = fileCache?.frontmatter?.searchFilesNameOnly || false;
                 const searchMediaFiles = fileCache?.frontmatter?.searchMediaFiles || false;
-                this.setSource('', '', true, redirectPath, searchCurrentLocationOnly, searchFilesNameOnly, searchMediaFiles);
+                void this.setSource('', '', true, redirectPath, searchCurrentLocationOnly, searchFilesNameOnly, searchMediaFiles);
                 this.clearSelection();
                 return true;
             } else if (redirectType === 'uri') {
@@ -2212,7 +2220,7 @@ export class GridView extends ItemView {
         const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
         setIcon(editButton, 'pencil');
         editButton.addEventListener('click', () => {
-            this.getLeafByMode(file).openFile(file);
+            void this.getLeafByMode(file).openFile(file);
         });
 
         // Metadata 切換按鈕
@@ -2349,7 +2357,7 @@ export class GridView extends ItemView {
                                     e.preventDefault();
                                     const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
                                     if (linkedFile) {
-                                        this.getLeafByMode(linkedFile).openFile(linkedFile);
+                                        void this.getLeafByMode(linkedFile).openFile(linkedFile);
                                     }
                                 });
                                 lastIndex = wikilinkRegex.lastIndex;
@@ -2458,7 +2466,7 @@ export class GridView extends ItemView {
                         const linkText = link.getAttribute('data-href') || href;
                         const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
                         if (linkedFile) {
-                            this.getLeafByMode(linkedFile).openFile(linkedFile);
+                            void this.getLeafByMode(linkedFile).openFile(linkedFile);
                         }
                     }
                 }
@@ -2567,7 +2575,7 @@ export class GridView extends ItemView {
                     const targetY = isPullingUp ? '-100vh' : '100vh';
                     this.noteViewContainer.style.transition = 'transform 0.2s ease-out';
                     this.noteViewContainer.style.transform = `translateY(${targetY})`;
-                    setTimeout(() => {
+                    window.setTimeout(() => {
                         this.hideNoteInGrid();
                         if (this.noteViewContainer) {
                             this.noteViewContainer.style.transform = '';
@@ -2578,7 +2586,7 @@ export class GridView extends ItemView {
                     // 距離不夠，彈回原位
                     this.noteViewContainer.style.transition = 'transform 0.3s ease-out';
                     this.noteViewContainer.style.transform = `translateY(0)`;
-                    setTimeout(() => {
+                    window.setTimeout(() => {
                         if (this.noteViewContainer) {
                             this.noteViewContainer.style.transform = '';
                             this.noteViewContainer.style.transition = '';
@@ -2603,7 +2611,7 @@ export class GridView extends ItemView {
             }
         };
 
-        document.addEventListener('keydown', handleKeyDown);
+        activeDocument.addEventListener('keydown', handleKeyDown);
 
         // 儲存事件監聽器以便後續移除
         (this.noteViewContainer as any).keydownHandler = handleKeyDown;
@@ -2615,7 +2623,7 @@ export class GridView extends ItemView {
 
         // 顯示移動端導航欄 (僅在行動裝置上)
         if (Platform.isPhone) {
-            const mobileNavbar = document.querySelector('.mobile-navbar') as HTMLElement;
+            const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
             if (mobileNavbar) {
                 mobileNavbar.style.transform = 'translateY(0)';
                 mobileNavbar.style.transition = 'transform 0.3s ease-in';
@@ -2626,7 +2634,7 @@ export class GridView extends ItemView {
             // 移除鍵盤事件監聽器
             const keydownHandler = (this.noteViewContainer as any).keydownHandler;
             if (keydownHandler) {
-                document.removeEventListener('keydown', keydownHandler);
+                activeDocument.removeEventListener('keydown', keydownHandler);
             }
 
             this.noteViewContainer.remove();

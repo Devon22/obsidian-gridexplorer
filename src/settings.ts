@@ -20,6 +20,23 @@ export interface CustomMode {
     fields?: string;
 }
 
+function isCustomMode(value: unknown): value is CustomMode {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        'internalName' in value &&
+        typeof value.internalName === 'string' &&
+        value.internalName.length > 0 &&
+        'displayName' in value &&
+        typeof value.displayName === 'string' &&
+        value.displayName.length > 0 &&
+        'dataviewCode' in value &&
+        typeof value.dataviewCode === 'string' &&
+        value.dataviewCode.length > 0
+    );
+}
+
 export interface GallerySettings {
     ignoredFolders: string[]; // 要忽略的資料夾路徑
     ignoredFolderPatterns: string[]; // 要忽略的資料夾模式
@@ -217,15 +234,17 @@ class IgnoredFolderSuggest extends AbstractInputSuggest<string> {
         el.setText(suggestion);
     }
 
-    async selectSuggestion(suggestion: string): Promise<void> {
-        if (suggestion && !this.plugin.settings.ignoredFolders.includes(suggestion)) {
-            this.plugin.settings.ignoredFolders.push(suggestion);
-            await this.plugin.saveSettings();
+    selectSuggestion(suggestion: string): void {
+        void (async () => {
+            if (suggestion && !this.plugin.settings.ignoredFolders.includes(suggestion)) {
+                this.plugin.settings.ignoredFolders.push(suggestion);
+                await this.plugin.saveSettings();
 
-            this.inputEl.value = ''; // Clear the input
-            this.settingTab.display(); // Re-render the settings tab to update the list
-        }
-        this.close();
+                this.inputEl.value = ''; // Clear the input
+                this.settingTab.display(); // Re-render the settings tab to update the list
+            }
+            this.close();
+        })();
     }
 }
 
@@ -295,26 +314,28 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             });
 
             // 放下項目時，更新順序
-            setting.settingEl.addEventListener('drop', async (event: DragEvent) => {
-                event.preventDefault();
-                if (!event.dataTransfer) return;
+            setting.settingEl.addEventListener('drop', (event: DragEvent) => {
+                void (async () => {
+                    event.preventDefault();
+                    if (!event.dataTransfer) return;
 
-                const fromIndexStr = event.dataTransfer.getData('text/plain');
-                if (!fromIndexStr) return;
+                    const fromIndexStr = event.dataTransfer.getData('text/plain');
+                    if (!fromIndexStr) return;
 
-                const fromIndex = parseInt(fromIndexStr);
-                const toIndex = index;
+                    const fromIndex = parseInt(fromIndexStr);
+                    const toIndex = index;
 
-                if (fromIndex === toIndex) return;
+                    if (fromIndex === toIndex) return;
 
-                // 重新排序陣列
-                const modes = this.plugin.settings.customModes;
-                const movedMode = modes.splice(fromIndex, 1)[0];
-                modes.splice(toIndex, 0, movedMode);
+                    // 重新排序陣列
+                    const modes = this.plugin.settings.customModes;
+                    const movedMode = modes.splice(fromIndex, 1)[0];
+                    modes.splice(toIndex, 0, movedMode);
 
-                // 儲存設定並重新整理顯示
-                await this.plugin.saveSettings();
-                this.display();
+                    // 儲存設定並重新整理顯示
+                    await this.plugin.saveSettings();
+                    this.display();
+                })();
             });
 
             // 編輯按鈕
@@ -328,7 +349,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         if (modeIndex === -1) return;
                         new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
                             this.plugin.settings.customModes[modeIndex] = result;
-                            this.plugin.saveSettings();
+                            void this.plugin.saveSettings();
                             this.display();
                         }).open();
                     });
@@ -345,7 +366,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
                         if (modeIndex === -1) return;
                         this.plugin.settings.customModes.splice(modeIndex, 1);
-                        this.plugin.saveSettings();
+                        void this.plugin.saveSettings();
                         this.display();
                     });
             });
@@ -357,10 +378,12 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setCta()
                     .setTooltip(t('add_custom_mode'))
                     .onClick(() => {
-                        new CustomModeModal(this.app, this.plugin, null, async (result) => {
-                            this.plugin.settings.customModes.push(result);
-                            await this.plugin.saveSettings();
-                            this.display();
+                        new CustomModeModal(this.app, this.plugin, null, (result) => {
+                            void (async () => {
+                                this.plugin.settings.customModes.push(result);
+                                await this.plugin.saveSettings();
+                                this.display();
+                            })();
                         }).open();
                     });
             })
@@ -398,7 +421,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                             // 桌面版：使用傳統的瀏覽器下載方法
                             const blob = new Blob([data], { type: 'application/json' });
                             const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
+                            const a = activeDocument.createElement('a');
                             a.href = url;
                             a.download = 'gridexplorer-custom-modes.json';
                             a.click();
@@ -410,7 +433,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 button.setButtonText(t('import'))
                     .setTooltip(t('import'))
                     .onClick(() => {
-                        const input = document.createElement('input');
+                        const input = activeDocument.createElement('input');
                         input.type = 'file';
                         input.accept = '.json';
                         input.onchange = async (e) => {
@@ -429,9 +452,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
                                 try {
                                     const content = e.target.result;
-                                    const importedModes = JSON.parse(content);
+                                    const importedModes: unknown = JSON.parse(content);
                                     if (Array.isArray(importedModes)) {
-                                        const validModes = importedModes.filter(m => m.internalName && m.displayName && m.dataviewCode);
+                                        const validModes = importedModes.filter(isCustomMode);
                                         if (validModes.length > 0) {
                                             validModes.forEach(importedMode => {
                                                 const existingModeIndex = this.plugin.settings.customModes.findIndex(
@@ -545,9 +568,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         });
 
         // 在設定描述區域添加數字輸入框
-        const recentDescEl = recentFilesSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
+        const recentDescEl = recentFilesSetting.descEl.createDiv({ cls: 'ge-setting-desc' });
 
-        recentDescEl.createEl('span', { text: t('recent_files_count') });
+        recentDescEl.createSpan({ text: t('recent_files_count') })
 
         const recentInput = recentDescEl.createEl('input', {
             type: 'number',
@@ -555,15 +578,17 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             cls: 'ge-setting-number-input'
         });
 
-        recentInput.addEventListener('change', async (e) => {
-            const target = e.target as HTMLInputElement;
-            const value = parseInt(target.value);
-            if (!isNaN(value) && value > 0) {
-                this.plugin.settings.recentFilesCount = value;
-                await this.plugin.saveSettings(false);
-            } else {
-                target.value = this.plugin.settings.recentFilesCount.toString();
-            }
+        recentInput.addEventListener('change', (e) => {
+            void (async () => {
+                const target = e.target as HTMLInputElement;
+                const value = parseInt(target.value);
+                if (!isNaN(value) && value > 0) {
+                    this.plugin.settings.recentFilesCount = value;
+                    await this.plugin.saveSettings(false);
+                } else {
+                    target.value = this.plugin.settings.recentFilesCount.toString();
+                }
+            })();
         });
 
         // 隨機筆記模式設定
@@ -581,9 +606,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         });
 
         // 在設定描述區域添加數字輸入框
-        const descEl = randomNoteSetting.descEl.createEl('div', { cls: 'ge-setting-desc' });
+        const descEl = randomNoteSetting.descEl.createDiv({ cls: 'ge-setting-desc' });
 
-        descEl.createEl('span', { text: t('random_note_count') });
+        descEl.createSpan({ text: t('random_note_count') })
 
         const input = descEl.createEl('input', {
             type: 'number',
@@ -591,16 +616,20 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             cls: 'ge-setting-number-input'
         });
 
-        input.addEventListener('change', async (e) => {
-            const target = e.target as HTMLInputElement;
-            const value = parseInt(target.value);
-            if (!isNaN(value) && value > 0) {
-                this.plugin.settings.randomNoteCount = value;
-                await this.plugin.saveSettings(false);
-            } else {
-                target.value = this.plugin.settings.randomNoteCount.toString();
-            }
+        input.addEventListener('change', (e) => {
+            void (async () => {
+                const target = e.target as HTMLInputElement;
+                const value = parseInt(target.value);
+
+                if (!isNaN(value) && value > 0) {
+                    this.plugin.settings.randomNoteCount = value;
+                    await this.plugin.saveSettings(false);
+                } else {
+                    target.value = this.plugin.settings.randomNoteCount.toString();
+                }
+            })();
         });
+
 
         // 顯示任務模式
         new Setting(sectionEl)
@@ -1331,7 +1360,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         // 桌面版：使用傳統的瀏覽器下載方法
                         const blob = new Blob([data], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
+                        const a = activeDocument.createElement('a');
                         a.href = url;
                         a.download = 'gridexplorer-settings.json';
                         a.click();
@@ -1343,7 +1372,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setButtonText(t('import'))
                 .setTooltip(t('import'))
                 .onClick(() => {
-                    const input = document.createElement('input');
+                    const input = activeDocument.createElement('input');
                     input.type = 'file';
                     input.accept = '.json';
                     input.onchange = async (e) => {
@@ -1360,9 +1389,14 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                             }
                             try {
                                 const content = evt.target.result;
-                                const importedSettings = JSON.parse(content);
-                                if (importedSettings && typeof importedSettings === 'object') {
-                                    this.plugin.settings = { ...DEFAULT_SETTINGS, ...importedSettings } as typeof DEFAULT_SETTINGS;
+                                const importedSettings: unknown = JSON.parse(content);
+
+                                if (
+                                    importedSettings &&
+                                    typeof importedSettings === 'object' &&
+                                    !Array.isArray(importedSettings)
+                                ) {
+                                    this.plugin.settings = { ...DEFAULT_SETTINGS, ...importedSettings };
                                     await this.plugin.saveSettings();
                                     this.display();
                                     new Notice(t('import_success'));
@@ -1402,15 +1436,16 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 text: t('remove')
             });
 
-            removeButton.addEventListener('click', async () => {
-                // 從忽略列表中移除
-                this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders
-                    .filter(f => f !== folder);
-                await this.plugin.saveSettings();
+            removeButton.addEventListener('click', () => {
+                void (async () => {
+                    // 從忽略列表中移除
+                    this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders
+                        .filter(f => f !== folder);
+                    await this.plugin.saveSettings();
 
-                // 重新渲染列表
-                this.renderIgnoredFoldersList(containerEl);
-                // this.display();
+                    // 重新渲染列表
+                    this.renderIgnoredFoldersList(containerEl);
+                })();
             });
         });
     }
@@ -1436,14 +1471,16 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 text: t('remove')
             });
 
-            removeButton.addEventListener('click', async () => {
-                // 從忽略模式列表中移除
-                this.plugin.settings.ignoredFolderPatterns = this.plugin.settings.ignoredFolderPatterns
-                    .filter(p => p !== pattern);
-                await this.plugin.saveSettings();
+            removeButton.addEventListener('click', () => {
+                void (async () => {
+                    // 從忽略模式列表中移除
+                    this.plugin.settings.ignoredFolderPatterns = this.plugin.settings.ignoredFolderPatterns
+                        .filter(p => p !== pattern);
+                    await this.plugin.saveSettings();
 
-                // 重新渲染列表
-                this.renderIgnoredFolderPatternsList(containerEl);
+                    // 重新渲染列表
+                    this.renderIgnoredFolderPatternsList(containerEl);
+                })();
             });
         });
     }

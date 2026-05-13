@@ -1,4 +1,4 @@
-import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, Notice } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './utils/fileUtils';
@@ -156,7 +156,9 @@ export class ExplorerView extends ItemView {
                 .filter((p: unknown) => typeof p === 'string' && p)
                 .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
             this.stashFilePaths = Array.from(new Set(validPaths));
-        } catch {}
+        } catch (error) {
+            console.error('ExplorerView: Failed to load stash from settings', error);
+        }
     }
 
     // 將目前的暫存清單寫回設定（去重）
@@ -165,8 +167,10 @@ export class ExplorerView extends ItemView {
             const unique = Array.from(new Set(this.stashFilePaths));
             (this.plugin.settings as any).explorerStashPaths = unique;
             // 保存但不觸發整體視圖更新，避免頻繁重繪
-            this.plugin.saveSettings(false);
-        } catch {}
+            void this.plugin.saveSettings(false);
+        } catch (error) {
+            console.error('ExplorerView: Failed to save stash to settings', error);
+        }
     }
 
     // 同步搜尋輸入框狀態
@@ -273,8 +277,12 @@ export class ExplorerView extends ItemView {
     private cleanupEventListeners() {
         const { vault, workspace } = this.app;
         for (const ref of this.eventRefs) {
-            try { vault.offref(ref); } catch { }
-            try { workspace.offref(ref); } catch { }
+            try { vault.offref(ref); } catch (error) {
+                console.error('ExplorerView: Failed to remove vault event listener', error);
+            }
+            try { workspace.offref(ref); } catch (error) {
+                console.error('ExplorerView: Failed to remove workspace event listener', error);
+            }
         }
         this.eventRefs = [];
     }
@@ -319,7 +327,7 @@ export class ExplorerView extends ItemView {
         if (leaf.view instanceof GridView) {
             leaf.view.setSource('folder', folderPath);
         }
-        workspace.revealLeaf(leaf);
+        void workspace.revealLeaf(leaf);
     }
 
     // 在新視圖中開啟模式
@@ -343,7 +351,7 @@ export class ExplorerView extends ItemView {
         if (leaf.view instanceof GridView) {
             leaf.view.setSource(mode);
         }
-        workspace.revealLeaf(leaf);
+        void workspace.revealLeaf(leaf);
     }
 
     // 主要渲染方法
@@ -384,13 +392,15 @@ export class ExplorerView extends ItemView {
     // 處理搜尋框焦點
     private handleSearchFocus() {
         if (this.keepSearchFocus && this.searchInputEl) {
-            setTimeout(() => {
+            window.setTimeout(() => {
                 if (this.searchInputEl) {
                     this.searchInputEl.focus();
                     try {
                         const len = this.searchInputEl.value.length;
                         this.searchInputEl.setSelectionRange(len, len);
-                    } catch { }
+                    } catch (error) {
+                        console.error('ExplorerView: Failed to set selection range', error);
+                    }
                 }
             }, 0);
             this.keepSearchFocus = false;
@@ -474,7 +484,7 @@ export class ExplorerView extends ItemView {
         clearBtn.removeClass('show');
         this.scheduleRender();
         this.app.workspace.requestSaveLayout();
-        setTimeout(() => this.searchInputEl?.focus(), 0);
+        window.setTimeout(() => this.searchInputEl?.focus(), 0);
     }
 
     /**
@@ -514,7 +524,7 @@ export class ExplorerView extends ItemView {
                     this.scheduleRender();
                     // 通知 Obsidian 保存視圖狀態
                     this.app.workspace.requestSaveLayout();
-                    setTimeout(() => this.searchInputEl?.focus(), 0);
+                    window.setTimeout(() => this.searchInputEl?.focus(), 0);
                 }
             });
         }
@@ -789,7 +799,7 @@ export class ExplorerView extends ItemView {
                         if (modeIndex === -1) return;
                         new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result: any) => {
                             this.plugin.settings.customModes[modeIndex] = result;
-                            this.plugin.saveSettings();
+                            void this.plugin.saveSettings();
                             this.scheduleRender();
                         }).open();
                     });
@@ -877,47 +887,49 @@ export class ExplorerView extends ItemView {
         const foldersChildren = foldersNode.createDiv({ cls: 'ge-explorer-folder-children' });
         if (!foldersExpanded) foldersChildren.addClass('is-collapsed');
 
-        foldersHeader.addEventListener('click', async (evt) => {
-            // 判斷點擊的是切換箭頭、資料夾名稱還是空白區域
-            if ((evt.target as HTMLElement).closest('.ge-explorer-folder-toggle')) {
-                // 點擊箭頭：只展開/收合
-                const newExpanded = !this.isExpanded(foldersGroupKey);
-                this.setExpanded(foldersGroupKey, newExpanded);
-                setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
-                foldersChildren.toggleClass('is-collapsed', !newExpanded);
-            } else if ((evt.target as HTMLElement).closest('.ge-explorer-folder-name')) {
-                // 點擊資料夾名稱：可能展開/收合，也可能開啟 GridView
-                // Ctrl/Meta + 點擊：在新的 GridView 分頁中開啟
-                if (evt.ctrlKey || evt.metaKey) {
-                    this.openFolderInNewView(rootPath);
-                    return;
-                }
-
-                const isActive = foldersHeader.hasClass('is-active');
-
-                // 如果已是選取狀態，處理展開/收合邏輯
-                if (isActive) {
-                    const currentExpanded = this.isExpanded(foldersGroupKey);
-                    const newExpanded = !currentExpanded;
-
-                    // 切換展開狀態
+        foldersHeader.addEventListener('click', (evt) => {
+            void (async () => {
+                // 判斷點擊的是切換箭頭、資料夾名稱還是空白區域
+                if ((evt.target as HTMLElement).closest('.ge-explorer-folder-toggle')) {
+                    // 點擊箭頭：只展開/收合
+                    const newExpanded = !this.isExpanded(foldersGroupKey);
+                    this.setExpanded(foldersGroupKey, newExpanded);
                     setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
                     foldersChildren.toggleClass('is-collapsed', !newExpanded);
-                    this.setExpanded(foldersGroupKey, newExpanded);
-                    return;
-                }
+                } else if ((evt.target as HTMLElement).closest('.ge-explorer-folder-name')) {
+                    // 點擊資料夾名稱：可能展開/收合，也可能開啟 GridView
+                    // Ctrl/Meta + 點擊：在新的 GridView 分頁中開啟
+                    if (evt.ctrlKey || evt.metaKey) {
+                        this.openFolderInNewView(rootPath);
+                        return;
+                    }
 
-                // 開啟 Vault 根目錄
-                const root = this.app.vault.getRoot();
-                const view = await this.plugin.activateView();
-                if (view instanceof GridView) await view.setSource('folder', (root as any).path ?? '/');
-            } else {
-                // 點擊空白區域：展開/收合
-                const newExpanded = !this.isExpanded(foldersGroupKey);
-                this.setExpanded(foldersGroupKey, newExpanded);
-                setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
-                foldersChildren.toggleClass('is-collapsed', !newExpanded);
-            }
+                    const isActive = foldersHeader.hasClass('is-active');
+
+                    // 如果已是選取狀態，處理展開/收合邏輯
+                    if (isActive) {
+                        const currentExpanded = this.isExpanded(foldersGroupKey);
+                        const newExpanded = !currentExpanded;
+
+                        // 切換展開狀態
+                        setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
+                        foldersChildren.toggleClass('is-collapsed', !newExpanded);
+                        this.setExpanded(foldersGroupKey, newExpanded);
+                        return;
+                    }
+
+                    // 開啟 Vault 根目錄
+                    const root = this.app.vault.getRoot();
+                    const view = await this.plugin.activateView();
+                    if (view instanceof GridView) await view.setSource('folder', (root as any).path ?? '/');
+                } else {
+                    // 點擊空白區域：展開/收合
+                    const newExpanded = !this.isExpanded(foldersGroupKey);
+                    this.setExpanded(foldersGroupKey, newExpanded);
+                    setIcon(foldersToggle, newExpanded ? 'chevron-down' : 'chevron-right');
+                    foldersChildren.toggleClass('is-collapsed', !newExpanded);
+                }
+            })();
         });
 
         return { foldersHeader, foldersChildren };
@@ -1116,7 +1128,7 @@ export class ExplorerView extends ItemView {
             const isActive = header.hasClass('is-active');
             if (!this.hasVisibleChildren(folder)) {
                 if (!isActive) {
-                    this.openFolderInGrid(folder.path);
+                    void this.openFolderInGrid(folder.path);
                 }
                 // 如果已選取且沒有子資料夾，則不做任何動作
             } else {
@@ -1411,16 +1423,17 @@ export class ExplorerView extends ItemView {
 
     // 打開檔案模糊搜尋並加入暫存區
     private openFileSuggestionForStash() {
-        const self = this;
+        const app = this.app;
+        const addFileToStash = (file: TFile) => this.addToStash([file.path]);
         class FileSuggest extends FuzzySuggestModal<TFile> {
             getItems(): TFile[] {
-                return self.app.vault.getMarkdownFiles();
+                return app.vault.getMarkdownFiles();
             }
             getItemText(file: TFile): string {
                 return file.path;
             }
             onChooseItem(file: TFile): void {
-                self.addToStash([file.path]);
+                addFileToStash(file);
             }
         }
         new FileSuggest(this.app).open();
@@ -1522,44 +1535,46 @@ export class ExplorerView extends ItemView {
 
     // 設置暫存項目點擊事件
     private setupStashItemClick(itemEl: HTMLElement, file: TFile, visibleFiles: TFile[]) {
-        itemEl.addEventListener('click', async (evt) => {
-            evt.stopPropagation();
+        itemEl.addEventListener('click', (evt) => {
+            void (async () => {
+                evt.stopPropagation();
 
-            if (isAudioFile(file)) {
-                FloatingAudioPlayer.open(this.app, file);
-                return;
-            }
+                if (isAudioFile(file)) {
+                    FloatingAudioPlayer.open(this.app, file);
+                    return;
+                }
 
-            if (isImageFile(file) || isVideoFile(file)) {
-                const mediaFiles = visibleFiles.filter((f) => isImageFile(f) || isVideoFile(f));
-                new MediaModal(this.app, file, mediaFiles).open();
-                return;
-            }
+                if (isImageFile(file) || isVideoFile(file)) {
+                    const mediaFiles = visibleFiles.filter((f) => isImageFile(f) || isVideoFile(f));
+                    new MediaModal(this.app, file, mediaFiles).open();
+                    return;
+                }
 
-            // 先判斷是否為捷徑檔（frontmatter 內有 type 與非空 redirect）
-            const fileCache = this.app.metadataCache.getFileCache(file);
-            const fm = fileCache?.frontmatter;
-            const isShortcut = !!(fm && fm.type && typeof fm.redirect === 'string' && fm.redirect.trim() !== '');
+                // 先判斷是否為捷徑檔（frontmatter 內有 type 與非空 redirect）
+                const fileCache = this.app.metadataCache.getFileCache(file);
+                const fm = fileCache?.frontmatter;
+                const isShortcut = !!(fm && fm.type && typeof fm.redirect === 'string' && fm.redirect.trim() !== '');
 
-            if (!isShortcut) {
-                // 非捷徑：直接開啟檔案，避免不必要的 activateView
-                if (evt.ctrlKey || evt.metaKey) {
-                    this.app.workspace.getLeaf(true).openFile(file);
+                if (!isShortcut) {
+                    // 非捷徑：直接開啟檔案，避免不必要的 activateView
+                    if (evt.ctrlKey || evt.metaKey) {
+                        void this.app.workspace.getLeaf(true).openFile(file);
+                    } else {
+                        void this.app.workspace.getLeaf().openFile(file);
+                    }
+                    return;
+                }
+
+                // 捷徑檔：啟用 GridView 並嘗試以捷徑邏輯開啟
+                const view = await this.plugin.activateView();
+                if (view instanceof GridView) {
+                    if (!(view as any).openShortcutFile || !(view as any).openShortcutFile(file)) {
+                        void this.app.workspace.getLeaf().openFile(file);
+                    }
                 } else {
-                    this.app.workspace.getLeaf().openFile(file);
+                    void this.app.workspace.getLeaf().openFile(file);
                 }
-                return;
-            }
-
-            // 捷徑檔：啟用 GridView 並嘗試以捷徑邏輯開啟
-            const view = await this.plugin.activateView();
-            if (view instanceof GridView) {
-                if (!(view as any).openShortcutFile || !(view as any).openShortcutFile(file)) {
-                    this.app.workspace.getLeaf().openFile(file);
-                }
-            } else {
-                this.app.workspace.getLeaf().openFile(file);
-            }
+            })();
         });
     }
 
@@ -1611,12 +1626,12 @@ export class ExplorerView extends ItemView {
 
     // 創建拖拽預覽
     private createDragPreview(event: DragEvent, basename: string) {
-        const dragImage = document.createElement('div');
+        const dragImage = activeDocument.createElement('div');
         dragImage.className = 'ge-custom-drag-preview';
         dragImage.textContent = basename;
-        document.body.appendChild(dragImage);
+        activeDocument.body.appendChild(dragImage);
         event.dataTransfer?.setDragImage(dragImage, 20, 20);
-        setTimeout(() => document.body.removeChild(dragImage), 0);
+        window.setTimeout(() => activeDocument.body.removeChild(dragImage), 0);
     }
 
     // 設置暫存項目拖放
@@ -1951,10 +1966,10 @@ export class ExplorerView extends ItemView {
                     const view = await this.plugin.activateView();
                     if (view instanceof GridView) {
                         if (!view.openShortcutFile(noteFile)) {
-                            this.app.workspace.getLeaf().openFile(noteFile);
+                            void this.app.workspace.getLeaf().openFile(noteFile);
                         }
                     } else {
-                        this.app.workspace.getLeaf().openFile(noteFile);
+                        void this.app.workspace.getLeaf().openFile(noteFile);
                     }
                 });
         });
@@ -1976,7 +1991,7 @@ export class ExplorerView extends ItemView {
             item.setTitle(t('delete_folder_note'))
                 .setIcon('folder-x')
                 .onClick(() => {
-                    this.app.fileManager.trashFile(noteFile);
+                    void this.app.fileManager.trashFile(noteFile);
                 });
         });
     }

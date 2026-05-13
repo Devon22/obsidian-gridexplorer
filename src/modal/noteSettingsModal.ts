@@ -206,7 +206,7 @@ export class NoteSettingsModal extends Modal {
                 .setButtonText(t('confirm'))
                 .setCta() // 設置為主要按鈕樣式
                 .onClick(() => {
-                    this.saveAttributes();
+                    void this.saveAttributes();
                     this.close();
                 });
         });
@@ -242,7 +242,7 @@ export class NoteSettingsModal extends Modal {
             }
 
             // 等待一小段時間以確保 metadata cache 已更新
-            setTimeout(() => {}, 200);
+            window.setTimeout(() => {}, 200);
 
             // 關閉 modal
             this.close();
@@ -365,7 +365,7 @@ export class NoteSettingsModal extends Modal {
             }
             
             // 等待一小段時間以確保 metadata cache 已更新
-            setTimeout(() => {}, 200);
+            window.setTimeout(() => {}, 200);
             
             // 只有在 isPinned 有變更時才更新資料夾筆記的 pinned 欄位
             if (this.initialIsPinned !== this.settings.isPinned) {
@@ -400,11 +400,11 @@ export class NoteSettingsModal extends Modal {
             }
 
             // 等待一小段時間以確保 metadata cache 已更新
-            setTimeout(() => {
+            window.setTimeout(() => {
                 // 重新渲染所有 grid-view 視圖
                 this.app.workspace.getLeavesOfType('grid-view').forEach(leaf => {
                     if (leaf.view instanceof GridView) {
-                        leaf.view.render();
+                        void leaf.view.render();
                     }
                 });
             }, 200);

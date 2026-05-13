@@ -280,7 +280,7 @@ export class SearchModal extends Modal {
                     searchInput.value = searchTerms.splice(currentInputIndex, 1)[0];
                     renderTagButtons();
                     e.preventDefault();
-                    setTimeout(() => searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length), 0);
+                    window.setTimeout(() => searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length), 0);
                 }
                 return;
             }
@@ -290,7 +290,7 @@ export class SearchModal extends Modal {
                     searchInput.value = searchTerms.splice(currentInputIndex, 1)[0];
                     renderTagButtons();
                     e.preventDefault();
-                    setTimeout(() => searchInput.setSelectionRange(0, 0), 0);
+                    window.setTimeout(() => searchInput.setSelectionRange(0, 0), 0);
                 }
                 return;
             }
@@ -396,14 +396,14 @@ export class SearchModal extends Modal {
 
         // 創建單一標籤按鈕
         const createTagButton = (term: string, index: number) => {
-            const tagDiv = document.createElement('div');
+            const tagDiv = activeDocument.createElement('div');
             tagDiv.className = 'ge-search-tag-button';
             if (term.startsWith('#')) {
                 tagDiv.classList.add('is-tag');
             }
             tagDiv.textContent = term;
 
-            const deleteButton = document.createElement('div');
+            const deleteButton = activeDocument.createElement('div');
             deleteButton.className = 'ge-search-tag-delete-button';
             setIcon(deleteButton, 'x');
             tagDiv.appendChild(deleteButton);
@@ -511,7 +511,7 @@ export class SearchModal extends Modal {
             this.gridView.searchMediaFiles = searchMediaFilesCheckbox.checked;
             this.gridView.clearSelection();
             this.gridView.app.workspace.requestSaveLayout();
-            this.gridView.render();
+            void this.gridView.render();
             this.close();
         };
 

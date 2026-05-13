@@ -183,7 +183,7 @@ export class FolderNoteSettingsModal extends Modal {
                 .setButtonText(t('confirm'))
                 .setCta() // 設置為主要按鈕樣式
                 .onClick(() => {
-                    this.saveFolderNote();
+                    void this.saveFolderNote();
                     this.close();
                 });
         });
@@ -308,11 +308,11 @@ export class FolderNoteSettingsModal extends Modal {
             this.app.workspace.trigger('grid-explorer:folder-note-updated', this.folder.path);
 
             // 等待一小段時間以確保 metadata cache 已更新
-            setTimeout(() => {
+            window.setTimeout(() => {
                 // 重新渲染所有 grid-view 視圖
                 this.app.workspace.getLeavesOfType('grid-view').forEach(leaf => {
                     if (leaf.view instanceof GridView) {
-                        leaf.view.render();
+                        void leaf.view.render();
                     }
                 });
                 // 再次通知（保險）

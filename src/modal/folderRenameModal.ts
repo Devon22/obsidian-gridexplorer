@@ -132,7 +132,7 @@ export class FolderRenameModal extends Modal {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         this.newName = text.getValue();
-                        this.renameFolder();
+                        void this.renameFolder();
                         this.close();
                     }
                 });
@@ -144,7 +144,7 @@ export class FolderRenameModal extends Modal {
                     .setButtonText(t('confirm'))
                     .setCta()
                     .onClick(() => {
-                        this.renameFolder();
+                        void this.renameFolder();
                         this.close();
                     });
             })
@@ -163,11 +163,11 @@ export class FolderRenameModal extends Modal {
             const newPath = normalizePath(parentPath ? `${parentPath}/${this.newName}` : this.newName);
             await this.app.fileManager.renameFile(this.folder, newPath);
             // 重新渲染視圖
-            setTimeout(() => {
+            window.setTimeout(() => {
                 if (this.plugin.settings.folderDisplayStyle !== 'show') {
-                    this.gridView.setSource('folder', newPath || '/');
+                    void this.gridView.setSource('folder', newPath || '/');
                 } else {
-                    this.gridView.render();
+                    void this.gridView.render();
                 }
             }, 100);
         } catch (error) {

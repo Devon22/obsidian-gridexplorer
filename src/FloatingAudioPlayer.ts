@@ -31,13 +31,13 @@ export class FloatingAudioPlayer {
         this.currentFile = file;
 
         // 綁定事件處理器
-        this.boundHandleDragStartMouse = this.handleDragStartMouse.bind(this);
-        this.boundHandleDragStartTouch = this.handleDragStartTouch.bind(this);
-        this.boundHandleDragMoveMouse = this.handleDragMoveMouse.bind(this);
-        this.boundHandleDragMoveTouch = this.handleDragMoveTouch.bind(this);
-        this.boundHandleDragEndMouse = this.handleDragEndMouse.bind(this);
-        this.boundHandleDragEndTouch = this.handleDragEndTouch.bind(this);
-        this.boundClose = this.close.bind(this);
+        this.boundHandleDragStartMouse = (e) => this.handleDragStartMouse(e);
+        this.boundHandleDragStartTouch = (e) => this.handleDragStartTouch(e);
+        this.boundHandleDragMoveMouse = (e) => this.handleDragMoveMouse(e);
+        this.boundHandleDragMoveTouch = (e) => this.handleDragMoveTouch(e);
+        this.boundHandleDragEndMouse = () => this.handleDragEndMouse();
+        this.boundHandleDragEndTouch = () => this.handleDragEndTouch();
+        this.boundClose = () => this.close();
 
         this.buildUI();
         this.setupDragEvents();
@@ -70,24 +70,24 @@ export class FloatingAudioPlayer {
 
     // --- Private UI 和事件設定方法 ---
     private buildUI(): void {
-        this.containerEl = document.createElement('div');
+        this.containerEl = activeDocument.createElement('div');
         this.containerEl.className = 'ge-floating-audio-player';
         this.containerEl.setAttribute('data-file', this.currentFile.path);
 
-        this.audioEl = document.createElement('audio');
+        this.audioEl = activeDocument.createElement('audio');
         this.audioEl.controls = true;
         this.audioEl.src = this.app.vault.getResourcePath(this.currentFile);
 
-        this.titleEl = document.createElement('div');
+        this.titleEl = activeDocument.createElement('div');
         this.titleEl.className = 'ge-audio-title';
         this.titleEl.textContent = this.currentFile.basename;
 
-        this.closeButtonEl = document.createElement('div');
+        this.closeButtonEl = activeDocument.createElement('div');
         this.closeButtonEl.className = 'ge-audio-close-button';
         setIcon(this.closeButtonEl, 'x');
         this.closeButtonEl.addEventListener('click', this.boundClose);
 
-        this.handleEl = document.createElement('div');
+        this.handleEl = activeDocument.createElement('div');
         this.handleEl.className = 'ge-audio-handle';
 
         this.containerEl.appendChild(this.handleEl);
@@ -100,22 +100,22 @@ export class FloatingAudioPlayer {
         this.handleEl.addEventListener('mousedown', this.boundHandleDragStartMouse);
         this.handleEl.addEventListener('touchstart', this.boundHandleDragStartTouch, { passive: true });
 
-        document.addEventListener('mousemove', this.boundHandleDragMoveMouse);
-        document.addEventListener('touchmove', this.boundHandleDragMoveTouch, { passive: false });
+        activeDocument.addEventListener('mousemove', this.boundHandleDragMoveMouse);
+        activeDocument.addEventListener('touchmove', this.boundHandleDragMoveTouch, { passive: false });
 
-        document.addEventListener('mouseup', this.boundHandleDragEndMouse);
-        document.addEventListener('touchend', this.boundHandleDragEndTouch);
+        activeDocument.addEventListener('mouseup', this.boundHandleDragEndMouse);
+        activeDocument.addEventListener('touchend', this.boundHandleDragEndTouch);
     }
 
     private removeDragEvents(): void {
         this.handleEl.removeEventListener('mousedown', this.boundHandleDragStartMouse);
         this.handleEl.removeEventListener('touchstart', this.boundHandleDragStartTouch);
 
-        document.removeEventListener('mousemove', this.boundHandleDragMoveMouse);
-        document.removeEventListener('touchmove', this.boundHandleDragMoveTouch);
+        activeDocument.removeEventListener('mousemove', this.boundHandleDragMoveMouse);
+        activeDocument.removeEventListener('touchmove', this.boundHandleDragMoveTouch);
 
-        document.removeEventListener('mouseup', this.boundHandleDragEndMouse);
-        document.removeEventListener('touchend', this.boundHandleDragEndTouch);
+        activeDocument.removeEventListener('mouseup', this.boundHandleDragEndMouse);
+        activeDocument.removeEventListener('touchend', this.boundHandleDragEndTouch);
     }
 
     // --- Private 事件處理器 ---
@@ -169,14 +169,14 @@ export class FloatingAudioPlayer {
 
     // --- Public 方法 ---
     public show(): void {
-        document.body.appendChild(this.containerEl);
+        activeDocument.body.appendChild(this.containerEl);
 
         // 設定初始位置（右下角）
         const rect = this.containerEl.getBoundingClientRect();
         this.containerEl.style.left = `${window.innerWidth - rect.width - 20}px`;
         this.containerEl.style.top = `${window.innerHeight - rect.height - 20}px`;
 
-        this.audioEl.play();
+        void this.audioEl.play();
     }
 
     public close(): void {
@@ -190,7 +190,7 @@ export class FloatingAudioPlayer {
         // 可以考慮添加一些視覺提示，例如短暫閃爍邊框
         this.containerEl.style.transition = 'box-shadow 0.1s ease-in-out';
         this.containerEl.style.boxShadow = '0 0 10px 2px var(--interactive-accent)';
-        setTimeout(() => {
+        window.setTimeout(() => {
             this.containerEl.style.boxShadow = '';
         }, 300);
     }
@@ -207,6 +207,6 @@ export class FloatingAudioPlayer {
         this.containerEl.setAttribute('data-file', this.currentFile.path);
         this.audioEl.src = this.app.vault.getResourcePath(this.currentFile);
         this.titleEl.textContent = this.currentFile.basename;
-        this.audioEl.play();
+        void this.audioEl.play();
     }
 }

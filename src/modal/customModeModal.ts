@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { CustomMode } from '../settings';
 import { t } from '../translations';
@@ -155,7 +155,7 @@ export class CustomModeModal extends Modal {
                 }
                 
                 // 在指示線之後插入選項容器
-                const optionContainer = document.createElement('div');
+                const optionContainer = activeDocument.createElement('div');
                 optionContainer.className = 'ge-custommode-option-container';
                 if (expandedStates[idx]) {
                     optionContainer.classList.add('expanded');
