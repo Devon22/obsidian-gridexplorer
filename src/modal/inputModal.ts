@@ -59,7 +59,7 @@ export class InputModal extends Modal {
                 attr: { 
                     id: 'searchCurrentLocationOnly'
                 }
-            }) as HTMLInputElement;
+            });
             if (searchOptions.searchCurrentLocationOnly) {
                 searchScopeCheckbox.checked = true;
             }
@@ -73,7 +73,7 @@ export class InputModal extends Modal {
                 attr: { 
                     id: 'searchFilesNameOnly'
                 }
-            }) as HTMLInputElement;
+            });
             if (searchOptions.searchFilesNameOnly) {
                 searchNameCheckbox.checked = true;
             }
@@ -87,7 +87,7 @@ export class InputModal extends Modal {
                 attr: { 
                     id: 'searchMediaFiles'
                 }
-            }) as HTMLInputElement;
+            });
             if (searchOptions.searchMediaFiles) {
                 searchMediaFilesCheckbox.checked = true;
             }

@@ -7,6 +7,41 @@ import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
 import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut as createShortcutUtil } from './utils/createItemUtils';
 import { t } from './translations';
 
+interface SourceInfo {
+    mode: string;
+    path: string;
+    searchQuery?: string;
+    searchCurrentLocationOnly?: boolean;
+    searchFilesNameOnly?: boolean;
+    searchMediaFiles?: boolean;
+}
+
+interface AppWithSettings {
+    setting?: {
+        open: () => void;
+        openTabById: (id: string) => void;
+    };
+}
+
+function isSourceInfo(value: unknown): value is SourceInfo {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return false;
+    }
+
+    const source = value as Record<string, unknown>;
+    return typeof source.mode === 'string' &&
+        typeof source.path === 'string' &&
+        (source.searchQuery === undefined || typeof source.searchQuery === 'string') &&
+        (source.searchCurrentLocationOnly === undefined || typeof source.searchCurrentLocationOnly === 'boolean') &&
+        (source.searchFilesNameOnly === undefined || typeof source.searchFilesNameOnly === 'boolean') &&
+        (source.searchMediaFiles === undefined || typeof source.searchMediaFiles === 'boolean');
+}
+
+function parseSourceInfo(sourceInfoStr: string): SourceInfo | null {
+    const parsed: unknown = JSON.parse(sourceInfoStr);
+    return isSourceInfo(parsed) ? parsed : null;
+}
+
 export function renderHeaderButton(gridView: GridView) {
 
     // 創建頂部按鈕區域
@@ -53,7 +88,8 @@ export function renderHeaderButton(gridView: GridView) {
                 }
 
                 // 取得最近一筆歷史記錄
-                const lastSource = JSON.parse(gridView.recentSources[0]);
+                const lastSource = parseSourceInfo(gridView.recentSources[0]);
+                if (!lastSource) return;
                 gridView.recentSources.shift(); // 從歷史記錄中移除
 
                 // 設定來源及搜尋狀態（不記錄到歷史）
@@ -100,7 +136,8 @@ export function renderHeaderButton(gridView: GridView) {
                 }
 
                 // 取得下一筆未來紀錄
-                const nextSource = JSON.parse(gridView.futureSources[0]);
+                const nextSource = parseSourceInfo(gridView.futureSources[0]);
+                if (!nextSource) return;
                 gridView.futureSources.shift(); // 從未來紀錄中移除
 
                 // 設定來源及搜尋狀態（不記錄到歷史）
@@ -131,7 +168,8 @@ export function renderHeaderButton(gridView: GridView) {
             // 添加歷史記錄
             gridView.recentSources.forEach((sourceInfoStr, index) => {
                 try {
-                    const sourceInfo = JSON.parse(sourceInfoStr);
+                    const sourceInfo = parseSourceInfo(sourceInfoStr);
+                    if (!sourceInfo) return;
                     const { mode, path } = sourceInfo;
 
                     // 根據模式顯示圖示和文字
@@ -260,7 +298,8 @@ export function renderHeaderButton(gridView: GridView) {
             // 添加未來記錄
             gridView.futureSources.forEach((sourceInfoStr, index) => {
                 try {
-                    const sourceInfo = JSON.parse(sourceInfoStr);
+                    const sourceInfo = parseSourceInfo(sourceInfoStr);
+                    if (!sourceInfo) return;
                     const { mode, path } = sourceInfo;
 
                     // 根據模式顯示圖示和文字
@@ -319,7 +358,7 @@ export function renderHeaderButton(gridView: GridView) {
                         if (!sourceInfo.searchCurrentLocationOnly) {
                             displayText = '"' + (sourceInfo.searchQuery || t('search_results')) + '"';
                         } else {
-                            displayText += `: \"${sourceInfo.searchQuery}\"`;
+                            displayText += `: "${sourceInfo.searchQuery}"`;
                         }
                     }
 
@@ -599,8 +638,9 @@ export function renderHeaderButton(gridView: GridView) {
             .setIcon('settings')
             .onClick(() => {
                 // 打開插件設定頁面
-                (gridView.app as any).setting.open();
-                (gridView.app as any).setting.openTabById(gridView.plugin.manifest.id);
+                const setting = (gridView.app as AppWithSettings).setting;
+                setting?.open();
+                setting?.openTabById(gridView.plugin.manifest.id);
             });
     });
 

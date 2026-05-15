@@ -1,4 +1,4 @@
-import { Plugin, TFolder, TFile, Menu, WorkspaceLeaf } from 'obsidian';
+import { EventRef, Menu, MenuItem, Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { updateCustomDocumentExtensions, isMediaFile } from './utils/fileUtils';
@@ -6,6 +6,37 @@ import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { GallerySettings, DEFAULT_SETTINGS, GridExplorerSettingTab } from './settings';
 import { t } from './translations';
+
+interface MenuItemWithSubmenu extends MenuItem {
+    setSubmenu(): Menu;
+}
+
+type WorkspaceEventHandler = (name: string, callback: (...data: unknown[]) => unknown) => EventRef;
+
+interface CanvasPosition {
+    x: number;
+    y: number;
+}
+
+interface CanvasDropNode {
+    file: TFile;
+    pos: CanvasPosition;
+    size: { width: number; height: number };
+    focus: boolean;
+}
+
+interface CanvasDropApi {
+    posFromEvt(evt: DragEvent): CanvasPosition;
+    createFileNode(node: CanvasDropNode): unknown;
+    addNode(node: unknown): void;
+    requestSave(): Promise<void>;
+}
+
+interface CanvasDropView {
+    containerEl?: HTMLElement;
+    canvas?: CanvasDropApi;
+    gridExplorerDropHandler?: boolean;
+}
 
 export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings = DEFAULT_SETTINGS;
@@ -185,7 +216,7 @@ export default class GridExplorerPlugin extends Plugin {
                         item.setTitle(t('open_in_grid_view'));
                         item.setIcon('grid');
                         item.setSection?.("open");
-                        const ogSubmenu: Menu = (item as any).setSubmenu();
+                        const ogSubmenu = (item as MenuItemWithSubmenu).setSubmenu();
                         ogSubmenu.addItem((item) => {
                             item
                                 .setTitle(t('show_note_in_grid_view'))
@@ -306,8 +337,14 @@ export default class GridExplorerPlugin extends Plugin {
         );
 
         // 註冊tag-wrangler右鍵選單
+        const onWorkspaceEvent = this.app.workspace.on.bind(this.app.workspace) as WorkspaceEventHandler;
         this.registerEvent(
-            (this.app.workspace as any).on('tag-wrangler:contextmenu', (menu: Menu, tagName: string) => {
+            onWorkspaceEvent('tag-wrangler:contextmenu', (...data: unknown[]) => {
+                const [menu, tagName] = data;
+                if (!(menu instanceof Menu) || typeof tagName !== 'string') {
+                    return;
+                }
+
                 // 截斷過長的文字，最多顯示 15 個字元
                 const truncatedText = tagName.length > 15 ? tagName.substring(0, 15) + '...' : tagName;
                 const menuItemTitle = t('search_selection_in_grid_view').replace('...', `「#${truncatedText}」`); // 假設翻譯中有...代表要替換的部分，或者直接格式化
@@ -344,7 +381,7 @@ export default class GridExplorerPlugin extends Plugin {
                 '.tag-pane-tag, /* 標籤面板中的 tag */\n' +
                 'span.cm-hashtag, /* 編輯器中的 tag */\n' +
                 '.metadata-property[data-property-key="tags"] .multi-select-pill /* 屬性面板中的 tag */'
-            ) as HTMLElement | null;
+            );
             if (!el) return;            // 不是 tag 點擊就跳過
 
             // 取出 tag 名稱（去掉前導 #）
@@ -352,23 +389,23 @@ export default class GridExplorerPlugin extends Plugin {
             if (el.matches('span.cm-hashtag')) {
                 // 編輯器模式：可能被拆成多個 span，需組合
                 const collect = [] as string[];
-                let curr: HTMLElement | null = el;
+                let curr: Element | null = el;
                 // 向左收集
                 while (curr && curr.matches('span.cm-hashtag') && !curr.classList.contains('cm-formatting')) {
                     collect.unshift(curr.textContent ?? '');
-                    curr = curr.previousElementSibling as HTMLElement | null;
+                    curr = curr.previousElementSibling;
                     if (curr && (!curr.matches('span.cm-hashtag') || curr.classList.contains('cm-formatting'))) break;
                 }
                 // 向右收集
-                curr = el.nextElementSibling as HTMLElement | null;
+                curr = el.nextElementSibling;
                 while (curr && curr.matches('span.cm-hashtag') && !curr.classList.contains('cm-formatting')) {
                     collect.push(curr.textContent ?? '');
-                    curr = curr.nextElementSibling as HTMLElement | null;
+                    curr = curr.nextElementSibling;
                 }
                 tagName = collect.join('').trim();
             } else if (el.classList.contains('tag-pane-tag')) {
                 // Tag Pane 中的元素，需避開計數器
-                const inner = el.querySelector('.tag-pane-tag-text, .tree-item-inner-text') as HTMLElement | null;
+                const inner = el.querySelector('.tag-pane-tag-text, .tree-item-inner-text');
                 tagName = inner?.textContent?.trim() ?? '';
             } else if (el.matches('.metadata-property[data-property-key="tags"] .multi-select-pill')) {
                 // Frontmatter/Properties view
@@ -414,12 +451,12 @@ export default class GridExplorerPlugin extends Plugin {
             // 使用索引對映實際路徑，避免依賴顯示文字（可能被其他外掛修改）
             const parentEl = breadcrumbEl.parentElement;
             // 僅取麵包屑元素，建立清單以取得被點擊元素的索引
-            const crumbs = Array.from(parentEl.querySelectorAll('.view-header-breadcrumb')) as HTMLElement[];
-            const clickedIndex = crumbs.indexOf(breadcrumbEl as HTMLElement);
+            const crumbs = Array.from(parentEl.querySelectorAll('.view-header-breadcrumb'));
+            const clickedIndex = crumbs.indexOf(breadcrumbEl);
             if (clickedIndex < 0) return;
 
             // 嘗試取得目前活躍檔案
-            let activeFile = this.app.workspace.getActiveFile();
+            const activeFile = this.app.workspace.getActiveFile();
             if (!activeFile) {
                 // 若無活躍檔案，無法可靠對映麵包屑，結束處理
                 return;
@@ -427,7 +464,7 @@ export default class GridExplorerPlugin extends Plugin {
 
             // 蒐集從根到當前檔案之父層的所有資料夾
             const folders: TFolder[] = [];
-            let currFolder: TFolder | null = (activeFile instanceof TFile) ? activeFile.parent : (activeFile as unknown as TFolder);
+            let currFolder: TFolder | null = activeFile.parent;
             while (currFolder) {
                 folders.push(currFolder);
                 currFolder = currFolder.parent;
@@ -436,7 +473,7 @@ export default class GridExplorerPlugin extends Plugin {
 
             // 以「去除根目錄('/')」後的資料夾清單，直接用索引對應麵包屑
             const foldersWithoutRoot = folders.filter(f => f.path !== '/');
-            const isClickingFileCrumb = (activeFile instanceof TFile) && (clickedIndex === crumbs.length - 1);
+            const isClickingFileCrumb = clickedIndex === crumbs.length - 1;
 
             let targetFolder: TFolder | undefined;
             if (isClickingFileCrumb) {
@@ -535,7 +572,7 @@ export default class GridExplorerPlugin extends Plugin {
     private setupCanvasDropHandlers() {
         const setup = () => {
             this.app.workspace.getLeavesOfType('canvas').forEach(leaf => {
-                const canvasView = leaf.view as any;
+                const canvasView = leaf.view as CanvasDropView;
                 if (canvasView.gridExplorerDropHandler) {
                     return;
                 }
@@ -566,9 +603,9 @@ export default class GridExplorerPlugin extends Plugin {
                     const data = evt.dataTransfer.getData('application/obsidian-grid-explorer-files');
                     let filePaths: string[] = [];
                     try {
-                        const parsed = JSON.parse(data);
+                        const parsed: unknown = JSON.parse(data);
                         if (Array.isArray(parsed)) {
-                            filePaths = parsed.filter((p: any) => typeof p === 'string');
+                            filePaths = parsed.filter((p): p is string => typeof p === 'string');
                         } else if (typeof parsed === 'string') {
                             filePaths = [parsed];
                         }
@@ -587,7 +624,7 @@ export default class GridExplorerPlugin extends Plugin {
                     }
 
                     const pos = canvas.posFromEvt(evt);
-                    let currentPos = { ...pos } as { x: number; y: number };
+                    let currentPos = { ...pos };
 
                     // 逐一建立節點，若多檔則位置做些微偏移
                     for (let i = 0; i < filePaths.length; i++) {
@@ -748,7 +785,8 @@ export default class GridExplorerPlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const loadedSettings = await this.loadData() as Partial<GallerySettings> | null;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings ?? {});
         updateCustomDocumentExtensions(this.settings);
     }
 
@@ -769,7 +807,7 @@ export default class GridExplorerPlugin extends Plugin {
             const explorerLeaves = this.app.workspace.getLeavesOfType(EXPLORER_VIEW_TYPE);
             explorerLeaves.forEach(leaf => {
                 if (leaf.view instanceof ExplorerView) {
-                    void (leaf.view as ExplorerView).refresh();
+                    void (leaf.view).refresh();
                 }
             });
         }

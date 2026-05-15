@@ -4,6 +4,14 @@
  */
 
 // 從 obsidian://open?vault=...&file=... 解析出 vault 名稱與檔案路徑
+interface ObsidianWindow extends Window {
+    app?: {
+        vault?: {
+            getName?: () => string;
+        };
+    };
+}
+
 export function parseObsidianOpenUris(input: string): Array<{ vault?: string; file?: string }> {
     const results: Array<{ vault?: string; file?: string }> = [];
     if (!input) return results;
@@ -44,7 +52,7 @@ export async function extractObsidianPathsFromDT(dt: DataTransfer | null): Promi
         console.error('GridExplorer: Error getting data from DataTransfer', error);
     }
 
-    const vaultName = (window as any).app?.vault?.getName?.() as string | undefined;
+    const vaultName = (window as ObsidianWindow).app?.vault?.getName?.();
     const paths: string[] = [];
     for (const t of texts) {
         const entries = parseObsidianOpenUris(t);

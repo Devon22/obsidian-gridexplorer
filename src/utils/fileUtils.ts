@@ -110,15 +110,16 @@ export function sortFiles(files: TFile[], gridView: GridView, overrideSortType?:
         return {
             file,
             mDate: (() => {
-                if (metadata?.frontmatter) {
+                const frontmatter = metadata?.frontmatter;
+                if (frontmatter) {
                     // 支援多個欄位名稱（用逗號隔開）
                     const fieldNames = settings.modifiedDateField
                         ? settings.modifiedDateField.split(',').map(f => f.trim()).filter(Boolean)
                         : [];
                     for (const fieldName of fieldNames) {
-                        const dateStr = metadata.frontmatter[fieldName];
-                        if (dateStr) {
-                            const date = new Date(dateStr);
+                        const dateValue: unknown = frontmatter[fieldName];
+                        if (typeof dateValue === 'string' || typeof dateValue === 'number' || dateValue instanceof Date) {
+                            const date = new Date(dateValue);
                             if (!isNaN(date.getTime())) {
                                 return date.getTime();
                             }
@@ -128,15 +129,16 @@ export function sortFiles(files: TFile[], gridView: GridView, overrideSortType?:
                 return file.stat.mtime;
             })(),
             cDate: (() => {
-                if (metadata?.frontmatter) {
+                const frontmatter = metadata?.frontmatter;
+                if (frontmatter) {
                     // 支援多個欄位名稱（用逗號隔開）
                     const fieldNames = settings.createdDateField
                         ? settings.createdDateField.split(',').map(f => f.trim()).filter(Boolean)
                         : [];
                     for (const fieldName of fieldNames) {
-                        const dateStr = metadata.frontmatter[fieldName];
-                        if (dateStr) {
-                            const date = new Date(dateStr);
+                        const dateValue: unknown = frontmatter[fieldName];
+                        if (typeof dateValue === 'string' || typeof dateValue === 'number' || dateValue instanceof Date) {
+                            const date = new Date(dateValue);
                             if (!isNaN(date.getTime())) {
                                 return date.getTime();
                             }
@@ -186,7 +188,7 @@ export function isFolderIgnored(folder: TFolder, ignoredFolders: string[], ignor
                     // 檢查資料夾名稱是否包含模式字串（不區分大小寫）
                     return folder.name.toLowerCase().includes(pattern.toLowerCase());
                 }
-            } catch (error) {
+            } catch {
                 // 如果正則表達式無效，直接檢查資料夾名稱
                 return folder.name.toLowerCase().includes(pattern.toLowerCase());
             }
@@ -214,7 +216,7 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
         // 檢查檔案的 metadata 是否有 hidden: true
         if (file.extension === 'md') {
             const metadata = gridView.app.metadataCache.getFileCache(file)?.frontmatter;
-            const displayValue = metadata?.display;
+            const displayValue: unknown = metadata?.display;
             if (displayValue === 'hidden') {
                 return false;
             }
@@ -303,8 +305,8 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         const resolvedLinks = app.metadataCache.resolvedLinks;
         for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
             if (Object.keys(links).includes(activeFile.path)) {
-                const sourceFile = app.vault.getAbstractFileByPath(sourcePath) as TFile;
-                if (sourceFile) {
+                const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+                if (sourceFile instanceof TFile) {
                     backlinks.add(sourceFile);
                 }
             }
@@ -325,8 +327,8 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
 
         if (fileLinks) {
             for (const targetPath of Object.keys(fileLinks)) {
-                const targetFile = app.vault.getAbstractFileByPath(targetPath) as TFile;
-                if (targetFile && (isDocumentFile(targetFile) ||
+                const targetFile = app.vault.getAbstractFileByPath(targetPath);
+                if (targetFile instanceof TFile && (isDocumentFile(targetFile) ||
                     (settings.showMediaFiles && isMediaFile(targetFile)))) {
                     outgoingLinks.add(targetFile);
                 }
@@ -356,7 +358,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                         }
                     }
                 }
-            } catch (_e) {
+            } catch {
                 // 忽略讀取錯誤
             }
         }
@@ -481,16 +483,16 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                     // 用 gridView.taskFilter 匹配 uncompleted、completed、all 任務
                     if (gridView.taskFilter === 'uncompleted') {
                         // 只匹配未完成的任務: - [ ] 或 * [ ]
-                        shouldAdd = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        shouldAdd = /^[\s]*[-*]\s*\[\s*\](?![^[]*\[\s*[^\s\]]+\]).*$/m.test(content);
                     } else if (gridView.taskFilter === 'completed') {
                         // 只匹配所有任務均已完成的檔案（至少有一個已完成且沒有未完成）
-                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
-                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^[]*\[\s*[^\s\]]+\]).*$/m.test(content);
                         shouldAdd = hasCompleted && !hasIncomplete;
                     } else if (gridView.taskFilter === 'all') {
                         // 匹配任何任務（已完成或未完成皆可）
-                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
-                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^\[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasIncomplete = /^[\s]*[-*]\s*\[\s*\](?![^[]*\[\s*[^\s\]]+\]).*$/m.test(content);
+                        const hasCompleted = /^[\s]*[-*]\s*\[x\](?![^[]*\[\s*[^\s\]]+\]).*$/m.test(content);
                         shouldAdd = hasIncomplete || hasCompleted;
                     }
 
@@ -567,7 +569,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                 dvApi.current = () => dvApi.page(activeFile.path);
             }
 
-            const func = new Function('app', 'dv', dvCode!);
+            const func = new Function('app', 'dv', dvCode);
             const dvPagesResult = func(app, dvApi);
             const dvPages = Array.isArray(dvPagesResult) ? dvPagesResult : Array.from(dvPagesResult || []);
 
@@ -586,7 +588,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
                     }
                 }
             }
-            return sortFiles(Array.from(files) as TFile[], gridView);
+            return sortFiles(Array.from(files), gridView);
         } catch (error) {
             console.error('Grid Explorer: Error executing Dataview query.', error);
             return [];

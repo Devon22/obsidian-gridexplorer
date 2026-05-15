@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFile } from 'obsidian';
+import { App, Modal, Setting, TFile, TextComponent, ToggleComponent } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
@@ -10,6 +10,26 @@ export interface NoteSettings {
     isPinned: boolean;
     isMinimized: boolean;
     isHidden: boolean;
+}
+
+interface NoteFrontmatter {
+    [key: string]: unknown;
+    color?: unknown;
+    display?: unknown;
+    pinned?: unknown;
+    type?: unknown;
+    redirect?: unknown;
+}
+
+function getStringValue(value: unknown, fallback = ''): string {
+    return typeof value === 'string' ? value : fallback;
+}
+
+function getStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value.filter((item): item is string => typeof item === 'string');
 }
 
 export function showNoteSettingsModal(app: App, plugin: GridExplorerPlugin, file: TFile | TFile[]) {
@@ -105,13 +125,13 @@ export class NoteSettingsModal extends Modal {
                 });
 
             // HEX 自訂顏色輸入欄位
-            let hexInput: any;
-            const hexSetting = new Setting(contentEl)
+            let hexInput: TextComponent | null = null;
+            new Setting(contentEl)
                 .setName(t('custom_hex_color'))
                 .setDesc(t('custom_hex_color_desc'))
                 .addText(text => {
                     hexInput = text;
-                    text.setPlaceholder('#FF8800 or #F80')
+                    text.setPlaceholder('#Ff8800 or #f80')
                         .setValue(isCurrentColorHex ? this.settings.color : '')
                         .onChange(value => {
                             // 驗證 HEX 格式
@@ -148,8 +168,8 @@ export class NoteSettingsModal extends Modal {
         }
 
         // 最小化顯示切換
-        let minimizedToggle: any;
-        let hiddenToggle: any;
+        let minimizedToggle: ToggleComponent | null = null;
+        let hiddenToggle: ToggleComponent | null = null;
         
         if (this.files[0].extension === "md") {
             new Setting(contentEl)
@@ -233,7 +253,7 @@ export class NoteSettingsModal extends Modal {
                 const newFile = await this.app.vault.create(newPath, '');
 
                 // 使用 processFrontMatter 來更新 frontmatter
-                await this.app.fileManager.processFrontMatter(newFile, (frontmatter: any) => {
+                await this.app.fileManager.processFrontMatter(newFile, (frontmatter: NoteFrontmatter) => {
                     // 設置 redirect 和 summary
                     const link = this.app.fileManager.generateMarkdownLink(originalFile, "");
                     frontmatter.type = "file";
@@ -258,14 +278,15 @@ export class NoteSettingsModal extends Modal {
             // 讀取自訂標題設定
             if (this.files.length === 1) {
                 const fileCache = this.app.metadataCache.getFileCache(this.files[0]);
-                if (fileCache && fileCache.frontmatter) {
+                if (fileCache?.frontmatter) {
+                    const frontmatter = fileCache.frontmatter as NoteFrontmatter;
                     const titleField = this.plugin.settings.noteTitleField || 'title';
-                    if (fileCache.frontmatter[titleField]) {
-                        this.settings.title = fileCache.frontmatter[titleField] || '';
+                    if (frontmatter[titleField]) {
+                        this.settings.title = getStringValue(frontmatter[titleField]);
                     }
                     const summaryField = this.plugin.settings.noteSummaryField || 'summary';
-                    if (fileCache.frontmatter[summaryField]) {
-                        this.settings.summary = fileCache.frontmatter[summaryField] || '';
+                    if (frontmatter[summaryField]) {
+                        this.settings.summary = getStringValue(frontmatter[summaryField]);
                     }
                 }
             }
@@ -273,17 +294,18 @@ export class NoteSettingsModal extends Modal {
             // 如果有多個檔案，只讀取第一個檔案的設定作為預設值
             if (this.files.length > 0) {
                 const fileCache = this.app.metadataCache.getFileCache(this.files[0]);
-                if (fileCache && fileCache.frontmatter) {
+                if (fileCache?.frontmatter) {
+                    const frontmatter = fileCache.frontmatter as NoteFrontmatter;
                     // 讀取顏色設定
                     if ('color' in fileCache.frontmatter) {
-                        this.settings.color = fileCache.frontmatter.color || '';
+                        this.settings.color = getStringValue(frontmatter.color);
                     }
                     // 讀取最小化設定
-                    if (fileCache.frontmatter.display === 'minimized') {
+                    if (frontmatter.display === 'minimized') {
                         this.settings.isMinimized = true;
                     }
                     // 讀取隱藏設定
-                    if (fileCache.frontmatter.display === 'hidden') {
+                    if (frontmatter.display === 'hidden') {
                         this.settings.isHidden = true;
                     }
                 }
@@ -296,8 +318,9 @@ export class NoteSettingsModal extends Modal {
                 const noteFile = this.app.vault.getAbstractFileByPath(notePath);
                 if (noteFile instanceof TFile) {
                     const fm = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
-                    if (fm && Array.isArray(fm['pinned'])) {
-                        this.settings.isPinned = fm['pinned'].includes(this.files[0].name);
+                    const pinned = getStringArray(fm?.pinned);
+                    if (pinned.length > 0) {
+                        this.settings.isPinned = pinned.includes(this.files[0].name);
                     }
                 }
                 // 保存初始的 isPinned 狀態
@@ -313,7 +336,7 @@ export class NoteSettingsModal extends Modal {
         try {
             if (this.files.length === 1 && this.files[0].extension === "md") {
                 // 使用 fileManager.processFrontMatter 更新 frontmatter
-                await this.app.fileManager.processFrontMatter(this.files[0], (frontmatter) => {
+                await this.app.fileManager.processFrontMatter(this.files[0], (frontmatter: NoteFrontmatter) => {
                     const titleField = this.plugin.settings.noteTitleField || 'title';
                     if (this.settings.title) {
                         frontmatter[titleField] = this.settings.title;
@@ -327,16 +350,16 @@ export class NoteSettingsModal extends Modal {
                         delete frontmatter[summaryField];
                     }
                     if (this.settings.color) {
-                        frontmatter['color'] = this.settings.color;
+                        frontmatter.color = this.settings.color;
                     } else {
-                        delete frontmatter['color'];
+                        delete frontmatter.color;
                     }
                     if (this.settings.isHidden) {
-                        frontmatter['display'] = 'hidden';
+                        frontmatter.display = 'hidden';
                     } else if (this.settings.isMinimized) {
-                        frontmatter['display'] = 'minimized';
+                        frontmatter.display = 'minimized';
                     } else {
-                        if (frontmatter['display'] === 'minimized' || frontmatter['display'] === 'hidden') delete frontmatter['display'];
+                        if (frontmatter.display === 'minimized' || frontmatter.display === 'hidden') delete frontmatter.display;
                     }
                 });
             }
@@ -346,18 +369,18 @@ export class NoteSettingsModal extends Modal {
                 for (const file of this.files) {
                     if (file.extension === "md") {
                         // 使用 fileManager.processFrontMatter 更新 frontmatter
-                        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+                        await this.app.fileManager.processFrontMatter(file, (frontmatter: NoteFrontmatter) => {
                             if (this.settings.color) {
-                                frontmatter['color'] = this.settings.color;
+                                frontmatter.color = this.settings.color;
                             } else {
-                                delete frontmatter['color'];
+                                delete frontmatter.color;
                             }
                             if (this.settings.isHidden) {
-                                frontmatter['display'] = 'hidden';
+                                frontmatter.display = 'hidden';
                             } else if (this.settings.isMinimized) {
-                                frontmatter['display'] = 'minimized';
+                                frontmatter.display = 'minimized';
                             } else {
-                                if (frontmatter['display'] === 'minimized' || frontmatter['display'] === 'hidden') delete frontmatter['display'];
+                                if (frontmatter.display === 'minimized' || frontmatter.display === 'hidden') delete frontmatter.display;
                             }
                         });
                     }
@@ -383,17 +406,21 @@ export class NoteSettingsModal extends Modal {
                     }
 
                     // 此時 noteFile 一定是 TFile
-                    await this.app.fileManager.processFrontMatter(noteFile as TFile, (frontmatter) => {
-                        let list: string[] = Array.isArray(frontmatter['pinned']) ? frontmatter['pinned'] : [];
+                    if (!(noteFile instanceof TFile)) {
+                        continue;
+                    }
+
+                    await this.app.fileManager.processFrontMatter(noteFile, (frontmatter: NoteFrontmatter) => {
+                        let list = getStringArray(frontmatter.pinned);
                         if (this.settings.isPinned) {
                             if (!list.includes(file.name)) list.push(file.name);
                         } else {
                             list = list.filter(n => n !== file.name);
                         }
                         if (list.length > 0) {
-                            frontmatter['pinned'] = list;
+                            frontmatter.pinned = list;
                         } else {
-                            delete frontmatter['pinned'];
+                            delete frontmatter.pinned;
                         }
                     });
                 }

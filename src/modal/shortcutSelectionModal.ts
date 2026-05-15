@@ -115,7 +115,7 @@ export class ShortcutSelectionModal extends Modal {
                             displayName = `🌐 ${uri.substring(0, 20)}${uri.length > 20 ? '...' : ''}`;
                         }
                     }
-                } catch (error) {
+                } catch {
                     displayName = `🌐 ${uri.substring(0, 20)}${uri.length > 20 ? '...' : ''}`;
                 }
 

@@ -4,6 +4,22 @@ import { GridView } from '../GridView';
 import { t } from '../translations';
 import { isFolderIgnored } from '../utils/fileUtils';
 
+type AppWithInternalPlugins = App & {
+    internalPlugins?: {
+        plugins?: {
+            bookmarks?: {
+                enabled?: boolean;
+            };
+        };
+    };
+};
+
+type SearchViewWithComponent = {
+    searchComponent?: {
+        inputEl?: HTMLInputElement;
+    };
+};
+
 // 顯示資料夾選擇 modal
 export function showFolderSelectionModal(app: App, plugin: GridExplorerPlugin, activeView?: GridView, buttonElement?: HTMLElement) {
     new FolderSelectionModal(app, plugin, activeView, buttonElement).open();
@@ -94,7 +110,7 @@ export class FolderSelectionModal extends Modal {
 
         // 建立書籤選項
         if (this.plugin.settings.showBookmarksMode) {
-            const bookmarksPlugin = (this.app as any).internalPlugins.plugins.bookmarks;
+            const bookmarksPlugin = (this.app as AppWithInternalPlugins).internalPlugins?.plugins?.bookmarks;
             if (bookmarksPlugin?.enabled) {
                 const bookmarkOption = this.folderOptionsContainer.createEl('div', {
                     cls: 'ge-grid-view-folder-option',
@@ -120,10 +136,10 @@ export class FolderSelectionModal extends Modal {
 
         // 建立搜尋結果選項
         if (this.plugin.settings.showSearchMode) {
-            const searchLeaf = (this.app as any).workspace.getLeavesOfType('search')[0];
+            const searchLeaf = this.app.workspace.getLeavesOfType('search')[0];
             if (searchLeaf) {
-                const searchView = searchLeaf.view;
-                const searchInputEl = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
+                const searchView = searchLeaf.view as SearchViewWithComponent;
+                const searchInputEl = searchView.searchComponent?.inputEl ?? null;
                 if (searchInputEl) {
                     if (searchInputEl.value.trim().length > 0) {
                         const searchOption = this.folderOptionsContainer.createEl('div', {
@@ -446,7 +462,7 @@ export class FolderSelectionModal extends Modal {
                 event.preventDefault();
                 if (this.selectedIndex >= 0) {
                     const selectedOption = this.folderOptions[this.selectedIndex];
-                    if (selectedOption && selectedOption.style.display !== 'none') {
+                    if (selectedOption && !selectedOption.hasClass('ge-hidden')) {
                         window.requestAnimationFrame(() => {
                             selectedOption.click();
                         });
@@ -508,7 +524,7 @@ export class FolderSelectionModal extends Modal {
     // 獲取當前可見的選項
     getVisibleOptions(): HTMLElement[] {
         return this.folderOptions.filter(option =>
-            option.style.display !== 'none'
+            !option.hasClass('ge-hidden')
         );
     }
 
@@ -526,7 +542,7 @@ export class FolderSelectionModal extends Modal {
             const dataPath = option.getAttribute('data-path');
             if (dataPath) {
                 // 這是一個資料夾選項
-                const nameSpan = option.querySelector('span:last-child') as HTMLSpanElement | null;
+                const nameSpan = option.querySelector<HTMLSpanElement>('span:last-child');
                 if (nameSpan) {
                     if (searchTerm !== '') {
                         // 顯示完整路徑
@@ -538,7 +554,7 @@ export class FolderSelectionModal extends Modal {
                 }
 
                 // 根據搜尋狀態調整前綴縮排（ascii tree）
-                const prefixSpan = option.querySelector('.ge-folder-tree-prefix') as HTMLSpanElement | null;
+                const prefixSpan = option.querySelector<HTMLSpanElement>('.ge-folder-tree-prefix');
                 if (prefixSpan) {
                     if (searchTerm !== '') {
                         // 搜尋時移除縮排
@@ -555,10 +571,10 @@ export class FolderSelectionModal extends Modal {
             const text = option.textContent?.toLowerCase() || '';
             const fullPath = option.getAttribute('data-path')?.toLowerCase() || '';
             if (searchTerm === '' || text.includes(searchTerm) || fullPath.includes(searchTerm)) {
-                option.style.display = 'block';
+                option.removeClass('ge-hidden');
                 hasVisibleOptions = true;
             } else {
-                option.style.display = 'none';
+                option.addClass('ge-hidden');
             }
         });
 

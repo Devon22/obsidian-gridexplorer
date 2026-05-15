@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFolder, TFile } from 'obsidian';
+import { App, Modal, Setting, TFile, TFolder, TextComponent } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
@@ -9,6 +9,25 @@ export interface FolderNoteSettings {
     icon: string;
     isPinned: boolean;
     cardLayout: '' | 'horizontal' | 'vertical';
+}
+
+interface FolderNoteFrontmatter {
+    sort?: unknown;
+    color?: unknown;
+    icon?: unknown;
+    cardLayout?: unknown;
+    pinned?: unknown;
+}
+
+function getStringValue(value: unknown, fallback = ''): string {
+    return typeof value === 'string' ? value : fallback;
+}
+
+function getPinnedName(value: unknown): string {
+    if (typeof value === 'string' || typeof value === 'number') {
+        return value.toString();
+    }
+    return '';
 }
 
 export function showFolderNoteSettingsModal(app: App, plugin: GridExplorerPlugin, folder: TFolder, gridView: GridView) {
@@ -106,13 +125,13 @@ export class FolderNoteSettingsModal extends Modal {
             });
 
         // HEX 自訂顏色輸入欄位
-        let hexInput: any;
-        const hexSetting = new Setting(contentEl)
+        let hexInput: TextComponent | null = null;
+        new Setting(contentEl)
             .setName(t('custom_hex_color'))
             .setDesc(t('custom_hex_color_desc'))
             .addText(text => {
                 hexInput = text;
-                text.setPlaceholder('#FF8800 or #F80')
+                text.setPlaceholder('#Ff8800 or #f80')
                     .setValue(isCurrentColorHex ? this.settings.color : '')
                     .onChange(value => {
                         // 驗證 HEX 格式
@@ -196,36 +215,24 @@ export class FolderNoteSettingsModal extends Modal {
         try {
             // 使用 metadataCache 讀取筆記的 frontmatter
             const fileCache = this.app.metadataCache.getFileCache(this.existingFile);
-            if (fileCache && fileCache.frontmatter) {
-                // 讀取排序設定
-                if ('sort' in fileCache.frontmatter) {
-                    this.settings.sort = fileCache.frontmatter.sort || '';
-                }
-                
-                // 讀取顏色設定
-                if ('color' in fileCache.frontmatter) {
-                    this.settings.color = fileCache.frontmatter.color || '';
-                }
-                
-                // 讀取圖示設定
-                if ('icon' in fileCache.frontmatter) {
-                    this.settings.icon = fileCache.frontmatter.icon || '📁';
-                }            
-                
-                // 讀取卡片樣式設定
-                if ('cardLayout' in fileCache.frontmatter) {
-                    this.settings.cardLayout = fileCache.frontmatter.cardLayout || 'default';
-                }
-                
-                // 讀取置頂設定
-                if (fileCache.frontmatter?.pinned && Array.isArray(fileCache.frontmatter.pinned)) {
-                    this.settings.isPinned = fileCache.frontmatter.pinned.some((item: any) => {
-                        if (!item) return false;
-                        const pinnedName = item.toString();
+            if (fileCache?.frontmatter) {
+                const frontmatter = fileCache.frontmatter as FolderNoteFrontmatter;
+
+                this.settings.sort = getStringValue(frontmatter.sort);
+                this.settings.color = getStringValue(frontmatter.color);
+                this.settings.icon = getStringValue(frontmatter.icon, '📁');
+
+                const cardLayout = getStringValue(frontmatter.cardLayout);
+                this.settings.cardLayout =
+                    cardLayout === 'horizontal' || cardLayout === 'vertical' ? cardLayout : '';
+
+                if (Array.isArray(frontmatter.pinned)) {
+                    this.settings.isPinned = frontmatter.pinned.some((item: unknown) => {
+                        const pinnedName = getPinnedName(item);
                         const pinnedNameWithoutExt = pinnedName.replace(/\.\w+$/, '');
                         return pinnedNameWithoutExt === this.folder.name;
                     });
-                }           
+                }
             }
         } catch (error) {
             console.error('無法讀取資料夾筆記設定', error);
@@ -252,51 +259,53 @@ export class FolderNoteSettingsModal extends Modal {
             }
             
             // 使用 fileManager.processFrontMatter 更新 frontmatter
-            await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+            await this.app.fileManager.processFrontMatter(file, (frontmatter: FolderNoteFrontmatter) => {
 
                 if (this.settings.sort) {
-                    frontmatter['sort'] = this.settings.sort;
+                    frontmatter.sort = this.settings.sort;
                 } else {
-                    delete frontmatter['sort'];
+                    delete frontmatter.sort;
                 }
 
                 if (this.settings.color) {
-                    frontmatter['color'] = this.settings.color;
+                    frontmatter.color = this.settings.color;
                 } else {
-                    delete frontmatter['color'];
+                    delete frontmatter.color;
                 }
 
                 if (this.settings.icon && this.settings.icon !== '📁') {
-                    frontmatter['icon'] = this.settings.icon;
+                    frontmatter.icon = this.settings.icon;
                 } else {
-                    delete frontmatter['icon'];
+                    delete frontmatter.icon;
                 }
                 
                 if (this.settings.cardLayout) {
-                    frontmatter['cardLayout'] = this.settings.cardLayout;
+                    frontmatter.cardLayout = this.settings.cardLayout;
                 } else {
-                    delete frontmatter['cardLayout'];
+                    delete frontmatter.cardLayout;
                 }
                 
                 const folderName = `${this.folder.name}.md`;
                 if (this.settings.isPinned) {
                     // 如果原本就有 pinned 陣列，則添加或更新
-                    if (Array.isArray(frontmatter['pinned'])) {
-                        if (!frontmatter['pinned'].includes(folderName)) {
-                            frontmatter['pinned'] = [folderName, ...frontmatter['pinned']];
+                    if (Array.isArray(frontmatter.pinned)) {
+                        const pinned = frontmatter.pinned.map(getPinnedName).filter(Boolean);
+                        if (!pinned.includes(folderName)) {
+                            frontmatter.pinned = [folderName, ...pinned];
                         }
                     } else {
                         // 如果沒有 pinned 陣列，則創建一個新的
-                        frontmatter['pinned'] = [folderName];
+                        frontmatter.pinned = [folderName];
                     }
-                } else if (Array.isArray(frontmatter['pinned'])) {
+                } else if (Array.isArray(frontmatter.pinned)) {
                     // 如果取消置頂，則從陣列中移除
-                    frontmatter['pinned'] = frontmatter['pinned'].filter(
-                        (item: any) => item !== folderName
-                    );
+                    const pinned = frontmatter.pinned
+                        .map(getPinnedName)
+                        .filter(item => item !== folderName);
+                    frontmatter.pinned = pinned;
                     // 如果陣列為空，則刪除該欄位
-                    if (frontmatter['pinned'].length === 0) {
-                        delete frontmatter['pinned'];
+                    if (pinned.length === 0) {
+                        delete frontmatter.pinned;
                     }
                 }
             });

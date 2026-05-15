@@ -56,6 +56,10 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+.ge-grid-item-full-height {
+    height: 100%;
+}
+
 /* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button */
 /* .ge-grid-item { position: relative; }
 .ge-hover-open-note {
@@ -617,6 +621,16 @@
     user-select: none;
     margin-top: -1px;
     margin-bottom: -2px;
+}
+
+.ge-ios-divider {
+    width: calc(100% - 16px);
+}
+
+.ge-load-more-sentinel {
+    height: 1px;
+    width: 100%;
+    flex-shrink: 0;
 }
 
 /* 置頂分隔器圖示 */
@@ -1372,6 +1386,7 @@ a.ge-current-folder:hover {
 .ge-search-text {
     font-size: 14px;
     color: var(--text-normal);
+    cursor: pointer;
     flex-grow: 1;
     /* 讓文字填滿剩餘空間 */
     min-width: 0;
@@ -1632,6 +1647,11 @@ a.ge-current-folder:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
+.ge-floating-audio-player.ge-audio-focus-highlight {
+    box-shadow: 0 0 10px 2px var(--interactive-accent);
+    transition: box-shadow 0.1s ease-in-out;
+}
+
 .ge-audio-title {
     font-size: 14px;
     font-weight: 500;
@@ -1779,6 +1799,32 @@ a.ge-current-folder:hover {
 }
 
 /* Custom Mode Options */
+.ge-hidden {
+    display: none !important;
+}
+
+.ge-custommode-icon-input {
+    width: 3em;
+    min-width: 3em;
+}
+
+.ge-custommode-dataview-setting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.ge-custommode-dataview-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.ge-custommode-code-input {
+    width: 100%;
+}
+
 .ge-custommode-option-container {
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
@@ -2127,6 +2173,15 @@ a.ge-current-folder:hover {
     overflow: auto;
     background-color: var(--background-primary);
     font-size: var(--font-text-size);
+}
+
+.ge-note-sidebar-scroll-container {
+    background-color: var(--background-secondary);
+    font-size: 1em;
+}
+
+.ge-note-sidebar-content-container {
+    padding: 15px;
 }
 
 .ge-note-close-button,
@@ -2801,6 +2856,11 @@ a.ge-current-folder:hover {
 /* dropzone 僅作為展示，不攔截事件（避免影響整區拖曳與點擊） */
 .ge-explorer-stash-dropzone {
     pointer-events: none;
+}
+
+.ge-explorer-stash-dropzone-clickable {
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .ge-explorer-stash-item {

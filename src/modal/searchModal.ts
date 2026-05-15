@@ -1,6 +1,18 @@
-import { App, Modal, Setting, setIcon } from 'obsidian';
+import { App, Modal, setIcon } from 'obsidian';
 import type { GridView } from '../GridView';
 import { t } from '../translations';
+
+interface MetadataCacheWithTags {
+    getTags?: () => Record<string, unknown>;
+}
+
+function setHidden(el: HTMLElement, hidden: boolean) {
+    el.toggleClass('ge-hidden', hidden);
+}
+
+function isHidden(el: HTMLElement): boolean {
+    return el.hasClass('ge-hidden');
+}
 
 export class SearchModal extends Modal {
     gridView: GridView;
@@ -92,20 +104,21 @@ export class SearchModal extends Modal {
 
         // 創建清空按鈕
         const clearButton = inputContainer.createDiv('ge-search-clear-button');
-        clearButton.style.display = searchTerms.length > 0 ? 'flex' : 'none';
+        setHidden(clearButton, searchTerms.length === 0);
         setIcon(clearButton, 'x');
 
         const updateClearButton = () => {
             const hasContent = searchTerms.length > 0 || searchInput.value.trim().length > 0;
-            clearButton.style.display = hasContent ? 'flex' : 'none';
+            setHidden(clearButton, !hasContent);
         };
 
         // 建立標籤建議容器
         const tagSuggestionContainer = contentEl.createDiv('ge-search-tag-suggestions');
-        tagSuggestionContainer.style.display = 'none';
+        setHidden(tagSuggestionContainer, true);
 
         // 取得並快取所有標籤 (移除 # 前綴)
-        const allTagsArr: string[] = Object.keys(((this.app.metadataCache as any).getTags?.() || {})).map((t) => t.substring(1));
+        const tagMap = (this.app.metadataCache as unknown as MetadataCacheWithTags).getTags?.() ?? {};
+        const allTagsArr = Object.keys(tagMap).map((tag) => tag.substring(1));
 
         let tagSuggestions: string[] = [];
         let selectedSuggestionIndex = -1;
@@ -113,7 +126,7 @@ export class SearchModal extends Modal {
         const updateTagSuggestions = () => {
             const match = searchInput.value.substring(0, searchInput.selectionStart || 0).match(/#([^#\s]*)$/);
             if (!match) {
-                tagSuggestionContainer.style.display = 'none';
+                setHidden(tagSuggestionContainer, true);
                 tagSuggestionContainer.empty();
                 selectedSuggestionIndex = -1;
                 return;
@@ -134,7 +147,7 @@ export class SearchModal extends Modal {
             }).slice(0, 10);
 
             if (tagSuggestions.length === 0) {
-                tagSuggestionContainer.style.display = 'none';
+                setHidden(tagSuggestionContainer, true);
                 selectedSuggestionIndex = -1;
                 return;
             }
@@ -149,7 +162,7 @@ export class SearchModal extends Modal {
                     applySuggestion(idx);
                 });
             });
-            tagSuggestionContainer.style.display = 'block';
+            setHidden(tagSuggestionContainer, false);
         };
 
         const applySuggestion = (index: number) => {
@@ -165,7 +178,7 @@ export class SearchModal extends Modal {
 
             flushInput(false);
 
-            tagSuggestionContainer.style.display = 'none';
+            setHidden(tagSuggestionContainer, true);
             tagSuggestionContainer.empty();
             selectedSuggestionIndex = -1;
 
@@ -189,7 +202,7 @@ export class SearchModal extends Modal {
         });
         // 隨機筆記模式下，搜尋範圍設定不顯示
         if (this.gridView.sourceMode === 'random-note') {
-            searchScopeContainer.style.display = 'none';
+            setHidden(searchScopeContainer, true);
             searchScopeCheckbox.checked = false;
         }
 
@@ -218,7 +231,7 @@ export class SearchModal extends Modal {
         });
         // 如果設定中的顯示媒體檔案為false，或在反向連結模式下，則隱藏搜尋媒體檔案設定
         if (!this.gridView.plugin.settings.showMediaFiles || this.gridView.sourceMode === 'backlinks') {
-            searchMediaFilesContainer.style.display = 'none';
+            setHidden(searchMediaFilesContainer, true);
             searchMediaFilesCheckbox.checked = false;
             this.gridView.searchMediaFiles = false;
         }
@@ -295,7 +308,7 @@ export class SearchModal extends Modal {
                 return;
             }
 
-            if (tagSuggestionContainer.style.display !== 'none') {
+            if (!isHidden(tagSuggestionContainer)) {
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     selectedSuggestionIndex = (selectedSuggestionIndex + 1) % tagSuggestions.length;
@@ -312,7 +325,7 @@ export class SearchModal extends Modal {
                 }
             } else {
                 if (e.key === 'ArrowDown') {
-                    const firstVisible = optionsList.find(o => o.style.display !== 'none');
+                    const firstVisible = optionsList.find(o => !isHidden(o));
                     if (firstVisible) {
                         e.preventDefault();
                         firstVisible.focus();
@@ -331,7 +344,7 @@ export class SearchModal extends Modal {
             currentInputIndex = 0;
             updateClearButton();
             renderTagButtons();
-            tagSuggestionContainer.style.display = 'none';
+            setHidden(tagSuggestionContainer, true);
             searchInput.focus();
         });
         optionsList.forEach((container, index) => {
@@ -343,7 +356,7 @@ export class SearchModal extends Modal {
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     for (let i = index + 1; i < optionsList.length; i++) {
-                        if (optionsList[i].style.display !== 'none') {
+                        if (!isHidden(optionsList[i])) {
                             optionsList[i].focus();
                             return;
                         }
@@ -351,7 +364,7 @@ export class SearchModal extends Modal {
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     for (let i = index - 1; i >= 0; i--) {
-                        if (optionsList[i].style.display !== 'none') {
+                        if (!isHidden(optionsList[i])) {
                             optionsList[i].focus();
                             return;
                         }
@@ -571,10 +584,12 @@ export class SearchModal extends Modal {
         }
 
         // 應用位置
-        modalEl.style.position = 'fixed';
-        modalEl.style.top = `${top}px`;
-        modalEl.style.left = `${left}px`;
-        modalEl.style.transform = 'none';
+        modalEl.setCssProps({
+            position: 'fixed',
+            top: `${top}px`,
+            left: `${left}px`,
+            transform: 'none',
+        });
     }
 }
 

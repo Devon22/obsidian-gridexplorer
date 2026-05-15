@@ -1,6 +1,6 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting, setIcon } from 'obsidian';
 import GridExplorerPlugin from '../main';
-import { CustomMode } from '../settings';
+import { CustomMode, CustomModeOption } from '../settings';
 import { t } from '../translations';
 
 export class CustomModeModal extends Modal {
@@ -24,9 +24,9 @@ export class CustomModeModal extends Modal {
         let icon = this.mode ? this.mode.icon : '🧩';
         let displayName = this.mode ? this.mode.displayName : '';
         // 新增名稱欄位，用於原始 dataviewCode 的選項名稱
-        let name = this.mode && (this.mode as any).name ? (this.mode as any).name : t('default');
+        let name = this.mode?.name || t('default');
         // 支援多個子選項，每個選項包含名稱與 Dataview 程式碼
-        let options = this.mode?.options ? this.mode.options.map(opt => ({ ...opt })) : []; // 其他選項（不含 Default）
+        const options: CustomModeOption[] = this.mode?.options ? this.mode.options.map(opt => ({ ...opt })) : []; // 其他選項（不含 Default）
         // 向下相容：使用第一個選項作為主要 dataviewCode
         let dataviewCode = this.mode ? this.mode.dataviewCode : '';
         let enabled = this.mode ? (this.mode.enabled ?? true) : true;
@@ -41,8 +41,7 @@ export class CustomModeModal extends Modal {
                         icon = value || '🧩';
                     });
                 // 設置固定寬度，適合單個圖示
-                text.inputEl.style.width = '3em';
-                text.inputEl.style.minWidth = '3em';
+                text.inputEl.addClass('ge-custommode-icon-input');
             })
             .addText(text => {
                 text.setValue(displayName)
@@ -56,9 +55,7 @@ export class CustomModeModal extends Modal {
             .setDesc(t('custom_mode_dataview_code_desc'));
 
         // 使標題與描述佔據一行，輸入區域佔據了下一行
-        dvSetting.settingEl.style.flexDirection = 'column';
-        dvSetting.settingEl.style.alignItems = 'stretch';
-        dvSetting.settingEl.style.gap = '0.5rem';
+        dvSetting.settingEl.addClass('ge-custommode-dataview-setting');
 
         dvSetting.addText(text => {
             text.setValue(name)
@@ -71,10 +68,10 @@ export class CustomModeModal extends Modal {
                 .onChange(value => {
                     dataviewCode = value;
                 })
-                .setPlaceholder('Dataview JS code');
+                .setPlaceholder('Dataview js code');
             // 給TextArea有足夠的垂直空間和完整的寬度
             text.inputEl.setAttr('rows', 6);
-            text.inputEl.style.width = '100%';
+            text.inputEl.addClass('ge-custommode-code-input');
         });
 
         dvSetting.addText(text => {
@@ -86,10 +83,7 @@ export class CustomModeModal extends Modal {
         });
 
         // 讓 Text 與 TextArea 在 control 區域各佔一行
-        dvSetting.controlEl.style.display = 'flex';
-        dvSetting.controlEl.style.flexDirection = 'column';
-        dvSetting.controlEl.style.alignItems = 'stretch';
-        dvSetting.controlEl.style.gap = '0.5rem';
+        dvSetting.controlEl.addClass('ge-custommode-dataview-controls');
 
         // ===== 選項管理區域 =====
         contentEl.createEl('h3', { text: t('custom_mode_sub_options') });
@@ -126,11 +120,11 @@ export class CustomModeModal extends Modal {
         };
 
         const getDropIndex = (e: DragEvent): number => {
-            const containers = Array.from(optionsContainer.querySelectorAll('.ge-custommode-option-container'));
+            const containers = Array.from(optionsContainer.querySelectorAll<HTMLElement>('.ge-custommode-option-container'));
             const y = e.clientY;
             
             for (let i = 0; i < containers.length; i++) {
-                const container = containers[i] as HTMLElement;
+                const container = containers[i];
                 const rect = container.getBoundingClientRect();
                 const midY = rect.top + rect.height / 2;
                 
@@ -173,7 +167,7 @@ export class CustomModeModal extends Modal {
                 
                 // 拖曳手柄
                 const dragHandle = headerEl.createDiv('ge-custommode-option-drag-handle');
-                dragHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>`;
+                setIcon(dragHandle, 'grip-vertical');
                 
                 // 選項名稱
                 const nameEl = headerEl.createDiv('ge-custommode-option-name');
@@ -181,11 +175,11 @@ export class CustomModeModal extends Modal {
                 
                 // 展開/摺疊按鈕
                 const toggleEl = headerEl.createDiv('ge-custommode-option-toggle');
-                toggleEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"></polyline></svg>`;
+                setIcon(toggleEl, 'chevron-right');
                 
                 // 刪除按鈕
                 const deleteEl = headerEl.createDiv('ge-custommode-option-delete');
-                deleteEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path></svg>`;
+                setIcon(deleteEl, 'trash-2');
                 
                 // 內容區域
                 const contentEl = optionContainer.createDiv('ge-custommode-option-content');
@@ -201,13 +195,13 @@ export class CustomModeModal extends Modal {
                             });
                     })
                     .addTextArea(text => {
-                        text.setPlaceholder('Dataview JS code')
+                        text.setPlaceholder('Dataview js code')
                             .setValue(opt.dataviewCode)
                             .onChange(val => {
                                 opt.dataviewCode = val;
                             });
                         text.inputEl.setAttr('rows', 6);
-                        text.inputEl.style.width = '100%';
+                        text.inputEl.addClass('ge-custommode-code-input');
                     })
                     .addText(text => {
                         text.setPlaceholder(t('custom_mode_fields_placeholder'))
@@ -251,7 +245,7 @@ export class CustomModeModal extends Modal {
                     optionContainer.classList.add('dragging');
                     if (e.dataTransfer) {
                         e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/html', optionContainer.outerHTML);
+                        e.dataTransfer.setData('text/plain', idx.toString());
                     }
                 });
 
@@ -293,6 +287,9 @@ export class CustomModeModal extends Modal {
                         // 保存展開狀態
                         const draggedExpanded = expandedStates[draggedIndex];
                         const draggedOption = options[draggedIndex];
+                        if (!draggedOption) {
+                            return;
+                        }
                         
                         // 從原位置移除
                         options.splice(draggedIndex, 1);

@@ -1,4 +1,4 @@
-import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, ViewStateResult } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './utils/fileUtils';
@@ -12,9 +12,20 @@ import { MediaModal } from './modal/mediaModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { t } from './translations';
+import { CustomMode, GallerySettings } from './settings';
 
 // 探索器視圖類型常數
 export const EXPLORER_VIEW_TYPE = 'explorer-view';
+
+type ModeItem = { key?: string; label: string; icon: string; onClick: () => void };
+type CustomEventPayload = { mode?: string; path?: string };
+interface WorkspaceWithCustomEvents {
+    on(name: string, callback: (...args: unknown[]) => void): EventRef;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
 
 export class ExplorerView extends ItemView {
     plugin: GridExplorerPlugin;
@@ -104,7 +115,7 @@ export class ExplorerView extends ItemView {
     }
 
     // 恢復視圖狀態
-    async setState(state: any, result?: any): Promise<void> {
+    async setState(state: unknown, result: ViewStateResult): Promise<void> {
         await super.setState(state, result);
 
         this.restoreExpandedPaths(state);
@@ -117,8 +128,8 @@ export class ExplorerView extends ItemView {
     }
 
     // 恢復展開路徑狀態
-    private restoreExpandedPaths(state: any) {
-        if (state?.expandedPaths && Array.isArray(state.expandedPaths)) {
+    private restoreExpandedPaths(state: unknown) {
+        if (isRecord(state) && Array.isArray(state.expandedPaths)) {
             this.expandedPaths = new Set(
                 state.expandedPaths.filter((p: unknown) => typeof p === 'string')
             );
@@ -128,19 +139,16 @@ export class ExplorerView extends ItemView {
     }
 
     // 恢復搜尋查詢
-    private restoreSearchQuery(state: any) {
-        this.searchQuery = (state?.searchQuery && typeof state.searchQuery === 'string')
+    private restoreSearchQuery(state: unknown) {
+        this.searchQuery = (isRecord(state) && typeof state.searchQuery === 'string')
             ? state.searchQuery
             : '';
     }
 
     // 恢復暫存檔案列表
-    private restoreStashFiles(state: any) {
-        if (state?.stashFilePaths && Array.isArray(state.stashFilePaths)) {
-            const validPaths = state.stashFilePaths
-                .filter((p: unknown) => typeof p === 'string' && p)
-                .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
-            this.stashFilePaths = Array.from(new Set(validPaths));
+    private restoreStashFiles(state: unknown) {
+        if (isRecord(state) && Array.isArray(state.stashFilePaths)) {
+            this.stashFilePaths = this.getValidStashPaths(state.stashFilePaths as unknown[]);
             // 將還原的暫存區同步回設定，確保下次新建視圖也能取得
             this.persistStashToSettings();
         }
@@ -150,22 +158,27 @@ export class ExplorerView extends ItemView {
     private loadStashFromSettingsIfNeeded() {
         try {
             if (this.stashFilePaths.length > 0) return;
-            const paths = (this.plugin.settings as any)?.explorerStashPaths as unknown;
+            const paths: unknown = this.plugin.settings.explorerStashPaths;
             if (!Array.isArray(paths)) return;
-            const validPaths = paths
-                .filter((p: unknown) => typeof p === 'string' && p)
-                .filter((p: string) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
-            this.stashFilePaths = Array.from(new Set(validPaths));
+            this.stashFilePaths = this.getValidStashPaths(paths as unknown[]);
         } catch (error) {
             console.error('ExplorerView: Failed to load stash from settings', error);
         }
     }
 
     // 將目前的暫存清單寫回設定（去重）
+    private getValidStashPaths(paths: unknown[]): string[] {
+        const validPaths = paths
+            .filter((p): p is string => typeof p === 'string' && p.length > 0)
+            .filter((p) => this.app.vault.getAbstractFileByPath(p) instanceof TFile);
+
+        return Array.from(new Set(validPaths));
+    }
+
     private persistStashToSettings() {
         try {
             const unique = Array.from(new Set(this.stashFilePaths));
-            (this.plugin.settings as any).explorerStashPaths = unique;
+            this.plugin.settings.explorerStashPaths = unique;
             // 保存但不觸發整體視圖更新，避免頻繁重繪
             void this.plugin.saveSettings(false);
         } catch (error) {
@@ -197,14 +210,18 @@ export class ExplorerView extends ItemView {
 
         this.eventRefs.push(
             vault.on('create', schedule),
-            vault.on('delete', (file: any) => this.handleFileDelete(file, schedule)),
-            vault.on('rename', (file: any, oldPath: string) => this.handleFileRename(file, oldPath, schedule))
+            vault.on('delete', (file: unknown) => this.handleFileDelete(file, schedule)),
+            vault.on('rename', (file: unknown, oldPath: string) => this.handleFileRename(file, oldPath, schedule))
         );
 
-        this.registerCustomEvent('ge-grid-source-changed', (payload: any) => {
+        this.registerCustomEvent('ge-grid-source-changed', (payload: unknown) => {
             // 檢查模式或路徑是否真的改變了
-            const newMode = payload?.mode ?? this.lastMode;
-            const newPath = payload?.path ?? this.lastPath;
+            const sourceChangedPayload: CustomEventPayload = isRecord(payload) ? {
+                mode: typeof payload.mode === 'string' ? payload.mode : undefined,
+                path: typeof payload.path === 'string' ? payload.path : undefined,
+            } : {};
+            const newMode = sourceChangedPayload.mode ?? this.lastMode;
+            const newPath = sourceChangedPayload.path ?? this.lastPath;
             
             // 只有在模式或路徑真正改變時才更新狀態和觸發重繪
             if (newMode !== this.lastMode || newPath !== this.lastPath) {
@@ -229,13 +246,13 @@ export class ExplorerView extends ItemView {
     }
 
     // 處理檔案刪除事件
-    private handleFileDelete(file: any, schedule: () => void) {
-        const path = file?.path as string | undefined;
+    private handleFileDelete(file: unknown, schedule: () => void) {
+        const path = isRecord(file) && typeof file.path === 'string' ? file.path : undefined;
         if (path) {
             this.removeExpandedPrefix(path);
             if (file instanceof TFile) {
                 this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
-                this.app.workspace.requestSaveLayout();
+                void this.app.workspace.requestSaveLayout();
                 this.persistStashToSettings();
             }
         }
@@ -243,13 +260,13 @@ export class ExplorerView extends ItemView {
     }
 
     // 處理檔案重新命名事件
-    private handleFileRename(file: any, oldPath: string, schedule: () => void) {
-        const newPath = file?.path as string || '';
+    private handleFileRename(file: unknown, oldPath: string, schedule: () => void) {
+        const newPath = isRecord(file) && typeof file.path === 'string' ? file.path : '';
         if (oldPath && newPath) {
             this.renameExpandedPrefix(oldPath, newPath);
             if (file instanceof TFile) {
                 this.stashFilePaths = this.stashFilePaths.map(p => p === oldPath ? newPath : p);
-                this.app.workspace.requestSaveLayout();
+                void this.app.workspace.requestSaveLayout();
                 this.persistStashToSettings();
             }
         }
@@ -257,9 +274,9 @@ export class ExplorerView extends ItemView {
     }
 
     // 註冊自定義事件
-    private registerCustomEvent(eventName: string, callback: (...args: any[]) => void) {
+    private registerCustomEvent(eventName: string, callback: (...args: unknown[]) => void) {
         try {
-            const ref = (this.app.workspace as any).on?.(eventName, callback);
+            const ref = (this.app.workspace as WorkspaceWithCustomEvents).on(eventName, callback);
             if (ref) this.eventRefs.push(ref);
         } catch (error) {
             console.warn(`Failed to register event ${eventName}:`, error);
@@ -309,7 +326,7 @@ export class ExplorerView extends ItemView {
     // 在新視圖中開啟資料夾
     private openFolderInNewView(folderPath: string) {
         const { workspace } = this.app;
-        let leaf: any = null;
+        let leaf: WorkspaceLeaf | null = null;
         switch (this.plugin.settings.defaultOpenLocation) {
             case 'left':
                 leaf = workspace.getLeftLeaf(false);
@@ -323,9 +340,9 @@ export class ExplorerView extends ItemView {
                 break;
         }
         if (!leaf) leaf = workspace.getLeaf('tab');
-        leaf.setViewState({ type: 'grid-view', active: true });
+        void leaf.setViewState({ type: 'grid-view', active: true });
         if (leaf.view instanceof GridView) {
-            leaf.view.setSource('folder', folderPath);
+            void leaf.view.setSource('folder', folderPath);
         }
         void workspace.revealLeaf(leaf);
     }
@@ -333,7 +350,7 @@ export class ExplorerView extends ItemView {
     // 在新視圖中開啟模式
     private openModeInNewView(mode: string) {
         const { workspace } = this.app;
-        let leaf: any = null;
+        let leaf: WorkspaceLeaf | null = null;
         switch (this.plugin.settings.defaultOpenLocation) {
             case 'left':
                 leaf = workspace.getLeftLeaf(false);
@@ -347,9 +364,9 @@ export class ExplorerView extends ItemView {
                 break;
         }
         if (!leaf) leaf = workspace.getLeaf('tab');
-        leaf.setViewState({ type: 'grid-view', active: true });
+        void leaf.setViewState({ type: 'grid-view', active: true });
         if (leaf.view instanceof GridView) {
-            leaf.view.setSource(mode);
+            void leaf.view.setSource(mode);
         }
         void workspace.revealLeaf(leaf);
     }
@@ -410,7 +427,7 @@ export class ExplorerView extends ItemView {
     // 創建搜尋容器
     private createSearchContainer(contentEl: HTMLElement) {
         this.searchContainerEl = contentEl.createDiv({ cls: 'ge-explorer-search-container' });
-        this.searchInputEl = this.searchContainerEl.createEl('input', { type: 'text' }) as HTMLInputElement;
+        this.searchInputEl = this.searchContainerEl.createEl('input', { type: 'text' });
         this.searchInputEl.addClass('ge-explorer-search-input');
         this.searchInputEl.placeholder = t?.('search') || 'Search';
         this.searchInputEl.value = this.searchQuery;
@@ -458,7 +475,7 @@ export class ExplorerView extends ItemView {
         if (!this.isComposing) {
             this.keepSearchFocus = true;
             this.scheduleRender();
-            this.app.workspace.requestSaveLayout();
+            void this.app.workspace.requestSaveLayout();
         }
     }
 
@@ -483,7 +500,7 @@ export class ExplorerView extends ItemView {
         if (this.searchInputEl) this.searchInputEl.value = '';
         clearBtn.removeClass('show');
         this.scheduleRender();
-        this.app.workspace.requestSaveLayout();
+        void this.app.workspace.requestSaveLayout();
         window.setTimeout(() => this.searchInputEl?.focus(), 0);
     }
 
@@ -503,15 +520,15 @@ export class ExplorerView extends ItemView {
             setIcon(searchIcon, 'search');
             const searchName = searchItem.createSpan({ cls: 'ge-explorer-folder-name' });
             searchName.textContent = `${t ? t('search_for') : 'Search for'} "${trimmed}"`;
-            searchItem.addEventListener('click', async (evt) => {
+            searchItem.addEventListener('click', (evt) => {
                 evt.stopPropagation();
-                await this.openFolderSearch(trimmed);
+                void this.openFolderSearch(trimmed);
             });
             // 鍵盤支援：Enter 觸發、ArrowUp 返回輸入框、Escape 清空並返回
-            searchItem.addEventListener('keydown', async (evt: KeyboardEvent) => {
+            searchItem.addEventListener('keydown', (evt: KeyboardEvent) => {
                 if (evt.key === 'Enter') {
                     evt.preventDefault();
-                    await this.openFolderSearch(trimmed);
+                    void this.openFolderSearch(trimmed);
                 } else if (evt.key === 'ArrowUp') {
                     evt.preventDefault();
                     this.searchInputEl?.focus();
@@ -523,7 +540,7 @@ export class ExplorerView extends ItemView {
                     clearBtn?.removeClass('show');
                     this.scheduleRender();
                     // 通知 Obsidian 保存視圖狀態
-                    this.app.workspace.requestSaveLayout();
+                    void this.app.workspace.requestSaveLayout();
                     window.setTimeout(() => this.searchInputEl?.focus(), 0);
                 }
             });
@@ -630,16 +647,16 @@ export class ExplorerView extends ItemView {
     }
 
     // 獲取自定義模式項目
-    private getCustomModeItems(settings: any) {
-        const customModes = (settings?.customModes ?? []).filter((cm: any) => cm?.enabled !== false);
+    private getCustomModeItems(settings: GallerySettings): ModeItem[] {
+        const customModes = settings.customModes.filter((cm: CustomMode) => cm.enabled !== false);
 
         return customModes
-            .filter((cm: any) => {
+            .filter((cm: CustomMode) => {
                 if (!this.isFiltering()) return true;
                 const baseLabel = cm.displayName || cm.internalName || 'Custom';
                 return this.matchesQuery(baseLabel);
             })
-            .map((cm: any) => {
+            .map((cm: CustomMode) => {
                 const baseLabel = cm.displayName || cm.internalName || 'Custom';
                 const internalName = cm.internalName || `custom-${baseLabel}`;
                 const textIcon = cm.icon ? `${cm.icon} ` : '';
@@ -647,13 +664,13 @@ export class ExplorerView extends ItemView {
                     key: internalName,
                     label: `${textIcon}${baseLabel}`,
                     icon: '',
-                    onClick: () => this.openMode(internalName)
+                    onClick: () => { void this.openMode(internalName); }
                 };
             });
     }
 
     // 獲取內建模式項目
-    private getBuiltinModeItems(settings: any) {
+    private getBuiltinModeItems(settings: GallerySettings): ModeItem[] {
         const builtInModes = this.getEnabledBuiltInModes(settings);
 
         return builtInModes
@@ -661,12 +678,12 @@ export class ExplorerView extends ItemView {
             .map(m => {
                 const emoji = this.BUILTIN_MODE_EMOJIS[m.key] || '';
                 const label = emoji ? `${emoji} ${m.label}` : m.label;
-                return { key: m.key, label, icon: '', onClick: () => this.openMode(m.key) };
+                return { key: m.key, label, icon: '', onClick: () => { void this.openMode(m.key); } };
             });
     }
 
     // 獲取已啟用的內建模式
-    private getEnabledBuiltInModes(settings: any) {
+    private getEnabledBuiltInModes(settings: GallerySettings) {
         const builtInCandidates = [
             { key: 'bookmarks', label: t?.('bookmarks_mode') || 'Bookmarks', icon: 'bookmark', enabled: !!settings?.showBookmarksMode },
             { key: 'search', label: t?.('search_results') || 'Search', icon: 'search', enabled: !!settings?.showSearchMode },
@@ -689,13 +706,13 @@ export class ExplorerView extends ItemView {
     // 恢復滾動位置
     private restoreScrollPosition(contentEl: HTMLElement, prevScrollTop: number) {
         contentEl.scrollTop = prevScrollTop;
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             contentEl.scrollTop = prevScrollTop;
         });
     }
 
     // 渲染模式群組
-    private renderModesGroup(contentEl: HTMLElement, groupKey: string, title: string, iconName: string, items: Array<{ key?: string; label: string; icon: string; onClick: () => void }>) {
+    private renderModesGroup(contentEl: HTMLElement, groupKey: string, title: string, iconName: string, items: ModeItem[]) {
         if (items.length === 0) return;
 
         const nodeEl = contentEl.createDiv({ cls: 'ge-explorer-folder-node' });
@@ -730,7 +747,7 @@ export class ExplorerView extends ItemView {
     }
 
     // 渲染模式項目
-    private renderModeItems(children: HTMLElement, items: Array<{ key?: string; label: string; icon: string; onClick: () => void }>, groupKey: string) {
+    private renderModeItems(children: HTMLElement, items: ModeItem[], groupKey: string) {
         const { currentMode } = this.getCurrentGridState();
 
         items.forEach(({ key, label, icon, onClick }) => {
@@ -795,16 +812,16 @@ export class ExplorerView extends ItemView {
                 item.setTitle(t?.('edit_custom_mode') || 'Edit Custom Mode')
                     .setIcon('settings')
                     .onClick(() => {
-                        const modeIndex = this.plugin.settings.customModes.findIndex((m: any) => m.internalName === key);
+                        const modeIndex = this.plugin.settings.customModes.findIndex((m: CustomMode) => m.internalName === key);
                         if (modeIndex === -1) return;
-                        new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result: any) => {
+                        new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result: CustomMode) => {
                             this.plugin.settings.customModes[modeIndex] = result;
                             void this.plugin.saveSettings();
                             this.scheduleRender();
                         }).open();
                     });
             });
-            menu.showAtMouseEvent(evt as MouseEvent);
+            menu.showAtMouseEvent(evt);
         });
     }
 
@@ -840,7 +857,7 @@ export class ExplorerView extends ItemView {
 
         const view = await this.plugin.activateView();
         if (view instanceof GridView) {
-            await view.clearSelection();
+            view.clearSelection();
             await view.setSource('', '', true, searchTerm);
         }
     }
@@ -877,7 +894,7 @@ export class ExplorerView extends ItemView {
 
         // 高亮 vault 根（當前為 folder 模式且路徑為根）
         const vaultRoot = this.app.vault.getRoot();
-        const rootPath = (vaultRoot as any).path ?? '/';
+        const rootPath = vaultRoot.path || '/';
         if (currentMode === 'folder' && (currentPath === rootPath || currentPath === '' || currentPath === '/')) {
             foldersHeader.addClass('is-active');
         }
@@ -921,7 +938,7 @@ export class ExplorerView extends ItemView {
                     // 開啟 Vault 根目錄
                     const root = this.app.vault.getRoot();
                     const view = await this.plugin.activateView();
-                    if (view instanceof GridView) await view.setSource('folder', (root as any).path ?? '/');
+                    if (view instanceof GridView) await view.setSource('folder', root.path || '/');
                 } else {
                     // 點擊空白區域：展開/收合
                     const newExpanded = !this.isExpanded(foldersGroupKey);
@@ -1010,6 +1027,7 @@ export class ExplorerView extends ItemView {
 
         const toggle = header.createSpan({ cls: 'ge-explorer-folder-toggle' });
         const icon = header.createSpan({ cls: 'ge-explorer-folder-icon' });
+        setIcon(icon, 'folder');
         const name = header.createSpan({ cls: 'ge-explorer-folder-name' });
         name.textContent = folder.name || '/';
 
@@ -1049,12 +1067,12 @@ export class ExplorerView extends ItemView {
             const noteFile = this.app.vault.getAbstractFileByPath(notePath);
             if (noteFile instanceof TFile) {
                 const metadata = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
-                const colorValue = (metadata as any)?.color as string | undefined;
-                if (colorValue) {
+                const colorValue: unknown = metadata?.color;
+                if (typeof colorValue === 'string' && colorValue) {
                     name.parentElement?.addClass(`ge-folder-color-${colorValue}`);
                 }
-                const iconValue = (metadata as any)?.icon as string | undefined;
-                if (iconValue && name) {
+                const iconValue: unknown = metadata?.icon;
+                if (typeof iconValue === 'string' && iconValue && name) {
                     name.textContent = `${iconValue} ${folder.name || '/'}`;
                     return true;
                 }
@@ -1206,7 +1224,7 @@ export class ExplorerView extends ItemView {
         }
 
         // 其他情況：直接開啟該資料夾的 GridView
-        this.openFolderInGrid(folder.path);
+        void this.openFolderInGrid(folder.path);
     }
 
     // 渲染暫存區群組
@@ -1278,9 +1296,9 @@ export class ExplorerView extends ItemView {
             menu.addItem((item) => {
                 item.setTitle(t('save_stash_as_markdown'))
                     .setIcon('file-plus')
-                    .onClick(() => this.saveStashAsMarkdown());
+                    .onClick(() => { void this.saveStashAsMarkdown(); });
             });
-            menu.showAtMouseEvent(evt as MouseEvent);
+            menu.showAtMouseEvent(evt);
         });
 
         this.setupStashDropTarget(nodeEl);
@@ -1290,8 +1308,6 @@ export class ExplorerView extends ItemView {
     private setupStashDropTarget(nodeEl: HTMLElement) {
         if (!Platform.isDesktop) return;
         
-        let currentDropTarget: HTMLElement | null = null;
-        let insertPosition: 'before' | 'after' | 'end' = 'end';
         let targetIndex = -1;
         
         nodeEl.addEventListener('dragover', (e: DragEvent) => {
@@ -1324,8 +1340,6 @@ export class ExplorerView extends ItemView {
             });
             
             if (closestItem && closestDistance < 50) { // 50px 容忍範圍
-                currentDropTarget = closestItem;
-                insertPosition = insertBefore ? 'before' : 'after';
                 
                 // 顯示插入指示器
                 if (insertBefore) {
@@ -1335,8 +1349,6 @@ export class ExplorerView extends ItemView {
                 }
             } else {
                 // 沒有找到合適的項目，插入到最後
-                currentDropTarget = null;
-                insertPosition = 'end';
                 targetIndex = stashItems.length;
                 nodeEl.addClass('ge-dragover');
             }
@@ -1351,22 +1363,20 @@ export class ExplorerView extends ItemView {
             if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
                 this.clearStashInsertIndicators(nodeEl);
                 nodeEl.removeClass('ge-dragover');
-                currentDropTarget = null;
             }
         });
 
-        nodeEl.addEventListener('drop', async (e: DragEvent) => {
-            if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
-            e.preventDefault();
-            
-            this.clearStashInsertIndicators(nodeEl);
-            nodeEl.removeClass('ge-dragover');
-            
-            await this.handleStashDrop(e, targetIndex);
-            
-            currentDropTarget = null;
-            insertPosition = 'end';
-            targetIndex = -1;
+        nodeEl.addEventListener('drop', (e: DragEvent) => {
+            void (async () => {
+                if (e.dataTransfer?.types?.includes('application/obsidian-ge-stash')) return;
+                e.preventDefault();
+
+                this.clearStashInsertIndicators(nodeEl);
+                nodeEl.removeClass('ge-dragover');
+
+                await this.handleStashDrop(e, targetIndex);
+                targetIndex = -1;
+            })();
         });
     }
 
@@ -1404,6 +1414,7 @@ export class ExplorerView extends ItemView {
     // 渲染暫存拖放區
     private renderStashDropzone(children: HTMLElement) {
         const dropzone = children.createDiv({ cls: 'ge-explorer-folder-header ge-explorer-mode-item ge-explorer-stash-dropzone' });
+        dropzone.addClass('ge-explorer-stash-dropzone-clickable');
         const dzIcon = dropzone.createSpan({ cls: 'ge-explorer-folder-icon' });
         setIcon(dzIcon, 'plus');
         const dzName = dropzone.createSpan({ cls: 'ge-explorer-folder-name' });
@@ -1411,8 +1422,6 @@ export class ExplorerView extends ItemView {
 
         // 讓 dropzone 可點擊以選擇檔案加入
         // CSS 對 .ge-explorer-stash-dropzone 設了 pointer-events: none; 這裡強制開啟
-        (dropzone as HTMLElement).style.pointerEvents = 'auto';
-        (dropzone as HTMLElement).style.cursor = 'pointer';
         dropzone.setAttr('role', 'button');
         dropzone.setAttr('tabindex', '0');
         dropzone.addEventListener('click', (evt) => {
@@ -1568,7 +1577,7 @@ export class ExplorerView extends ItemView {
                 // 捷徑檔：啟用 GridView 並嘗試以捷徑邏輯開啟
                 const view = await this.plugin.activateView();
                 if (view instanceof GridView) {
-                    if (!(view as any).openShortcutFile || !(view as any).openShortcutFile(file)) {
+                    if (!view.openShortcutFile(file)) {
                         void this.app.workspace.getLeaf().openFile(file);
                     }
                 } else {
@@ -1591,7 +1600,7 @@ export class ExplorerView extends ItemView {
                     .setIcon('x')
                     .onClick(() => this.removeFromStash(file.path));
             });
-            menu.showAtMouseEvent(evt as MouseEvent);
+            menu.showAtMouseEvent(evt);
         });
     }
 
@@ -1683,7 +1692,7 @@ export class ExplorerView extends ItemView {
         newList.splice(insertIndex, 0, sourcePath);
 
         this.stashFilePaths = newList;
-        this.app.workspace.requestSaveLayout();
+        void this.app.workspace.requestSaveLayout();
         this.persistStashToSettings();
         this.scheduleRender();
     }
@@ -1707,7 +1716,7 @@ export class ExplorerView extends ItemView {
                         // 與一般文字處理一致：先嘗試絕對路徑，再用 linkpath 解析
                         let file = this.app.vault.getAbstractFileByPath(p);
                         if (!(file instanceof TFile)) {
-                            const alt = (this.app.metadataCache as any).getFirstLinkpathDest?.(p, srcPath);
+                            const alt = this.app.metadataCache.getFirstLinkpathDest(p, srcPath);
                             if (alt instanceof TFile) file = alt;
                         }
                         if (file instanceof TFile) resolved.push(file.path);
@@ -1740,14 +1749,14 @@ export class ExplorerView extends ItemView {
                         if (line.startsWith('[[') && line.endsWith(']]')) {
                             const inner = line.slice(2, -2);
                             const parsed = parseLinktext(inner);
-                            const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                            const dest = this.app.metadataCache.getFirstLinkpathDest(parsed.path, srcPath);
                             if (dest instanceof TFile) resolved = dest;
                         } else {
                             const direct = this.app.vault.getAbstractFileByPath(line);
                             if (direct instanceof TFile) {
                                 resolved = direct;
                             } else {
-                                const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(line, srcPath);
+                                const dest = this.app.metadataCache.getFirstLinkpathDest(line, srcPath);
                                 if (dest instanceof TFile) resolved = dest;
                             }
                         }
@@ -1798,7 +1807,7 @@ export class ExplorerView extends ItemView {
             this.stashFilePaths = [...this.stashFilePaths, ...validPaths];
         }
         
-        this.app.workspace.requestSaveLayout();
+        void this.app.workspace.requestSaveLayout();
         this.persistStashToSettings();
         this.scheduleRender();
     }
@@ -1806,7 +1815,7 @@ export class ExplorerView extends ItemView {
     // 從暫存區移除
     private removeFromStash(path: string) {
         this.stashFilePaths = this.stashFilePaths.filter(p => p !== path);
-        this.app.workspace.requestSaveLayout();
+        void this.app.workspace.requestSaveLayout();
         this.persistStashToSettings();
         this.scheduleRender();
     }
@@ -1814,7 +1823,7 @@ export class ExplorerView extends ItemView {
     // 清空暫存區
     private clearStash() {
         this.stashFilePaths = [];
-        this.app.workspace.requestSaveLayout();
+        void this.app.workspace.requestSaveLayout();
         this.persistStashToSettings();
         this.scheduleRender();
     }
@@ -1885,8 +1894,8 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('new_note'))
                 .setIcon('square-pen')
-                .onClick(async () => {
-                    await createNewNote(this.app, folder.path);
+                .onClick(() => {
+                    void createNewNote(this.app, folder.path);
                 });
         });
 
@@ -1894,8 +1903,8 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('new_folder'))
                 .setIcon('folder')
-                .onClick(async () => {
-                    await createNewFolder(this.app, folder.path, () => {
+                .onClick(() => {
+                    void createNewFolder(this.app, folder.path, () => {
                         this.scheduleRender();
                     });
                 });
@@ -1905,8 +1914,8 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('new_canvas'))
                 .setIcon('layout-dashboard')
-                .onClick(async () => {
-                    await createNewCanvas(this.app, folder.path);
+                .onClick(() => {
+                    void createNewCanvas(this.app, folder.path);
                 });
         });
 
@@ -1914,8 +1923,8 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('new_base'))
                 .setIcon('layout-dashboard')
-                .onClick(async () => {
-                    await createNewBase(this.app, folder.path);
+                .onClick(() => {
+                    void createNewBase(this.app, folder.path);
                 });
         });
 
@@ -1923,9 +1932,9 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('new_shortcut'))
                 .setIcon('shuffle')
-                .onClick(async () => {
-                    const modal = new ShortcutSelectionModal(this.app, this.plugin, async (option) => {
-                        await createShortcut(this.app, folder.path, option);
+                .onClick(() => {
+                    const modal = new ShortcutSelectionModal(this.app, this.plugin, (option) => {
+                        void createShortcut(this.app, folder.path, option);
                     });
                     modal.open();
                 });
@@ -1962,15 +1971,17 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('open_folder_note'))
                 .setIcon('panel-left-open')
-                .onClick(async () => {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        if (!view.openShortcutFile(noteFile)) {
+                .onClick(() => {
+                    void (async () => {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            if (!view.openShortcutFile(noteFile)) {
+                                void this.app.workspace.getLeaf().openFile(noteFile);
+                            }
+                        } else {
                             void this.app.workspace.getLeaf().openFile(noteFile);
                         }
-                    } else {
-                        void this.app.workspace.getLeaf().openFile(noteFile);
-                    }
+                    })();
                 });
         });
 
@@ -1978,11 +1989,13 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('edit_folder_note_settings'))
                 .setIcon('settings-2')
-                .onClick(async () => {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        showFolderNoteSettingsModal(this.app, this.plugin, folder, view);
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            showFolderNoteSettingsModal(this.app, this.plugin, folder, view);
+                        }
+                    })();
                 });
         });
 
@@ -2006,11 +2019,13 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('create_folder_note'))
                 .setIcon('file-cog')
-                .onClick(async () => {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        showFolderNoteSettingsModal(this.app, this.plugin, folder, view);
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            showFolderNoteSettingsModal(this.app, this.plugin, folder, view);
+                        }
+                    })();
                 });
         });
     }
@@ -2027,13 +2042,15 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(isIgnored ? t('unignore_folder') : t('ignore_folder'))
                 .setIcon(isIgnored ? 'folder-up' : 'folder-x')
-                .onClick(async () => {
-                    if (isIgnored) {
-                        this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders.filter(p => p !== folder.path);
-                    } else {
-                        this.plugin.settings.ignoredFolders.push(folder.path);
-                    }
-                    await this.plugin.saveSettings();
+                .onClick(() => {
+                    void (async () => {
+                        if (isIgnored) {
+                            this.plugin.settings.ignoredFolders = this.plugin.settings.ignoredFolders.filter(p => p !== folder.path);
+                        } else {
+                            this.plugin.settings.ignoredFolders.push(folder.path);
+                        }
+                        await this.plugin.saveSettings();
+                    })();
                 });
         });
 
@@ -2041,11 +2058,13 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('move_folder'))
                 .setIcon('folder-cog')
-                .onClick(async () => {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        new showFolderMoveModal(this.plugin, folder, view).open();
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            new showFolderMoveModal(this.plugin, folder, view).open();
+                        }
+                    })();
                 });
         });
 
@@ -2053,21 +2072,23 @@ export class ExplorerView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('rename_folder'))
                 .setIcon('file-cog')
-                .onClick(async () => {
-                    const view = await this.plugin.activateView();
-                    if (view instanceof GridView) {
-                        showFolderRenameModal(this.app, this.plugin, folder, view);
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        const view = await this.plugin.activateView();
+                        if (view instanceof GridView) {
+                            showFolderRenameModal(this.app, this.plugin, folder, view);
+                        }
+                    })();
                 });
         });
 
         // 刪除資料夾
         menu.addItem((item) => {
-            (item as any).setWarning(true);
-            item.setTitle(t('delete_folder'))
+            item.setWarning(true)
+                .setTitle(t('delete_folder'))
                 .setIcon('trash')
-                .onClick(async () => {
-                    await this.app.fileManager.trashFile(folder);
+                .onClick(() => {
+                    void this.app.fileManager.trashFile(folder);
                 });
         });
     }
@@ -2134,7 +2155,7 @@ export class ExplorerView extends ItemView {
         // 如果狀態確實發生變化，請求保存版面配置
         // 這樣下次開啟時可以恢復展開狀態
         if (before !== after) {
-            this.app.workspace.requestSaveLayout();
+            void this.app.workspace.requestSaveLayout();
         }
     }
 
@@ -2146,7 +2167,9 @@ export class ExplorerView extends ItemView {
 
         headerEl.addEventListener('dragover', this.handleDragOver.bind(this));
         headerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
-        headerEl.addEventListener('drop', this.handleDrop.bind(this, folderPath));
+        headerEl.addEventListener('drop', (event) => {
+            void this.handleDrop(folderPath, event);
+        });
     }
 
     // 處理拖拽懸停
@@ -2169,12 +2192,12 @@ export class ExplorerView extends ItemView {
     private async handleDrop(folderPath: string, evt: Event) {
         const event = evt as DragEvent;
         // 某些情況下事件非 DragEvent，需防禦處理
-        if (typeof (event as any).preventDefault === 'function') {
+        if (typeof event.preventDefault === 'function') {
             event.preventDefault();
         }
         // 確保從 header 本身移除樣式，而非子元素
         const header = event.currentTarget as HTMLElement | null;
-        if (header && typeof (header as any).removeClass === 'function') {
+        if (header && typeof header.removeClass === 'function') {
             header.removeClass('ge-dragover');
         }
 
@@ -2209,14 +2232,14 @@ export class ExplorerView extends ItemView {
                 if (text.startsWith('[[') && text.endsWith(']]')) {
                     const inner = text.slice(2, -2);
                     const parsed = parseLinktext(inner);
-                    const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                    const dest = this.app.metadataCache.getFirstLinkpathDest(parsed.path, srcPath);
                     if (dest instanceof TFile) resolvedFile = dest;
                 } else {
                     const direct = this.app.vault.getAbstractFileByPath(text);
                     if (direct instanceof TFile) {
                         resolvedFile = direct;
                     } else {
-                        const dest = (this.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                        const dest = this.app.metadataCache.getFirstLinkpathDest(text, srcPath);
                         if (dest instanceof TFile) resolvedFile = dest;
                     }
                 }

@@ -2,6 +2,14 @@ import { App, TFile, Notice } from 'obsidian';
 import { showNameInputModal } from '../modal/folderRenameModal';
 import { t } from '../translations';
 
+interface ShortcutFrontmatter {
+    type?: 'mode' | 'folder' | 'file' | 'search' | 'uri';
+    redirect?: string;
+    searchCurrentLocationOnly?: boolean;
+    searchFilesNameOnly?: boolean;
+    searchMediaFiles?: boolean;
+}
+
 /**
  * 創建新筆記的共用函數
  * @param app Obsidian App 實例
@@ -173,7 +181,7 @@ export async function createShortcut(
         const newFile = await app.vault.create(newPath, '');
 
         // 使用 processFrontMatter 來更新 frontmatter
-        await app.fileManager.processFrontMatter(newFile, (frontmatter: any) => {                
+        await app.fileManager.processFrontMatter(newFile, (frontmatter: ShortcutFrontmatter) => {
             if (option.type === 'mode') {
                 frontmatter.type = 'mode';
                 frontmatter.redirect = option.value;
@@ -181,10 +189,12 @@ export async function createShortcut(
                 frontmatter.type = 'folder';
                 frontmatter.redirect = option.value;
             } else if (option.type === 'file') {
-                const link = app.fileManager.generateMarkdownLink(
-                    app.vault.getAbstractFileByPath(option.value) as TFile, 
-                    ""
-                );
+                const targetFile = app.vault.getAbstractFileByPath(option.value);
+                if (!(targetFile instanceof TFile)) {
+                    return;
+                }
+
+                const link = app.fileManager.generateMarkdownLink(targetFile, "");
                 frontmatter.type = "file";
                 frontmatter.redirect = link;
             } else if (option.type === 'search') {
@@ -293,7 +303,7 @@ function generateFilenameFromUri(uri: string): string {
         const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
         return `🌐 ${cleanUri}`;
         
-    } catch (error) {
+    } catch {
         // 如果解析失敗，使用安全的預設名稱
         const cleanUri = uri.replace(/[<>:"/\\|?*]/g, '_').substring(0, 30);
         return `🌐 ${cleanUri}`;

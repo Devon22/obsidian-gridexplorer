@@ -8,6 +8,35 @@ import { showFolderMoveModal } from './modal/folderMoveModal';
 import { CustomModeModal } from './modal/customModeModal';
 import { showSearchModal } from './modal/searchModal';
 import { t } from './translations';
+interface SearchLeaf {
+    view?: {
+        searchComponent?: {
+            inputEl?: HTMLInputElement;
+        };
+    };
+}
+
+interface BookmarksPluginItem {
+    type?: string;
+    title?: string;
+    items?: BookmarksPluginItem[];
+}
+
+interface BookmarksPlugin {
+    enabled?: boolean;
+    instance?: {
+        items?: BookmarksPluginItem[];
+    };
+}
+
+interface AppWithInternalPlugins {
+    showInFolder?: (path: string) => void;
+    internalPlugins?: {
+        plugins?: {
+            bookmarks?: BookmarksPlugin;
+        };
+    };
+}
 
 export function renderModePath(gridView: GridView) {
 
@@ -225,7 +254,7 @@ export function renderModePath(gridView: GridView) {
                                                 .setDisabled(true)
                                         );
 
-                                        subFolders.forEach((folder: any) => {
+                                        subFolders.forEach((folder) => {
                                             menu.addItem((item) => {
                                                 item.setTitle(`${customFolderIcon} ${folder.name}`)
                                                     .setIcon('corner-down-right')
@@ -238,7 +267,7 @@ export function renderModePath(gridView: GridView) {
                                     }
                                 }
 
-                                menu.showAtMouseEvent(event as MouseEvent);
+                                menu.showAtMouseEvent(event);
                             } else {
                                 void gridView.setSource('folder', path.path);
                                 gridView.clearSelection();
@@ -291,7 +320,7 @@ export function renderModePath(gridView: GridView) {
 
                                             // 3) 使用 Obsidian 的連結解析
                                             if (!resolved) {
-                                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(filePath, path.path);
+                                                const dest = gridView.app.metadataCache.getFirstLinkpathDest(filePath, path.path);
                                                 if (dest instanceof TFile) resolved = dest;
                                             }
 
@@ -327,14 +356,14 @@ export function renderModePath(gridView: GridView) {
                                         if (text.startsWith('[[') && text.endsWith(']]')) {
                                             const inner = text.slice(2, -2);
                                             const parsed = parseLinktext(inner);
-                                            const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(parsed.path, srcPath);
+                                            const dest = gridView.app.metadataCache.getFirstLinkpathDest(parsed.path, srcPath);
                                             if (dest instanceof TFile) resolvedFile = dest;
                                         } else {
                                             const direct = gridView.app.vault.getAbstractFileByPath(text);
                                             if (direct instanceof TFile) {
                                                 resolvedFile = direct;
                                             } else {
-                                                const dest = (gridView.app.metadataCache as any).getFirstLinkpathDest?.(text, srcPath);
+                                                const dest = gridView.app.metadataCache.getFirstLinkpathDest(text, srcPath);
                                                 if (dest instanceof TFile) resolvedFile = dest;
                                             }
                                         }
@@ -356,7 +385,7 @@ export function renderModePath(gridView: GridView) {
                 }
             }
 
-            if (el.className === 'ge-current-folder' || (el instanceof HTMLAnchorElement && el.className.includes('ge-current-folder'))) {
+            if (el.className === 'ge-current-folder' || (el.instanceOf(HTMLAnchorElement) && el.className.includes('ge-current-folder'))) {
                 const showCurrentFolderMenu = (event: MouseEvent) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -484,7 +513,7 @@ export function renderModePath(gridView: GridView) {
                                 .setIcon('arrow-up-right')
                                 .onClick(() => {
                                     if (folder instanceof TFolder) {    
-                                        (gridView.app as any).showInFolder(folder.path);
+                                        (gridView.app as AppWithInternalPlugins).showInFolder?.(folder.path);
                                     }
                                 });
                         });
@@ -548,8 +577,8 @@ export function renderModePath(gridView: GridView) {
                             });
                             // 刪除資料夾
                             menu.addItem((item) => {
-                                (item as any).setWarning(true);
                                 item
+                                    .setWarning(true)
                                     .setTitle(t('delete_folder'))
                                     .setIcon('trash')
                                     .onClick(async () => {
@@ -606,17 +635,18 @@ export function renderModePath(gridView: GridView) {
 
         // 根據目前模式設定對應的圖示和名稱
         switch (gridView.sourceMode) {
-            case 'bookmarks':
+            case 'bookmarks': {
                 modeIcon = '📑';
                 modeName = t('bookmarks_mode');
                 break;
-            case 'search':
+            }
+            case 'search': {
                 modeIcon = '🔍';
                 modeName = t('search_results');
-                const searchLeaf = (gridView.app as any).workspace.getLeavesOfType('search')[0];
+                const searchLeaf = gridView.app.workspace.getLeavesOfType('search')[0] as SearchLeaf | undefined;
                 if (searchLeaf) {
-                    const searchView: any = searchLeaf.view;
-                    const searchInputEl: HTMLInputElement | null = searchView.searchComponent ? searchView.searchComponent.inputEl : null;
+                    const searchView = searchLeaf.view;
+                    const searchInputEl: HTMLInputElement | null = searchView?.searchComponent?.inputEl ?? null;
                     const currentQuery = searchInputEl?.value.trim();
                     if (currentQuery && currentQuery.length > 0) {
                         modeName += `: ${currentQuery}`;
@@ -625,7 +655,8 @@ export function renderModePath(gridView: GridView) {
                     }
                 }
                 break;
-            case 'backlinks':
+            }
+            case 'backlinks': {
                 modeIcon = '🔗';
                 modeName = t('backlinks_mode');
                 const activeFile = gridView.app.workspace.getActiveFile();
@@ -633,7 +664,8 @@ export function renderModePath(gridView: GridView) {
                     modeName += `: ${activeFile.basename}`;
                 }
                 break;
-            case 'outgoinglinks':
+            }
+            case 'outgoinglinks': {
                 modeIcon = '🔗';
                 modeName = t('outgoinglinks_mode');
                 const currentFile = gridView.app.workspace.getActiveFile();
@@ -641,6 +673,7 @@ export function renderModePath(gridView: GridView) {
                     modeName += `: ${currentFile.basename}`;
                 }
                 break;
+            }
             case 'recent-files':
                 modeIcon = '📅';
                 modeName = t('recent_files_mode');
@@ -707,7 +740,7 @@ export function renderModePath(gridView: GridView) {
         }
 
         switch (gridView.sourceMode) {
-            case 'bookmarks':
+            case 'bookmarks': {
                 let bookmarkGroupName = '';
                 if (gridView.bookmarkGroupId === 'all') {
                     bookmarkGroupName = t('all_bookmarks');
@@ -744,14 +777,14 @@ export function renderModePath(gridView: GridView) {
                     menu.addSeparator();
 
                     // 取得所有書籤群組
-                    const bookmarksPlugin = (gridView.app as any).internalPlugins.plugins.bookmarks;
+                    const bookmarksPlugin = (gridView.app as AppWithInternalPlugins).internalPlugins?.plugins?.bookmarks;
                     if (bookmarksPlugin?.enabled) {
-                        const bookmarks = bookmarksPlugin.instance.items;
+                        const bookmarks = bookmarksPlugin.instance?.items ?? [];
                         const groups: string[] = [];
-                        const findGroups = (items: any[]) => {
+                        const findGroups = (items: BookmarksPluginItem[]) => {
                             items.forEach(item => {
                                 if (item.type === 'group') {
-                                    groups.push(item.title);
+                                    groups.push(item.title ?? '');
                                     if (item.items) findGroups(item.items);
                                 }
                             });
@@ -772,9 +805,10 @@ export function renderModePath(gridView: GridView) {
                     menu.showAtMouseEvent(evt);
                 });
                 break;
+            }
             case 'random-note':
             case 'recent-files':
-            case 'all-files':
+            case 'all-files': {
                 if (gridView.plugin.settings.showMediaFiles && gridView.searchQuery === '') {
                     // "顯示類型"選項
                     const showTypeName = gridView.includeMedia ? t('random_note_include_media_files') : t('random_note_notes_only');
@@ -803,7 +837,8 @@ export function renderModePath(gridView: GridView) {
                     });
                 }
                 break;
-            case 'tasks':
+            }
+            case 'tasks': {
                 const taskFilterSpan = modenameContainer.createEl('a', { text: t(`${gridView.taskFilter}`), cls: 'ge-sub-option' });
                 taskFilterSpan.addEventListener('click', (evt) => {
                     const menu = new Menu();
@@ -838,7 +873,8 @@ export function renderModePath(gridView: GridView) {
                     menu.showAtMouseEvent(evt);
                 });
                 break;
-            default:
+            }
+            default: {
                 if (gridView.sourceMode.startsWith('custom-')) {
                     // 把 modenameContainer 加上所有自訂模式選項的選單
 
@@ -854,7 +890,7 @@ export function renderModePath(gridView: GridView) {
 
                             let subName: string | undefined;
                             if (gridView.customOptionIndex === -1) {
-                                subName = (mode as any).name?.trim() || t('default');
+                                subName = mode.name?.trim() || t('default');
                             } else if (gridView.customOptionIndex >= 0 && gridView.customOptionIndex < mode.options.length) {
                                 const opt = mode.options[gridView.customOptionIndex];
                                 subName = opt.name?.trim() || `${t('option')} ${gridView.customOptionIndex + 1}`;
@@ -864,7 +900,7 @@ export function renderModePath(gridView: GridView) {
                             subSpan.addEventListener('click', (evt) => {
                                 const menu = new Menu();
                                 // 預設選項
-                                const defaultName = (mode as any).name?.trim() || t('default');
+                                const defaultName = mode.name?.trim() || t('default');
                                 menu.addItem(item => {
                                     item.setTitle(defaultName)
                                         .setIcon('puzzle')
@@ -904,6 +940,7 @@ export function renderModePath(gridView: GridView) {
                     }
                 }
                 break;
+            }
         }
     } else if (gridView.searchQuery && !gridView.searchCurrentLocationOnly) {
         // 顯示全域搜尋名稱
@@ -921,7 +958,6 @@ export function renderModePath(gridView: GridView) {
 
         // 建立可點選的搜尋文字
         const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
-        searchText.style.cursor = 'pointer';
         searchText.addEventListener('click', () => {
             // 以文字元素作為定位點開啟搜尋 modal（popup 樣式）
             showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);

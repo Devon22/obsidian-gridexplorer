@@ -115,7 +115,7 @@ async function validateRemoteImage(url: string): Promise<string | null> {
                 return url;
             }
         }
-    } catch (error) {
+    } catch {
         try {
             const getResponse = await requestUrl({ url });
             if (isSuccessfulStatus(getResponse)) {

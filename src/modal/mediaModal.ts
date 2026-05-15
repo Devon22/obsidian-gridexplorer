@@ -1,6 +1,12 @@
 import { App, Modal, TFile, Menu, setIcon } from 'obsidian';
 import { isImageFile, isVideoFile, isAudioFile } from '../utils/fileUtils';
 
+interface GridViewFocusTarget {
+    gridItems: HTMLElement[];
+    hasKeyboardFocus: boolean;
+    selectItem(index: number): void;
+}
+
 export class MediaModal extends Modal {
     private file: TFile;
     private mediaFiles: TFile[];
@@ -8,7 +14,7 @@ export class MediaModal extends Modal {
     private currentMediaElement: HTMLElement | null = null;
     private isZoomed = false;
     private handleWheel: EventListener | null = null;
-    private gridView: any; // 儲存 GridView 實例的引用
+    private gridView?: GridViewFocusTarget; // 儲存 GridView 實例的引用
 
     // 觸控拖曳相關屬性
     private touchStartX = 0;
@@ -18,7 +24,7 @@ export class MediaModal extends Modal {
     private minSwipeDistance = 50; // 最小滑動距離
     private maxSwipeTime = 300; // 最大滑動時間（毫秒）
 
-    constructor(app: App, file: TFile, mediaFiles: TFile[], gridView?: any) {
+    constructor(app: App, file: TFile, mediaFiles: TFile[], gridView?: GridViewFocusTarget) {
         super(app);
         this.file = file;
         this.mediaFiles = mediaFiles;
@@ -34,8 +40,6 @@ export class MediaModal extends Modal {
 
         // 設置 modal 樣式為全螢幕
         contentEl.empty();
-        contentEl.style.width = '100%';
-        contentEl.style.height = '100%';
         contentEl.addClass('ge-media-modal-content');
 
         // 創建媒體顯示區域
@@ -120,7 +124,7 @@ export class MediaModal extends Modal {
 
         // 如果存在之前的滾輪事件處理程序，先移除它
         if (this.handleWheel) {
-            const mediaView = contentEl.querySelector('.ge-media-view') as HTMLElement | null;
+            const mediaView = contentEl.querySelector<HTMLElement>('.ge-media-view');
             if (mediaView) {
                 mediaView.removeEventListener('wheel', this.handleWheel);
             }
@@ -131,6 +135,7 @@ export class MediaModal extends Modal {
         if (this.gridView) {
             // 找到當前媒體檔案在 GridView 中的索引
             const currentFile = this.mediaFiles[this.currentIndex];
+            if (!currentFile) return;
             const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) =>
                 item.dataset.filePath === currentFile.path
             );
@@ -170,9 +175,9 @@ export class MediaModal extends Modal {
 
         if (isImageFile(mediaFile)) {
             // 創建圖片元素
-            const img = document.createElement('img');
+            const img = activeDocument.createElement('img');
             img.className = 'ge-fullscreen-image';
-            img.style.display = 'none'; // 先隱藏新圖片
+            img.addClass('ge-hidden'); // 先隱藏新圖片
             img.src = this.app.vault.getResourcePath(mediaFile);
 
             // 等待新圖片載入完成
@@ -185,7 +190,7 @@ export class MediaModal extends Modal {
                 // 設置圖片樣式，預設滿屏顯示
                 this.resetImageStyles(img);
                 // 顯示新圖片
-                img.style.display = '';
+                img.removeClass('ge-hidden');
             };
 
             mediaContainer.appendChild(img);
@@ -201,7 +206,7 @@ export class MediaModal extends Modal {
             if (this.currentMediaElement) {
                 this.currentMediaElement.remove();
             }
-            const video = document.createElement('video');
+            const video = activeDocument.createElement('video');
             video.className = 'ge-fullscreen-video';
             video.controls = true;
             video.autoplay = true;
@@ -219,7 +224,7 @@ export class MediaModal extends Modal {
         if (isAudioFile(mediaFile)) {
             //顯示檔案名稱
             const fileName = mediaFile.name;
-            const fileNameElement = document.createElement('div');
+            const fileNameElement = activeDocument.createElement('div');
             fileNameElement.className = 'ge-fullscreen-file-name';
             fileNameElement.textContent = fileName;
             mediaContainer.appendChild(fileNameElement);
@@ -240,31 +245,35 @@ export class MediaModal extends Modal {
 
     // 重設圖片樣式
     resetImageStyles(img: HTMLImageElement) {
-        const mediaView = this.contentEl.querySelector('.ge-media-view') as HTMLElement | null;
+        const mediaView = this.contentEl.querySelector<HTMLElement>('.ge-media-view');
         if (!mediaView) return;
 
-        img.style.width = 'auto';
-        img.style.height = 'auto';
-        img.style.maxWidth = '100vw';
-        img.style.maxHeight = '100vh';
-        img.style.position = 'absolute';
-        img.style.left = '50%';
-        img.style.top = '50%';
-        img.style.transform = 'translate(-50%, -50%)';
-        img.style.cursor = 'zoom-in';
+        img.setCssStyles({
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '100vw',
+            maxHeight: '100vh',
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            cursor: 'zoom-in',
+        });
 
-        (mediaView as HTMLElement).style.overflowX = 'hidden';
-        (mediaView as HTMLElement).style.overflowY = 'hidden';
+        mediaView.setCssStyles({
+            overflowX: 'hidden',
+            overflowY: 'hidden',
+        });
 
         // 等待圖片載入完成後調整大小
         img.onload = () => {
             if (mediaView.clientWidth > mediaView.clientHeight) {
                 if (img.naturalHeight < mediaView.clientHeight) {
-                    img.style.height = '100%';
+                    img.setCssStyles({ height: '100%' });
                 }
             } else {
                 if (img.naturalWidth < mediaView.clientWidth) {
-                    img.style.width = '100%';
+                    img.setCssStyles({ width: '100%' });
                 }
             }
         };
@@ -273,11 +282,11 @@ export class MediaModal extends Modal {
         if (img.complete) {
             if (mediaView.clientWidth > mediaView.clientHeight) {
                 if (img.naturalHeight < mediaView.clientHeight) {
-                    img.style.height = '100%';
+                    img.setCssStyles({ height: '100%' });
                 }
             } else {
                 if (img.naturalWidth < mediaView.clientWidth) {
-                    img.style.width = '100%';
+                    img.setCssStyles({ width: '100%' });
                 }
             }
         }
@@ -285,7 +294,7 @@ export class MediaModal extends Modal {
 
     // 切換圖片縮放
     toggleImageZoom(img: HTMLImageElement, event?: MouseEvent) {
-        const mediaView = this.contentEl.querySelector('.ge-media-view');
+        const mediaView = this.contentEl.querySelector<HTMLElement>('.ge-media-view');
         if (!mediaView) return;
 
         if (!this.isZoomed) { // 放大
@@ -306,25 +315,33 @@ export class MediaModal extends Modal {
             // 如果圖片比視窗更"細長" (Aspect Ratio 較小)，則寬度填滿 (Fit Width)，垂直捲動
             // 如果圖片比視窗更"扁平" (Aspect Ratio 較大)，則高度填滿 (Fit Height)，水平捲動
             if (imageAspect < screenAspect) {
-                img.style.width = '100vw';
-                img.style.height = 'auto';
-                (mediaView as HTMLElement).style.overflowX = 'hidden';
-                (mediaView as HTMLElement).style.overflowY = 'scroll';
+                img.setCssStyles({
+                    width: '100vw',
+                    height: 'auto',
+                });
+                mediaView.setCssStyles({
+                    overflowX: 'hidden',
+                    overflowY: 'scroll',
+                });
 
                 // 計算滾動位置
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     const newHeight = img.offsetHeight;
                     const scrollY = Math.max(0, (newHeight * clickY) - (mediaView.clientHeight / 2));
                     mediaView.scrollTop = scrollY;
                 });
             } else {
-                img.style.width = 'auto';
-                img.style.height = '100vh';
-                (mediaView as HTMLElement).style.overflowX = 'scroll';
-                (mediaView as HTMLElement).style.overflowY = 'hidden';
+                img.setCssStyles({
+                    width: 'auto',
+                    height: '100vh',
+                });
+                mediaView.setCssStyles({
+                    overflowX: 'scroll',
+                    overflowY: 'hidden',
+                });
 
                 // 計算滾動位置
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     const newWidth = img.offsetWidth;
                     const scrollX = Math.max(0, (newWidth * clickX) - (mediaView.clientWidth / 2));
                     mediaView.scrollLeft = scrollX;
@@ -339,14 +356,16 @@ export class MediaModal extends Modal {
                 mediaView.addEventListener('wheel', this.handleWheel);
             }
 
-            img.style.maxWidth = 'none';
-            img.style.maxHeight = 'none';
-            img.style.position = 'relative';
-            img.style.left = '0';
-            img.style.top = '0';
-            img.style.margin = 'auto';
-            img.style.transform = 'none';
-            img.style.cursor = 'zoom-out';
+            img.setCssStyles({
+                maxWidth: 'none',
+                maxHeight: 'none',
+                position: 'relative',
+                left: '0',
+                top: '0',
+                margin: 'auto',
+                transform: 'none',
+                cursor: 'zoom-out',
+            });
             this.isZoomed = true;
             this.contentEl.addClass('is-zoomed');
         } else { // 縮小

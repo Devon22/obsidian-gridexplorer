@@ -188,10 +188,9 @@ export class FloatingAudioPlayer {
     public focus(): void {
         this.containerEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // 可以考慮添加一些視覺提示，例如短暫閃爍邊框
-        this.containerEl.style.transition = 'box-shadow 0.1s ease-in-out';
-        this.containerEl.style.boxShadow = '0 0 10px 2px var(--interactive-accent)';
+        this.containerEl.addClass('ge-audio-focus-highlight');
         window.setTimeout(() => {
-            this.containerEl.style.boxShadow = '';
+            this.containerEl.removeClass('ge-audio-focus-highlight');
         }, 300);
     }
 

@@ -79,14 +79,11 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
                     targetFile = gridView.app.metadataCache.getFirstLinkpathDest(linkTarget, '');
                 }
                 
-                if (targetFile && 'extension' in targetFile) {
-                    // 使用 Obsidian 的 getBacklinksForFile API
-                    const backlinks = (gridView.app.metadataCache as any).getBacklinksForFile(targetFile);
-                    
+                if (targetFile instanceof TFile) {
                     const currentLinkFiles = new Set<string>();
-                    if (backlinks) {
-                        // 收集所有反向連結的檔案路徑
-                        for (const [filePath, links] of backlinks.data.entries()) {
+                    // 收集所有反向連結的檔案路徑
+                    for (const [filePath, links] of Object.entries(gridView.app.metadataCache.resolvedLinks)) {
+                        if (links[targetFile.path]) {
                             currentLinkFiles.add(filePath);
                         }
                     }
@@ -166,7 +163,7 @@ export async function renderFiles(gridView: GridView, container: HTMLElement) {
 
                             // frontmatter 標籤
                             if (fileCache.frontmatter && fileCache.frontmatter.tags) {
-                                const fmTags = fileCache.frontmatter.tags;
+                                const fmTags: unknown = fileCache.frontmatter.tags;
                                 if (typeof fmTags === 'string') {
                                     collectedTags.push(
                                         ...fmTags.split(/[,\s]+/)
