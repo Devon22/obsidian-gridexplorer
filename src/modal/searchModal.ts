@@ -17,8 +17,8 @@ function isHidden(el: HTMLElement): boolean {
 export class SearchModal extends Modal {
     gridView: GridView;
     defaultQuery: string;
-    buttonElement: HTMLElement | undefined;
-    constructor(app: App, gridView: GridView, defaultQuery: string, buttonElement?: HTMLElement) {
+    buttonElement: HTMLElement;
+    constructor(app: App, gridView: GridView, defaultQuery: string, buttonElement: HTMLElement) {
         super(app);
         this.gridView = gridView;
         this.defaultQuery = defaultQuery;
@@ -29,11 +29,9 @@ export class SearchModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        // 如果有提供按鈕元素，則設置為 popup 樣式
-        if (this.buttonElement) {
-            this.modalEl.addClass('ge-popup-modal');
-            this.positionAsPopup();
-        }
+        // 設置為 popup 樣式
+        this.modalEl.addClass('ge-popup-modal');
+        this.positionAsPopup();
 
         let searchTerms = this.defaultQuery.trim().split(/\s+/).filter(t => t.length > 0);
         let currentInputIndex = searchTerms.length;
@@ -547,8 +545,6 @@ export class SearchModal extends Modal {
     }
 
     private positionAsPopup() {
-        if (!this.buttonElement) return;
-
         const modalEl = this.modalEl;
         const contentEl = this.contentEl;
 
@@ -593,7 +589,7 @@ export class SearchModal extends Modal {
     }
 }
 
-// 顯示搜尋 modal
-export function showSearchModal(app: App, gridView: GridView, defaultQuery = '', buttonElement?: HTMLElement) {
+// 顯示搜尋 popup
+export function showSearchModal(app: App, gridView: GridView, defaultQuery: string, buttonElement: HTMLElement) {
     new SearchModal(app, gridView, defaultQuery, buttonElement).open();
 }
