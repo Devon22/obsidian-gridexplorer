@@ -76,6 +76,8 @@ export default {
     'show_video_thumbnails_desc': '그리드 뷰에서 비디오 썸네일 표시, 비활성화 시 재생 아이콘 표시',
     'show_note_in_grid': '그리드에 노트 표시',
     'show_note_in_grid_desc': '클릭 시 그리드 컨테이너에 노트 표시. 비활성화 시 우클릭 메뉴로 열기',
+    'close_grid_view_on_open_note': '노트 파일을 열 때 현재 그리드 뷰 닫기',
+    'close_grid_view_on_open_note_desc': '활성화하면 그리드 뷰에서 노트 파일을 열 때 현재 그리드 뷰를 닫습니다',
     'open_note_layout': '노트 열기 레이아웃',
     'open_note_layout_desc': '그리드 뷰에서 노트를 여는 방법 설정',
     'open_note_layout_default': '기본값',

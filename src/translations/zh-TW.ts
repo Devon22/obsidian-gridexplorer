@@ -76,6 +76,8 @@ export default {
     'show_video_thumbnails_desc': '在網格視圖中顯示影片的縮圖，關閉時將顯示播放圖示',
     'show_note_in_grid': '在網格視圖中顯示筆記',
     'show_note_in_grid_desc': '啟用後，點擊筆記會直接在網格中顯示內容，不啟用則需要使用右鍵選單打開',
+    'close_grid_view_on_open_note': '當開啟筆記檔案時，關閉目前的網格視圖',
+    'close_grid_view_on_open_note_desc': '啟用後，從網格視圖開啟筆記檔案時會關閉目前的網格視圖',
     'open_note_layout': '開啟筆記的方式',
     'open_note_layout_desc': '設定開啟筆記的方式',
     'open_note_layout_default': '預設',

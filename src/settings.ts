@@ -88,6 +88,7 @@ export interface GallerySettings {
     quickAccessModeType: string; // View types used by "Open quick access view" command
     useQuickAccessAsNewTabMode: 'default' | 'folder' | 'mode'; // Use quick access (folder or mode) as a new tab view
     showNoteInGrid: boolean; // 是否預設在 grid container 中顯示筆記（不需要按 Alt 鍵）
+    closeGridViewOnOpenNote: boolean; // 當開啟筆記檔案時，關閉目前的網格視圖
     openNoteLayout: 'default' | 'newTab' | 'split' | 'newWindow'; // 開啟筆記的方式
     searchCurrentLocationOnly: boolean; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean; // 是否只搜尋筆記名稱
@@ -155,6 +156,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     useQuickAccessAsNewTabMode: 'default',
     quickAccessModeType: 'all-files', // Default quick access view type
     showNoteInGrid: false, // 預設不在 grid container 中顯示筆記
+    closeGridViewOnOpenNote: false, // 預設開啟筆記檔案時不關閉目前的網格視圖
     openNoteLayout: 'default', // 預設開啟筆記的方式
     searchCurrentLocationOnly: false, // 預設搜尋所有筆記
     searchFilesNameOnly: false, // 預設不只搜尋筆記名稱
@@ -775,6 +777,19 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showNoteInGrid)
                     .onChange(async (value) => {
                         this.plugin.settings.showNoteInGrid = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 開啟筆記檔案時關閉目前的網格視圖
+        new Setting(sectionEl)
+            .setName(t('close_grid_view_on_open_note'))
+            .setDesc(t('close_grid_view_on_open_note_desc'))
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.closeGridViewOnOpenNote)
+                    .onChange(async (value) => {
+                        this.plugin.settings.closeGridViewOnOpenNote = value;
                         await this.plugin.saveSettings();
                     });
             });

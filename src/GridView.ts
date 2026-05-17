@@ -621,7 +621,7 @@ export class GridView extends ItemView {
             if (filterRenderTimer !== null) {
                 window.clearTimeout(filterRenderTimer);
             }
-            filterRenderTimer = window.setTimeout(renderFilteredFiles, 250);
+            filterRenderTimer = window.setTimeout(() => { void renderFilteredFiles(); }, 250);
         };
         let isComposingFilterText = false;
 
@@ -981,7 +981,6 @@ export class GridView extends ItemView {
                                                     let outputValue: unknown = value;
                                                     if (calcExpr) {
                                                         try {
-                                                            // eslint-disable-next-line @typescript-eslint/no-implied-eval
                                                             const fn = new Function('value', 'metadata', 'app', 'dv', `return (${calcExpr});`) as (value: string, metadata: FrontMatterCache | undefined, app: typeof this.app, dv: unknown) => unknown;
 
                                                             // 獲取 Dataview API
@@ -1030,16 +1029,19 @@ export class GridView extends ItemView {
                                             .replace(/```[\s\S]*?```\n/g, '')
                                             .replace(/```[\s\S]*$/, '');
                                     }
-
                                     // 刪除註解及連結
                                     contentWithoutMediaLinks = contentWithoutMediaLinks
                                         .replace(/<!--[\s\S]*?-->/g, '')
-                                            .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (_match: string, p1?: string, p2?: string) => {
-                                            const linkText = p1 || p2 || '';
-                                            if (!linkText) return '';
+                                        .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (_match: string, p1?: string, p2?: string) => {
+                                            const rawLinkText = p1 || p2 || '';
+                                            if (!rawLinkText) return '';
+
+                                            const wikiLinkParts = p2 ? rawLinkText.split('|') : [];
+                                            const linkTarget = p2 ? wikiLinkParts[0] : rawLinkText;
+                                            const linkText = p2 && wikiLinkParts.length > 1 ? wikiLinkParts.slice(1).join('|') : rawLinkText;
 
                                             // 獲取副檔名並檢查是否為圖片或影片
-                                            const extension = linkText.split('.').pop()?.toLowerCase() || '';
+                                            const extension = linkTarget.split('.').pop()?.toLowerCase() || '';
                                             return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
                                         });
 
@@ -1807,15 +1809,15 @@ export class GridView extends ItemView {
 
                                 if (idx !== -1) {
                                     lineNumber = content.substring(0, idx).split('\n').length - 1;
-                                    await leaf.openFile(file, { eState: { line: lineNumber } });
+                                    await this.openNoteFile(leaf, file, { eState: { line: lineNumber } });
                                     (this.app as AppWithCommands).commands?.executeCommandById?.('editor:focus');
                                     return;
                                 }
                                 // 若都找不到關鍵字，直接開檔
-                                await leaf.openFile(file);
+                                await this.openNoteFile(leaf, file);
                             })();
                         } else {
-                            void leaf.openFile(file);
+                            void this.openNoteFile(leaf, file);
                         }
                     }
                 }
@@ -2169,6 +2171,15 @@ export class GridView extends ItemView {
             const mediaModal = new MediaModal(this.app, file, filteredMediaFiles, this);
             mediaModal.open();
         });
+    }
+
+    // 開啟筆記檔案，必要時關閉目前的網格視圖
+    private async openNoteFile(leaf: WorkspaceLeaf, file: TFile, openState?: Parameters<WorkspaceLeaf['openFile']>[1]): Promise<void> {
+        await leaf.openFile(file, openState);
+
+        if (this.plugin.settings.closeGridViewOnOpenNote && leaf !== this.leaf) {
+            this.leaf.detach();
+        }
     }
 
     // 根據 openNoteLayout 設定獲取對應的 leaf

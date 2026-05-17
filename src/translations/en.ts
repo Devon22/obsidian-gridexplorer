@@ -76,6 +76,8 @@ export default {
     'show_video_thumbnails_desc': 'Display thumbnails for videos in the grid view, shows a play icon when disabled.',
     'show_note_in_grid': 'Show note in grid',
     'show_note_in_grid_desc': 'Display note in grid container when clicked. If disabled, use right-click menu to open.',
+    'close_grid_view_on_open_note': 'Close current grid view when opening a note file',
+    'close_grid_view_on_open_note_desc': 'When enabled, opening a note file from the grid view closes the current grid view.',
     'open_note_layout': 'Open note layout',
     'open_note_layout_desc': 'Set how notes are opened in the grid view',
     'open_note_layout_default': 'Default',

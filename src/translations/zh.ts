@@ -75,6 +75,8 @@ export default {
     'show_video_thumbnails_desc': '在网格视图中显示视频的缩略图，关闭时将显示播放图标',
     'show_note_in_grid': '在网格视图中显示笔记',
     'show_note_in_grid_desc': '在网格视图中显示笔记，关闭时使用右键菜单打开',
+    'close_grid_view_on_open_note': '打开笔记文件时关闭当前网格视图',
+    'close_grid_view_on_open_note_desc': '启用后，从网格视图打开笔记文件时会关闭当前网格视图',
     'open_note_layout': '打开笔记布局',
     'open_note_layout_desc': '设置在网格视图中打开笔记的方式',
     'open_note_layout_default': '默认',

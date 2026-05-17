@@ -75,6 +75,8 @@ export default {
     'show_video_thumbnails_desc': 'グリッドビューで動画のサムネイルを表示する、無効の場合は再生アイコンを表示',
     'show_note_in_grid': 'グリッドビューでノートを表示',
     'show_note_in_grid_desc': 'グリッドビューでノートを表示する、無効の場合は右鍵メニューを使用して開く',
+    'close_grid_view_on_open_note': 'ノートファイルを開くときに現在のグリッドビューを閉じる',
+    'close_grid_view_on_open_note_desc': '有効にすると、グリッドビューからノートファイルを開いたときに現在のグリッドビューを閉じます',
     'open_note_layout': 'ノートを開く',
     'open_note_layout_desc': 'グリッドビューでノートを開く方法を設定します',
     'open_note_layout_default': 'デフォルト',
