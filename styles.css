@@ -165,12 +165,28 @@
 }
 
 /* 多行標題支援 Multiline Title */
+.ge-title-container:has(.ge-multiline-title) {
+    align-items: flex-start;
+}
+
+.ge-title-container:has(.ge-multiline-title) .ge-icon-container {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.ge-title-container:has(.ge-multiline-title) .ge-icon-container svg {
+    width: 14px;
+    height: 14px;
+}
+
 .ge-multiline-title {
     white-space: normal !important;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
+    line-height: 1.3;
     overflow: hidden;
 }
 
@@ -481,37 +497,38 @@
 }
 
 /* 筆記文字顏色 Note Text Color */
-.ge-note-color-red-text {
-    color: rgba(var(--color-red-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-red-text {
+    color: rgba(var(--color-red-rgb), 0.7);
 }
 
-.ge-note-color-orange-text {
-    color: rgba(var(--color-orange-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-orange-text {
+    color: rgba(var(--color-orange-rgb), 0.7);
 }
 
-.ge-note-color-yellow-text {
-    color: rgba(var(--color-yellow-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-yellow-text {
+    color: rgba(var(--color-yellow-rgb), 0.7);
 }
 
-.ge-note-color-green-text {
-    color: rgba(var(--color-green-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-green-text {
+    color: rgba(var(--color-green-rgb), 0.7);
 }
 
-.ge-note-color-cyan-text {
-    color: rgba(var(--color-cyan-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-cyan-text {
+    color: rgba(var(--color-cyan-rgb), 0.7);
 }
 
-.ge-note-color-blue-text {
-    color: rgba(var(--color-blue-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-blue-text {
+    color: rgba(var(--color-blue-rgb), 0.7);
 }
 
-.ge-note-color-purple-text {
-    color: rgba(var(--color-purple-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-purple-text {
+    color: rgba(var(--color-purple-rgb), 0.7);
 }
 
-.ge-note-color-pink-text {
-    color: rgba(var(--color-pink-rgb), 0.7) !important;
+.ge-content-area p.ge-note-color-pink-text {
+    color: rgba(var(--color-pink-rgb), 0.7);
 }
+
 
 /* 自訂 HEX 色值 Custom HEX Color */
 .ge-grid-item.ge-note-color-custom {
@@ -519,8 +536,8 @@
     border-color: var(--ge-note-color-border);
 }
 
-.ge-note-color-custom-text {
-    color: var(--ge-note-color-text) !important;
+.ge-content-area p.ge-note-color-custom-text {
+    color: var(--ge-note-color-text);
 }
 
 .ge-grid-item.ge-folder-item.ge-folder-color-custom {
@@ -844,7 +861,7 @@
     white-space: nowrap;
     overflow: hidden;
     color: var(--text-normal);
-    border: 1px solid var(--background-secondary) !important;
+    border: 1px solid transparent;
     font-size: var(--font-ui-small);
     display: inline-flex;
     align-items: center;
@@ -854,8 +871,7 @@
 }
 
 a.ge-mode-title {
-    border: 1px solid var(--background-modifier-border) !important;
-    border-radius: 6px;
+    border-color: var(--background-modifier-border);
     cursor: pointer;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
     background: var(--background-primary);
@@ -870,10 +886,11 @@ a.ge-mode-title:hover {
 
 /* Root span mode title should look plain: no chip background/border */
 span.ge-mode-title {
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    box-shadow: none !important;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
+
 
 .ge-sub-option {
     text-decoration: none;
@@ -2106,15 +2123,6 @@ a.ge-current-folder:hover {
 .is-tablet .ge-note-edit-button:not(.clickable-icon),
 .is-tablet .ge-note-info-button:not(.clickable-icon) {
     padding: 6px 12px !important;
-}
-
-.ge-header-buttons button:hover {
-    background-color: var(--interactive-hover);
-    transform: translateY(-1px);
-}
-
-.ge-header-buttons button:active {
-    transform: translateY(0);
 }
 
 .ge-note-close-button:hover,

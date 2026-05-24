@@ -2636,6 +2636,7 @@ export class GridView extends ItemView {
                 // 只有在筆記滾動到最頂部或最底部時才記錄起始位置
                 if (isAtTop || isAtBottom) {
                     startY = e.touches[0].clientY;
+                    currentY = startY;
                     startX = e.touches[0].clientX;
                     isPulling = true;
                     isDragging = false;
@@ -2660,8 +2661,11 @@ export class GridView extends ItemView {
                     }
 
                     // 根據位置判斷是否允許滑動方向
-                    let canPullDown = isAtTop && deltaY > 5;
-                    let canPullUp = isAtBottom && deltaY < -5;
+                    // 上拉關閉較容易和閱讀到底部後的自然滑動衝突，因此門檻比下拉高一點
+                    const pullDownStartThreshold = 24;
+                    const pullUpStartThreshold = 36;
+                    const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
+                    const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
 
                     if (canPullDown || canPullUp) {
                         isDragging = true;
@@ -2700,7 +2704,9 @@ export class GridView extends ItemView {
                 const deltaY = currentY - startY;
 
                 // 判斷下拉或上拉距離是否夠大
-                if ((!isPullingUp && deltaY > 80) || (isPullingUp && deltaY < -80)) {
+                // 上拉關閉提高門檻，避免閱讀到筆記底部時不小心觸發
+                const closeThreshold = isPullingUp ? 170 : 110;
+                if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
                     // 關閉筆記
                     const targetY = isPullingUp ? '-100vh' : '100vh';
                     this.noteViewContainer.setCssProps({
