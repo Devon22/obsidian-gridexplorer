@@ -545,6 +545,24 @@
     border-color: var(--ge-folder-color-border);
 }
 
+/* 被忽略的資料夾樣式 Ignored Folder Style (顯示忽略時淡色) */
+.ge-grid-item.ge-folder-item.ge-folder-ignored {
+    opacity: 0.5;
+    border-style: dashed;
+    border-width: 2px;
+    background-color: var(--background-modifier-border);
+}
+
+@media (hover: hover) {
+    .ge-grid-item.ge-folder-item.ge-folder-ignored:hover {
+        opacity: 0.7;
+    }
+}
+
+.ge-grid-item.ge-folder-item.ge-folder-ignored .ge-title {
+    color: var(--text-muted);
+}
+
 /* 隱藏的筆記樣式 Hidden Note Style */
 .ge-grid-item.ge-note-hidden {
     opacity: 0.5;

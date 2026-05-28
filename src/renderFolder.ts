@@ -160,21 +160,23 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
             // 顯示子資料夾
             const subfolders = currentFolder.children
-                .filter(child => {
-                    // 如果不是資料夾，則不顯示
-                    if (!(child instanceof TFolder)) return false;
-
-                    // 使用 isFolderIgnored 函數檢查是否應該忽略此資料夾
-                    return !isFolderIgnored(
-                        child,
-                        gridView.plugin.settings.ignoredFolders,
-                        gridView.plugin.settings.ignoredFolderPatterns,
-                        gridView.showIgnoredItems
-                    );
-                })
+                .filter((child): child is TFolder => child instanceof TFolder)
                 .sort((a, b) => a.name.localeCompare(b.name));
+
+            const isFolderActuallyIgnored = (folder: TFolder) => isFolderIgnored(
+                folder,
+                gridView.plugin.settings.ignoredFolders,
+                gridView.plugin.settings.ignoredFolderPatterns,
+                false
+            );
+
             for (const folder of subfolders) {
+                if (!gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) continue;
+
                 const folderEl = container.createDiv('ge-grid-item ge-folder-item');
+                if (gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) {
+                    folderEl.addClass('ge-folder-ignored');
+                }
                 gridView.gridItems.push(folderEl); // 添加到網格項目數組
 
                 // 設置資料夾路徑屬性，用於拖曳功能

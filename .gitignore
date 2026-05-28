@@ -30,3 +30,6 @@ AGENTS.md
 
 # Changelog
 Changelog.md
+
+# Exclude snippets directory
+/snippets

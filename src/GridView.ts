@@ -1637,10 +1637,14 @@ export class GridView extends ItemView {
             };
 
             const onKeyDown = (e: KeyboardEvent) => {
-                // 只有在滑鼠確實懸停在此項目上且按下 Ctrl 時才觸發
+                const target = e.target as HTMLElement | null;
+                const isEditingText = target?.closest('input, textarea, select, [contenteditable="true"]');
+
+                // 只有在滑鼠確實懸停在此項目上且單獨按下 Ctrl 時才觸發
+                // 避免在篩選輸入框使用 Ctrl+C / Ctrl+V 等快捷鍵時誤開筆記
                 // 且滑鼠沒有按下（避免干擾 Ctrl+click）
                 // 並且當前 GridView 必須是活動視圖
-                if (isHovering && e.ctrlKey && !isMouseDown &&
+                if (isHovering && e.key === 'Control' && !isEditingText && !isMouseDown &&
                     this.app.workspace.getActiveViewOfType(GridView) === this) {
                     // 短暫延遲以確保不是 Ctrl+click 操作
                     window.setTimeout(() => {
