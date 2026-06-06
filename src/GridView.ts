@@ -1761,7 +1761,11 @@ export class GridView extends ItemView {
                     // 非媒體檔案
                     // 如果是捷徑檔案，則開啟捷徑，否則在網格視圖中直接顯示筆記
                     if (!this.openShortcutFile(file)) {
-                        void this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
+                   		if(file.extension === 'md') {
+                        	void this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
+                    	} else {
+	                    	void this.getLeafByMode(file).openFile(file);
+	                    }
                     }
                 }
                 event.preventDefault();
