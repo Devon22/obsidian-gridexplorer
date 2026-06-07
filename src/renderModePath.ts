@@ -114,8 +114,11 @@ export function renderModePath(gridView: GridView) {
 
     // 為區域添加點擊事件，點擊後網格容器捲動到最頂部
     modenameContainer.addEventListener('click', (event: MouseEvent) => {
-        // 只有當點擊的是頂部按鈕區域本身（而不是其中的按鈕）時才觸發捲動
-        if (event.target === modenameContainer) {
+        const target = event.target as HTMLElement;
+        // 只有當點擊的不是連結、搜尋框或其它可點擊的按鈕時，才觸發捲動
+        const isInteractive = target.closest('a') || 
+                            target.closest('.ge-search-text-container');
+        if (!isInteractive) {
             event.preventDefault();
             // 取得網格容器
             const gridContainer = gridView.containerEl.querySelector('.ge-grid-container');

@@ -311,6 +311,13 @@ export default {
     'open_quick_access_folder': 'クイックアクセス フォルダーを開く',
     'open_quick_access_mode': 'クイックアクセスモードを開く',
 
+    // ZIP Viewer
+    'zip_open_file': 'ZIPファイルを開く',
+    'zip_close_view': 'ZIPビューを閉じる',
+    'zip_loading': 'ZIPファイルを読み込み中...',
+    'zip_no_images': 'ZIPファイル内に画像が見つかりません',
+    'zip_load_error': 'ZIPファイルの内容を読み込めません',
+
     // Explorer Stash
     'stash': '一時保存',
     'drop_files_here': 'ここにドラッグして一時保存',

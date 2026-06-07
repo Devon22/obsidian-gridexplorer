@@ -1,6 +1,6 @@
 {
 	"name": "gridexplorer",
-	"version": "3.2.7",
+	"version": "3.3.0",
 	"description": "Browse note files in a grid view.",
 	"main": "main.js",
 	"scripts": {
@@ -12,6 +12,7 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@types/jszip": "^3.4.0",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "^8.59.3",
 		"@typescript-eslint/parser": "^8.59.3",
@@ -27,5 +28,8 @@
 	"optionalDependencies": {
 		"@esbuild/linux-x64": "^0.17.3",
 		"@esbuild/win32-x64": "^0.17.3"
+	},
+	"dependencies": {
+		"jszip": "^3.10.1"
 	}
 }

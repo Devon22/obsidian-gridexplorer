@@ -869,7 +869,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.customDocumentExtensions)
                     .onChange(async (value) => {
                         this.plugin.settings.customDocumentExtensions = value;
-                        await this.plugin.saveSettings();
+                        await this.plugin.saveSettings(false);
                     });
             });
 

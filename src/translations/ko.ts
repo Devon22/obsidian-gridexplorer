@@ -312,6 +312,13 @@ export default {
     'open_quick_access_folder': '빠른 액세스 폴더 열기',
     'open_quick_access_mode': '빠른 액세스 모드 열기',
 
+    // ZIP Viewer
+    'zip_open_file': 'ZIP 파일 열기',
+    'zip_close_view': 'ZIP 보기 닫기',
+    'zip_loading': 'ZIP 파일 읽는 중...',
+    'zip_no_images': 'ZIP 파일에서 이미지를 찾을 수 없습니다',
+    'zip_load_error': 'ZIP 파일 내용을 불러올 수 없습니다',
+
     // Explorer Stash
     'stash': '보관함',
     'drop_files_here': '파일을 여기에 드롭하여 보관',

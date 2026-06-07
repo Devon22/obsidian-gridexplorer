@@ -1529,6 +1529,9 @@ export class ExplorerView extends ItemView {
         } else if (ext === 'base') {
             setIcon(itemIcon, 'layout-list');
             itemIcon.addClass('ge-base');
+        } else if (ext === 'zip') {
+            setIcon(itemIcon, 'folder-archive');
+            itemIcon.addClass('ge-zip');
         } else if (ext === 'md' || ext === 'txt') {
             setIcon(itemIcon, 'file-text');
         } else {

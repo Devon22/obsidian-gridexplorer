@@ -311,6 +311,13 @@ export default {
     'open_quick_access_folder': 'Відкрити папку швидкого доступу',
     'open_quick_access_mode': 'Відкрити режим швидкого доступу',
 
+    // ZIP Viewer
+    'zip_open_file': 'Відкрити ZIP-файл',
+    'zip_close_view': 'Закрити ZIP-перегляд',
+    'zip_loading': 'Читання ZIP-файлу...',
+    'zip_no_images': 'У ZIP-файлі не знайдено зображень',
+    'zip_load_error': 'Не вдалося завантажити вміст ZIP-файлу',
+
     // Explorer Stash
     'stash': 'Сховище',
     'drop_files_here': 'Перетягніть файли сюди для зберігання',

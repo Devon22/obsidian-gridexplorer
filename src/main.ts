@@ -1,6 +1,7 @@
 import { EventRef, Menu, MenuItem, Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 import { GridView } from './GridView';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
+import { ZipView, VIEW_TYPE_ZIP } from './ZipView';
 import { updateCustomDocumentExtensions, isMediaFile } from './utils/fileUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { showNoteSettingsModal } from './modal/noteSettingsModal';
@@ -56,6 +57,13 @@ export default class GridExplorerPlugin extends Plugin {
             EXPLORER_VIEW_TYPE,
             (leaf) => new ExplorerView(leaf, this)
         );
+
+        // 註冊 ZIP 檢視視圖
+        this.registerView(
+            VIEW_TYPE_ZIP,
+            (leaf) => new ZipView(leaf)
+        );
+        this.registerExtensions(["zip"], VIEW_TYPE_ZIP);
 
         // 註冊設定頁面
         this.addSettingTab(new GridExplorerSettingTab(this.app, this));

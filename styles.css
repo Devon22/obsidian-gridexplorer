@@ -57,22 +57,22 @@
     height: 100%;
 }
 
-/* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button */
-/* .ge-grid-item { position: relative; }
+/* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button 
+.ge-grid-item { position: relative; }
 .ge-hover-open-note {
     position: absolute;
     top: 6px;
     right: 6px;
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
+    border-radius: 4px;
+    background: transparent;
     border: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    background: var(--background-secondary);
+    color: var(--text-muted);
     opacity: 0;
     transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
     pointer-events: none;
@@ -85,8 +85,8 @@
 }
 
 .ge-hover-open-note:hover {
-    background: rgba(0, 0, 0, 0.75);
-    color: #fff;
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
 }
 
 .ge-hover-open-note svg {
@@ -388,7 +388,7 @@
 
 /* 選中項目的樣式 Selected Item */
 .ge-selected-item {
-    outline: 1px solid var(--vault-profile-color-hover) !important;
+    outline: 1px solid var(--interactive-accent) !important;
     outline-offset: -1px;
     position: relative;
     z-index: 1;
@@ -2859,8 +2859,8 @@ a.ge-current-folder:hover {
 }
 
 /* 移除 Obsidian 預設為 .view-content 添加的 margin-top，
-   因為 GridExplorer 的 header buttons 位在 view-content 之外，
-   這會導致 buttons 與 grid 之間出現多餘的空隙。 */
+    因為 GridExplorer 的 header buttons 位在 view-content 之外，
+    這會導致 buttons 與 grid 之間出現多餘的空隙。 */
 .is-phone .ge-grid-view-container .view-content {
     margin-top: 0 !important;
     padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
@@ -2876,4 +2876,323 @@ a.ge-current-folder:hover {
 
 .is-tablet .ge-note-content {
     padding-bottom: var(--safe-area-inset-bottom) !important;
+}
+
+/* =========================================================================== */
+/* Zip 圖片檢視視圖樣式 Zip Image Viewer Styles */
+/* =========================================================================== */
+
+/* 移除 view-content 的內距，使 zip viewer 滿版 */
+.workspace-leaf:has(.zip-viewer-container) .view-content {
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.zip-viewer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--background-primary);
+    outline: none;
+}
+
+/* 1. Grid 畫面下不用顯示上方工具列 */
+.zip-viewer-container.is-grid-mode .zip-viewer-header {
+    display: none;
+}
+
+.zip-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+    flex-shrink: 0;
+}
+
+.zip-viewer-title {
+    font-weight: 500;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+}
+
+.zip-viewer-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.zip-viewer-btn {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.zip-viewer-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.zip-viewer-counter {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    user-select: none;
+}
+
+.zip-viewer-main {
+    position: relative;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.zip-viewer-loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-size: 1.1em;
+    z-index: 5;
+}
+
+.zip-viewer-loading.active {
+    display: block;
+}
+
+
+.zip-viewer-grid-container {
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: var(--background-primary);
+}
+
+.zip-viewer-container.is-grid-mode .zip-viewer-grid-container {
+    display: block;
+}
+
+.zip-viewer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.zip-viewer-grid-item {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--background-secondary);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.zip-viewer-grid-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--interactive-accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.zip-viewer-grid-item.current {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.zip-viewer-grid-item-img-wrapper {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background-color: var(--background-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.zip-viewer-grid-item-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.zip-viewer-grid-item-img-wrapper img.lazy-loaded {
+    opacity: 1;
+}
+
+.zip-viewer-grid-item-label {
+    padding: 8px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* =========================================================================== */
+/* Zip 檔案類型在 GridView 與 Explorer 中的圖示顏色 */
+/* =========================================================================== */
+.ge-icon-container.ge-zip {
+    color: var(--color-yellow);
+}
+.ge-explorer-stash-item .ge-explorer-folder-icon.ge-zip {
+    color: var(--color-yellow);
+}
+
+/* 網格預覽安全區域適配，確保橫屏不遮擋圖片，底部不遮擋 Home indicator */
+
+.is-phone .zip-viewer-container {
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+}
+
+/* 確保網格滾動最底部時不被底部 Home Indicator 遮擋 */
+.is-phone .zip-viewer-grid-container {
+    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
+}
+
+.is-tablet .zip-viewer-grid-container {
+    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3)) !important;
+}
+
+/* =========================================================================== */
+/* GridView 直接顯示 ZIP 圖片網格樣式 */
+/* =========================================================================== */
+
+.ge-zip-view-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-primary);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+}
+
+.is-phone .ge-zip-view-container {
+    padding-top: var(--safe-area-inset-top);
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+}
+
+.ge-zip-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    gap: 10px;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ge-zip-top-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 20px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ge-zip-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 15px;
+}
+
+.ge-zip-title {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ge-zip-close-button,
+.ge-zip-open-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background-color: var(--interactive-normal);
+    border-radius: var(--button-radius);
+    color: var(--text-normal);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    border: none;
+}
+
+.ge-zip-close-button:hover,
+.ge-zip-open-button:hover {
+    background-color: var(--interactive-hover);
+    transform: translateY(-1px);
+}
+
+.ge-zip-scroll-container {
+    flex: 1 1 auto;
+    overflow: auto;
+    background-color: var(--background-primary);
+}
+
+.ge-zip-sidebar-scroll-container {
+    background-color: var(--background-secondary);
+}
+
+.ge-zip-content-container {
+    padding: 20px;
+}
+
+.is-phone .ge-zip-content-container {
+    padding-bottom: var(--view-bottom-spacing) !important;
+}
+
+.is-tablet .ge-zip-content-container {
+    padding-bottom: var(--safe-area-inset-bottom) !important;
+}
+
+.ge-zip-sidebar-content-container {
+    padding: 15px;
+}
+
+.ge-zip-loading,
+.ge-zip-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 1.1em;
+}
+
+.is-mobile .ge-zip-view-container::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
 }

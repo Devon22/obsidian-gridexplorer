@@ -311,6 +311,13 @@ export default {
     'open_quick_access_folder': '打开快速访问文件夹',
     'open_quick_access_mode': '打开快速访问模式',
 
+    // ZIP 查看器
+    'zip_open_file': '打开 ZIP 文件',
+    'zip_close_view': '关闭 ZIP 查看',
+    'zip_loading': '正在读取 ZIP 文件...',
+    'zip_no_images': 'ZIP 文件中找不到图片',
+    'zip_load_error': '无法加载 ZIP 文件内容',
+
     // Explorer Stash
     'stash': '暂存区',
     'drop_files_here': '拖曳文件到此暂存',

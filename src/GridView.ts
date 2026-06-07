@@ -1,4 +1,5 @@
-import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip, MarkdownRenderer } from 'obsidian';
+import { WorkspaceLeaf, ItemView, TFolder, TFile, Menu, Notice, Platform, setIcon, getFrontMatterInfo, FrontMatterCache, normalizePath, setTooltip } from 'obsidian';
+import JSZip from 'jszip';
 import GridExplorerPlugin from './main';
 import { renderHeaderButton } from './renderHeaderButton';
 import { renderModePath } from './renderModePath';
@@ -7,7 +8,7 @@ import { renderFiles } from './renderFiles';
 import { handleKeyDown } from './handleKeyDown';
 import { isMediaFile, isImageFile, isVideoFile, isAudioFile, getFiles, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from './utils/fileUtils';
 import { FileWatcher } from './FileWatcher';
-import { findFirstImageInNote } from './utils/mediaUtils';
+import { findFirstImageInNote, getFirstImageFromZip } from './utils/mediaUtils';
 import { isHexColor, hexToRgba } from './utils/colorUtils';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
 import { MediaModal } from './modal/mediaModal';
@@ -15,6 +16,7 @@ import { showNoteSettingsModal } from './modal/noteSettingsModal';
 import { showSearchModal } from './modal/searchModal';
 import { FloatingAudioPlayer } from './FloatingAudioPlayer';
 import { ExplorerView, EXPLORER_VIEW_TYPE } from './ExplorerView';
+import { GridPreviewManager } from './GridPreviewManager';
 import { t } from './translations';
 
 // 定義分隔器狀態
@@ -91,10 +93,6 @@ interface ExplorerViewActions {
 
 interface WorkspaceSplitWithChildren {
     children?: unknown[];
-}
-
-interface NoteViewContainerWithKeydownHandler extends HTMLElement {
-    keydownHandler?: (e: KeyboardEvent) => void;
 }
 
 interface GridViewStateData {
@@ -190,12 +188,21 @@ export class GridView extends ItemView {
     renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
     isShowingNote: boolean = false; // 是否正在顯示筆記
     noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
+    isShowingZip: boolean = false; // 是否正在顯示 ZIP 預覽
+    zipViewContainer: HTMLElement | null = null; // ZIP 檢視容器
+    zipThumbnailUrls: Map<number, string> = new Map(); // 暫存縮圖 Blob URL
+    zipObserver: IntersectionObserver | null = null; // 用於 Lazy loading
+    activeZip: JSZip | null = null; // 解析後的 JSZip 物件
+    zipImageFiles: string[] = []; // ZIP 內的圖片路徑列表
+    zipCurrentIndex: number = -1; // 當前聚焦的圖片索引
     eventCleanupFunctions: (() => void)[] = []; // 存儲事件清理函數
     targetFocusPath: string | null = null; // 指定下次渲染要對焦的檔案路徑
+    previewManager: GridPreviewManager;
 
     constructor(leaf: WorkspaceLeaf, plugin: GridExplorerPlugin) {
         super(leaf);
         this.plugin = plugin;
+        this.previewManager = new GridPreviewManager(this);
         this.containerEl.addClass('ge-grid-view-container');
         this.baseSortType = this.plugin.settings.defaultSortType; // 使用設定中的預設排序模式
         this.sortType = this.baseSortType;
@@ -1287,6 +1294,16 @@ export class GridView extends ItemView {
                                     // 如果沒有圖片，移除圖片區域
                                     imageArea.remove();
                                 }
+                            } else if (file.extension.toLowerCase() === 'zip') {
+                                const zipImgUrl = await getFirstImageFromZip(this.app, file);
+                                if (zipImgUrl) {
+                                    const img = imageArea.createEl('img');
+                                    img.src = zipImgUrl;
+                                    img.draggable = false;
+                                    imageArea.setAttribute('data-loaded', 'true');
+                                } else {
+                                    imageArea.remove();
+                                }
                             } else {
                                 // 其他檔案類型，移除圖片區域
                                 imageArea.remove();
@@ -1577,6 +1594,9 @@ export class GridView extends ItemView {
         } else if (extension === 'base') {
             const iconContainer = titleContainer.createDiv('ge-icon-container ge-base');
             setIcon(iconContainer, 'layout-list');
+        } else if (extension === 'zip') {
+            const iconContainer = titleContainer.createDiv('ge-icon-container ge-zip');
+            setIcon(iconContainer, 'folder-archive');
         } else if (extension === 'md' || extension === 'txt') {
             const iconContainer = titleContainer.createDiv('ge-icon-container');
             setIcon(iconContainer, 'file-text');
@@ -1602,27 +1622,28 @@ export class GridView extends ItemView {
         // 加入滑鼠移入顯示的右上角圓形按鈕（僅針對可在網格中顯示筆記的檔案）
         // 位置與顯示由 CSS 控制（.ge-hover-open-note）
         // 當設定為「直接在網格中顯示筆記」時，不顯示此按鈕
-        // if (file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
-        //     // 確保容器可做為定位參考
-        //     fileEl.style.position = fileEl.style.position || 'relative';
-        //     const quickBtn = fileEl.createDiv({ cls: 'ge-hover-open-note' });
-        //     setIcon(quickBtn, 'maximize-2');
-        //     quickBtn.addEventListener('click', (e) => {
-        //         e.stopPropagation();
-        //         e.preventDefault();
-        //         // 如果是捷徑檔案，遵循捷徑開啟邏輯；否則在網格中顯示筆記
-        //         if (!this.openShortcutFile(file)) {
-        //             this.showNoteInGrid(file);
-        //         }
-        //     });
-        //     // 阻止滑鼠事件影響拖曳或選取
-        //     quickBtn.addEventListener('mousedown', (e) => {
-        //         e.stopPropagation();
-        //     });
-        // }
+        /*
+        if (file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
+            // 確保容器可做為定位參考
+            fileEl.style.position = fileEl.style.position || 'relative';
+            const quickBtn = fileEl.createDiv({ cls: 'ge-hover-open-note' });
+            setIcon(quickBtn, 'maximize-2');
+            quickBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                // 如果是捷徑檔案，遵循捷徑開啟邏輯；否則在網格中顯示筆記
+                if (!this.openShortcutFile(file)) {
+                    void this.showNoteInGrid(file);
+                }
+            });
+            // 阻止滑鼠事件影響拖曳或選取
+            quickBtn.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+        }*/
 
-        // 滑鼠懸停在項目上時，按 Ctrl 鍵直接顯示筆記
-        if (Platform.isDesktop && file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
+        // 滑鼠懸停在項目上時，按 Ctrl 鍵直接顯示筆記或 ZIP 圖片網格
+        if (Platform.isDesktop && (file.extension === 'md' || file.extension === 'zip') && !this.plugin.settings.showNoteInGrid) {
             let triggeredInHover = false;
             let isHovering = false;
             let isMouseDown = false; // 追蹤滑鼠按下狀態
@@ -1632,7 +1653,11 @@ export class GridView extends ItemView {
                 if (triggeredInHover || isMouseDown) return; // 如果滑鼠按下則不觸發
                 triggeredInHover = true;
                 if (!this.openShortcutFile(file)) {
-                    void this.showNoteInGrid(file);
+                    if (file.extension === 'md') {
+                        void this.showNoteInGrid(file);
+                    } else if (file.extension === 'zip') {
+                        void this.showZipInGrid(file);
+                    }
                 }
             };
 
@@ -1763,7 +1788,9 @@ export class GridView extends ItemView {
                     if (!this.openShortcutFile(file)) {
                    		if(file.extension === 'md') {
                         	void this.showNoteInGrid(file); // 在網格視圖中直接顯示筆記
-                    	} else {
+                    	} else if (file.extension === 'zip') {
+                            void this.showZipInGrid(file); // 在網格視圖中直接顯示 ZIP
+                        } else {
 	                    	void this.getLeafByMode(file).openFile(file);
 	                    }
                     }
@@ -2328,474 +2355,31 @@ export class GridView extends ItemView {
 
     // 在網格視圖中直接顯示筆記
     async showNoteInGrid(file: TFile) {
-        // 關閉之前的筆記顯示
-        if (this.isShowingNote) {
-            this.hideNoteInGrid();
-        }
-
-        const gridContainer = this.containerEl.querySelector('.ge-grid-container');
-        if (!gridContainer) return;
-
-        // 創建筆記顯示容器
-        this.noteViewContainer = this.containerEl.createDiv('ge-note-view-container');
-
-        // 頂部列 (左右區塊)
-        const topBar = this.noteViewContainer.createDiv('ge-note-top-bar');
-        const leftBar = topBar.createDiv('ge-note-top-left');
-        const rightBar = topBar.createDiv('ge-note-top-right');
-
-        // 筆記標題
-        const noteTitle = leftBar.createDiv('ge-note-title');
-        noteTitle.textContent = file.basename;
-        if (Platform.isDesktop) {
-            setTooltip(noteTitle, file.basename);
-        }
-
-        // 編輯按鈕
-        const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
-        setIcon(editButton, 'pencil');
-        editButton.addEventListener('click', () => {
-            void this.getLeafByMode(file).openFile(file);
-        });
-
-        // Metadata 切換按鈕
-        const infoButton = rightBar.createEl('button', { cls: 'ge-note-info-button' });
-        setIcon(infoButton, 'info')
-
-        // 關閉按鈕
-        const closeButton = rightBar.createEl('button', { cls: 'ge-note-close-button' });
-        setIcon(closeButton, 'x');
-        closeButton.addEventListener('click', () => {
-            this.hideNoteInGrid();
-        });
-
-        // 捲動內容容器
-        const scrollContainer = this.noteViewContainer.createDiv('ge-note-scroll-container');
-
-        // 假設在視圖側邊欄則把字型調小
-        const isInSidebar = this.leaf.getRoot() === this.app.workspace.leftSplit ||
-            this.leaf.getRoot() === this.app.workspace.rightSplit;
-        if (isInSidebar) {
-            scrollContainer.addClass('ge-note-sidebar-scroll-container');
-        }
-
-        // 創建筆記內容容器
-        const noteContent = scrollContainer.createDiv('ge-note-content-container');
-        if (isInSidebar) {
-            noteContent.addClass('ge-note-sidebar-content-container');
-        }
-
-        // 在移動端添加滾動監聽，根據滾動方向控制導航欄顯示/隱藏
-        if (Platform.isPhone) {
-            let lastScrollTop = 0;
-            const handleScroll = () => {
-                const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
-                if (!mobileNavbar) return;
-
-                const currentScrollTop = scrollContainer.scrollTop;
-
-                // 往上捲（滾動位置增加）時隱藏導航欄
-                if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
-                    if (!activeDocument.body.classList.contains('is-floating-nav')) {
-                        mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
-                    } else {
-                        mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
-                    }
-                    mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
-                }
-                // 往下捲（滾動位置減少）時顯示導航欄
-                else if (currentScrollTop < lastScrollTop) {
-                    mobileNavbar.setCssProps({
-                        transform: 'translateY(0)',
-                        transition: 'transform 0.3s ease-in',
-                    });
-                }
-
-                lastScrollTop = currentScrollTop;
-            };
-
-            scrollContainer.addEventListener('scroll', handleScroll);
-
-            // 監聽分頁切換事件，當離開當前視圖時恢復導航欄
-            const handleActiveLeafChange = () => {
-                const activeView = this.app.workspace.getActiveViewOfType(GridView);
-                // 如果當前活動視圖不是這個 GridView 實例，或者不在顯示筆記狀態
-                if (activeView !== this || !this.isShowingNote) {
-                    const navbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
-                    if (navbar) {
-                        navbar.setCssProps({
-                            transform: 'translateY(0)',
-                            transition: 'transform 0.3s ease-in',
-                        });
-                    }
-                }
-            };
-
-            // 註冊事件監聽器
-            this.registerEvent(
-                this.app.workspace.on('active-leaf-change', handleActiveLeafChange)
-            );
-
-            // 儲存滾動事件清理函數
-            this.eventCleanupFunctions.push(() => {
-                scrollContainer.removeEventListener('scroll', handleScroll);
-            });
-        }
-
-        // 取得 Metadata (Frontmatter)
-        const fileCache = this.app.metadataCache.getFileCache(file);
-        const frontmatter = fileCache?.frontmatter;
-
-        if (frontmatter) {
-            // 檢查是否除了 position 以外還有其他屬性
-            const keys = Object.keys(frontmatter).filter(k => k !== 'position');
-            if (keys.length > 0) {
-                const metadataContainer = noteContent.createDiv('ge-note-metadata-container');
-
-                // 綁定切換事件
-                infoButton.addEventListener('click', () => {
-                    metadataContainer.classList.toggle('is-visible');
-                    scrollContainer.scrollTo(0, 0);
-                });
-
-                const metadataContent = metadataContainer.createDiv('ge-note-metadata-content');
-                for (const key of keys) {
-                    const item = metadataContent.createDiv('ge-note-metadata-item');
-                    item.createSpan({ cls: 'ge-note-metadata-key', text: `${key}: ` });
-                    const value: unknown = frontmatter[key] as unknown;
-                    const valueSpan = item.createSpan({ cls: 'ge-note-metadata-value' });
-
-                    const values = Array.isArray(value) ? value : [value];
-                    values.forEach((val, index) => {
-                        const valStr = String(val);
-                        // 處理內部連結 [[link]] 或 [[link|alias]]
-                        const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-                        // 處理 URL
-                        const urlRegex = /(https?:\/\/[^\s]+)/g;
-                        // 處理 Tag
-                        const tagRegex = /#([^\s#]+)/g;
-
-                        if (wikilinkRegex.test(valStr)) {
-                            wikilinkRegex.lastIndex = 0;
-                            let lastIndex = 0;
-                            let match;
-                            while ((match = wikilinkRegex.exec(valStr)) !== null) {
-                                // 插入匹配前的文字
-                                if (match.index > lastIndex) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                }
-                                const linkPath = match[1];
-                                const linkAlias = match[2] || linkPath;
-                                const linkEl = valueSpan.createEl('a', {
-                                    cls: 'internal-link',
-                                    text: linkAlias,
-                                    attr: { 'data-href': linkPath }
-                                });
-                                linkEl.addEventListener('click', (e) => {
-                                    e.preventDefault();
-                                    const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
-                                    if (linkedFile) {
-                                        void this.getLeafByMode(linkedFile).openFile(linkedFile);
-                                    }
-                                });
-                                lastIndex = wikilinkRegex.lastIndex;
-                            }
-                            if (lastIndex < valStr.length) {
-                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                            }
-                        } else if (urlRegex.test(valStr)) {
-                            urlRegex.lastIndex = 0;
-                            let lastIndex = 0;
-                            let match;
-                            while ((match = urlRegex.exec(valStr)) !== null) {
-                                if (match.index > lastIndex) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                }
-                                const url = match[1];
-                                valueSpan.createEl('a', {
-                                    cls: 'external-link',
-                                    text: url,
-                                    attr: { 'href': url, 'target': '_blank', 'rel': 'noopener' }
-                                });
-                                lastIndex = urlRegex.lastIndex;
-                            }
-                            if (lastIndex < valStr.length) {
-                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                            }
-                        } else if (key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag' || tagRegex.test(valStr)) {
-                            if ((key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag') && !valStr.startsWith('#')) {
-                                const tagEl = valueSpan.createEl('a', {
-                                    cls: 'tag',
-                                    text: '#' + valStr,
-                                    attr: { 'href': '#' + valStr }
-                                });
-                                tagEl.addEventListener('click', (e) => {
-                                    e.preventDefault();
-                                    (this.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + valStr);
-                                });
-                            } else {
-                                tagRegex.lastIndex = 0;
-                                let lastIndex = 0;
-                                let match;
-                                while ((match = tagRegex.exec(valStr)) !== null) {
-                                    if (match.index > lastIndex) {
-                                        valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                    }
-                                    const tagName = match[1];
-                                    const tagEl = valueSpan.createEl('a', {
-                                        cls: 'tag',
-                                        text: '#' + tagName,
-                                        attr: { 'href': '#' + tagName }
-                                    });
-                                    tagEl.addEventListener('click', (e) => {
-                                        e.preventDefault();
-                                        (this.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + tagName);
-                                    });
-                                    lastIndex = tagRegex.lastIndex;
-                                }
-                                if (lastIndex < valStr.length) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                                }
-                            }
-                        } else {
-                            valueSpan.createSpan({ text: valStr });
-                        }
-
-                        if (index < values.length - 1) {
-                            const isTag = key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag';
-                            valueSpan.createSpan({ text: isTag ? ' ' : ', ' });
-                        }
-                    });
-                }
-            }
-        }
-
-        // 創建筆記內容區域
-        const noteContentArea = noteContent.createDiv('ge-note-content');
-
-        try {
-            // 讀取筆記內容
-            const content = await this.app.vault.read(file);
-
-            // 使用 Obsidian 的 MarkdownRenderer 渲染內容
-            await MarkdownRenderer.render(
-                this.app,
-                content,
-                noteContentArea,
-                file.path,
-                this
-            );
-
-            // 加上自訂屬性 data-source-path
-            noteContentArea
-                .querySelectorAll<HTMLImageElement>('img')
-                .forEach((img) => (img.dataset.sourcePath = file.path));
-
-            // 處理內部連結點擊
-            const handleLinkClick = (e: MouseEvent) => {
-                const target = e.target as HTMLElement;
-                const link = target.closest('a.internal-link');
-                if (link) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const href = link.getAttribute('href');
-                    if (href) {
-                        const linkText = link.getAttribute('data-href') || href;
-                        const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
-                        if (linkedFile) {
-                            void this.getLeafByMode(linkedFile).openFile(linkedFile);
-                        }
-                    }
-                }
-            };
-
-            // 使用 registerDomEvent 註冊事件
-            this.registerDomEvent(noteContentArea, 'click', handleLinkClick);
-        } catch (error) {
-            noteContentArea.textContent = '無法載入筆記內容';
-            console.error('Error loading note content:', error);
-        }
-
-        // 行動裝置下拉或上拉關閉筆記
-        if (Platform.isMobile && this.noteViewContainer) {
-            let startY = 0;
-            let startX = 0;
-            let currentY = 0;
-            let isPulling = false;
-            let isPullingUp = false;
-            let isDragging = false;
-            let initialScrollTop = 0;
-            let isAtTop = false;
-            let isAtBottom = false;
-
-            const handleTouchStart = (e: TouchEvent) => {
-                const target = e.target as HTMLElement;
-                // 避開按鈕、連結等可互動元素，以免影響正常點擊
-                if (target.closest('button') || target.closest('a') || target.closest('input') || target.closest('textarea')) {
-                    return;
-                }
-
-                initialScrollTop = scrollContainer.scrollTop;
-                isAtTop = initialScrollTop <= 0;
-                // 考量誤差，留 1px 空間
-                isAtBottom = initialScrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1;
-
-                // 只有在筆記滾動到最頂部或最底部時才記錄起始位置
-                if (isAtTop || isAtBottom) {
-                    startY = e.touches[0].clientY;
-                    currentY = startY;
-                    startX = e.touches[0].clientX;
-                    isPulling = true;
-                    isDragging = false;
-                    isPullingUp = false;
-                }
-            };
-
-            const handleTouchMove = (e: TouchEvent) => {
-                if (!isPulling || !this.noteViewContainer) return;
-
-                currentY = e.touches[0].clientY;
-                const currentX = e.touches[0].clientX;
-                const deltaY = currentY - startY;
-                const deltaX = currentX - startX;
-
-                // 如果還沒開始拖曳，先判斷滑動方向和距離
-                if (!isDragging) {
-                    // 水平滑動取消
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        isPulling = false;
-                        return;
-                    }
-
-                    // 根據位置判斷是否允許滑動方向
-                    // 上拉關閉較容易和閱讀到底部後的自然滑動衝突，因此門檻比下拉高一點
-                    const pullDownStartThreshold = 24;
-                    const pullUpStartThreshold = 36;
-                    const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
-                    const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
-
-                    if (canPullDown || canPullUp) {
-                        isDragging = true;
-                        // 當同時符合（例如內容很短）且往上拉時，視為上拉
-                        isPullingUp = canPullUp && deltaY < 0;
-                        if (this.noteViewContainer) {
-                            this.noteViewContainer.setCssProps({ transition: 'none' });
-                        }
-                    } else if ((isAtTop && !isAtBottom && deltaY < 0) || (isAtBottom && !isAtTop && deltaY > 0)) {
-                        // 往反方向正常滑動閱讀時，取消攔截
-                        isPulling = false;
-                        return;
-                    }
-                }
-
-                // 在拖曳狀態下進行視窗移動
-                if (isDragging) {
-                    // 防止觸發瀏覽器預設滾動或下拉更新
-                    if (e.cancelable) {
-                        e.preventDefault();
-                    }
-                    const resistance = 0.5;
-                    const translateY = deltaY * resistance;
-                    this.noteViewContainer.setCssProps({ transform: `translateY(${translateY}px)` });
-                }
-            };
-
-            const handleTouchEnd = () => {
-                if (!isPulling || !this.noteViewContainer) return;
-                isPulling = false;
-
-                // 如果沒有真正拖曳，就當作一般點擊，不執行後續動畫
-                if (!isDragging) return;
-                isDragging = false;
-
-                const deltaY = currentY - startY;
-
-                // 判斷下拉或上拉距離是否夠大
-                // 上拉關閉提高門檻，避免閱讀到筆記底部時不小心觸發
-                const closeThreshold = isPullingUp ? 170 : 110;
-                if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
-                    // 關閉筆記
-                    const targetY = isPullingUp ? '-100vh' : '100vh';
-                    this.noteViewContainer.setCssProps({
-                        transition: 'transform 0.2s ease-out',
-                        transform: `translateY(${targetY})`,
-                    });
-                    window.setTimeout(() => {
-                        this.hideNoteInGrid();
-                        if (this.noteViewContainer) {
-                            this.noteViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 200);
-                } else {
-                    // 距離不夠，彈回原位
-                    this.noteViewContainer.setCssProps({
-                        transition: 'transform 0.3s ease-out',
-                        transform: 'translateY(0)',
-                    });
-                    window.setTimeout(() => {
-                        if (this.noteViewContainer) {
-                            this.noteViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 300);
-                }
-            };
-
-            this.noteViewContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            this.noteViewContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            this.noteViewContainer.addEventListener('touchend', handleTouchEnd);
-        }
-
-        // 設定狀態
-        this.isShowingNote = true;
-
-        // 註冊鍵盤事件監聽器
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                this.hideNoteInGrid();
-                e.preventDefault();
-            }
-        };
-
-        activeDocument.addEventListener('keydown', handleKeyDown);
-
-        // 儲存事件監聽器以便後續移除
-        (this.noteViewContainer as NoteViewContainerWithKeydownHandler).keydownHandler = handleKeyDown;
+        return this.previewManager.showNoteInGrid(file);
     }
 
     // 隱藏筆記顯示
     hideNoteInGrid() {
-        if (!this.isShowingNote) return;
+        this.previewManager.hideNoteInGrid();
+    }
 
-        // 顯示移動端導航欄 (僅在行動裝置上)
-        if (Platform.isPhone) {
-            const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
-            if (mobileNavbar) {
-                mobileNavbar.setCssProps({
-                    transform: 'translateY(0)',
-                    transition: 'transform 0.3s ease-in',
-                });
-            }
-        }
+    // 在網格視圖中直接顯示 ZIP 圖片網格
+    async showZipInGrid(file: TFile) {
+        return this.previewManager.showZipInGrid(file);
+    }
 
-        if (this.noteViewContainer) {
-            // 移除鍵盤事件監聽器
-            const keydownHandler = (this.noteViewContainer as NoteViewContainerWithKeydownHandler).keydownHandler;
-            if (keydownHandler) {
-                activeDocument.removeEventListener('keydown', keydownHandler);
-            }
+    // 開啟 ZIP 內部圖片的 MediaModal
+    openZipMediaModal(index: number, gridEl: HTMLElement) {
+        this.previewManager.openZipMediaModal(index, gridEl);
+    }
 
-            this.noteViewContainer.remove();
-            this.noteViewContainer = null;
-        }
+    // 隱藏 ZIP 顯示
+    hideZipInGrid() {
+        this.previewManager.hideZipInGrid();
+    }
 
-        this.isShowingNote = false;
+    selectZipItem(idx: number, gridEl: HTMLElement) {
+        this.previewManager.selectZipItem(idx, gridEl);
     }
 
     // 保存視圖狀態

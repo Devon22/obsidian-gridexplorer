@@ -312,6 +312,13 @@ export default {
     'open_quick_access_folder': 'Open quick access folder',
     'open_quick_access_mode': 'Open quick access mode',
 
+    // ZIP Viewer
+    'zip_open_file': 'Open ZIP file',
+    'zip_close_view': 'Close ZIP view',
+    'zip_loading': 'Reading ZIP file...',
+    'zip_no_images': 'No images found in ZIP file',
+    'zip_load_error': 'Unable to load ZIP file content',
+
     // Explorer Stash
     'stash': 'Stash',
     'drop_files_here': 'Drop files here to stash',

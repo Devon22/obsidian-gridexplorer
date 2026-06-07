@@ -9,8 +9,8 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
         return;
     }
 
-    // 如果沒有項目或正在檢視筆記，直接返回
-    if (gridView.gridItems.length === 0 || gridView.isShowingNote) return;
+    // 如果沒有項目、正在檢視筆記或正在檢視 ZIP，直接返回
+    if (gridView.gridItems.length === 0 || gridView.isShowingNote || gridView.isShowingZip) return;
 
     // 如果有Modal視窗，直接返回
     if (activeDocument.querySelector('.modal-container')) return;

@@ -1,11 +1,79 @@
 import { App, TFile, requestUrl, RequestUrlResponse } from 'obsidian';
+import JSZip from 'jszip';
+import { type GallerySettings } from '../settings';
+
+type GridExplorerPlugin = {
+    settings?: Pick<GallerySettings, 'customDocumentExtensions'>;
+};
+
+type AppPluginAccess = {
+    plugins?: {
+        plugins?: Record<string, GridExplorerPlugin>;
+    };
+};
+
+// 尋找 zip 檔案內的第一張圖片並回傳它的 base64 Data URL
+export async function getFirstImageFromZip(app: App, file: TFile): Promise<string | null> {
+    try {
+        const arrayBuffer = await app.vault.readBinary(file);
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
+        let imageFileName: string | null = null;
+        
+        const filenames = Object.keys(zip.files).sort();
+        for (const filename of filenames) {
+            const fileEntry = zip.files[filename];
+            if (fileEntry.dir) continue;
+            if (filename.includes('__MACOSX')) continue;
+            
+            const ext = filename.split('.').pop()?.toLowerCase();
+            if (ext && imageExtensions.includes(ext)) {
+                imageFileName = filename;
+                break;
+            }
+        }
+        
+        if (imageFileName) {
+            const fileData = zip.files[imageFileName];
+            const ext = imageFileName.split('.').pop()?.toLowerCase() || 'jpeg';
+            
+            let mimeType = 'image/jpeg';
+            if (ext === 'png') mimeType = 'image/png';
+            else if (ext === 'gif') mimeType = 'image/gif';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            else if (ext === 'avif') mimeType = 'image/avif';
+            else if (ext === 'bmp') mimeType = 'image/bmp';
+            else if (ext === 'svg') mimeType = 'image/svg+xml';
+            
+            const base64Data = await fileData.async('base64');
+            return `data:${mimeType};base64,${base64Data}`;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error reading zip file:', file.path, error);
+        return null;
+    }
+}
 
 // 尋找筆記中的第一張圖片
 export async function findFirstImageInNote(app: App, content: string): Promise<string | null> {
     try {
-        const internalStyle = /!?\[\[(.*?\.(?:jpg|jpeg|png|gif|webp|avif))(?:\|.*?)?\]\]/;
-        const markdownStyle = /!\[(.*?)\]\(\s*(\S+?(?:\.(?:jpg|jpeg|png|gif|webp|avif)|format=(?:jpg|jpeg|png|gif|webp))[^\s)]*)\s*(?:\s+["'][^"']*["'])?\s*\)/;
-        const frontmatterUrl = /^[\w\-_]+:\s*(https?:\/\/\S+?(?:\.(?:jpg|jpeg|png|gif|webp|avif)|format=(?:jpg|jpeg|png|gif|webp))[^\s]*)\s*$/;
+        const pluginAccess = app as unknown as AppPluginAccess;
+        const customDocumentExtensions = pluginAccess.plugins?.plugins?.['obsidian-gridexplorer']?.settings?.customDocumentExtensions;
+        const isZipEnabled = customDocumentExtensions
+            ?.split(',')
+            .map((ext: string) => ext.trim().toLowerCase())
+            .includes('zip');
+
+        const allowedExtensions = isZipEnabled 
+            ? 'jpg|jpeg|png|gif|webp|avif|zip' 
+            : 'jpg|jpeg|png|gif|webp|avif';
+
+        const internalStyle = new RegExp(`!?\\[\\[(.*?\\.(?:${allowedExtensions}))(?:\\|.*?)?\\]\\]`);
+        const markdownStyle = new RegExp(`!\\[(.*?)\\]\\(\\s*(\\S+?(?:\\.(?:${allowedExtensions})|format=(?:jpg|jpeg|png|gif|webp))[^\\s)]*)\\s*(?:\\s+["'][^"']*["'])?\\s*\\)`);
+        const frontmatterUrl = new RegExp(`^[\\w\\-_]+:\\s*(https?:\\/\\/\\S+?(?:\\.(?:${allowedExtensions})|format=(?:jpg|jpeg|png|gif|webp))[^\\s]*)\\s*$`);
 
         const combinedPatternSource = `(?:${internalStyle.source}|${markdownStyle.source}|${frontmatterUrl.source})`;
         const initialPattern = new RegExp(combinedPatternSource, 'im');
@@ -55,6 +123,9 @@ async function processMediaLink(app: App, internalMatch: RegExpMatchArray | RegE
     if (internalMatch[1]) {
         const file = app.metadataCache.getFirstLinkpathDest(internalMatch[1], '');
         if (file) {
+            if (file.extension.toLowerCase() === 'zip') {
+                return await getFirstImageFromZip(app, file);
+            }
             return app.vault.getResourcePath(file);
         }
     }
@@ -69,9 +140,15 @@ async function processMediaLink(app: App, internalMatch: RegExpMatchArray | RegE
             if (!file) {
                 const fileByPath = app.vault.getAbstractFileByPath(url);
                 if (fileByPath instanceof TFile) {
+                    if (fileByPath.extension.toLowerCase() === 'zip') {
+                        return await getFirstImageFromZip(app, fileByPath);
+                    }
                     return app.vault.getResourcePath(fileByPath);
                 }
             } else {
+                if (file.extension.toLowerCase() === 'zip') {
+                    return await getFirstImageFromZip(app, file);
+                }
                 return app.vault.getResourcePath(file);
             }
         }
@@ -91,11 +168,17 @@ async function resolveUrl(app: App, url: string): Promise<string | null> {
 
     const file = app.metadataCache.getFirstLinkpathDest(url, '');
     if (file) {
+        if (file.extension.toLowerCase() === 'zip') {
+            return await getFirstImageFromZip(app, file);
+        }
         return app.vault.getResourcePath(file);
     }
 
     const fileByPath = app.vault.getAbstractFileByPath(url);
     if (fileByPath instanceof TFile) {
+        if (fileByPath.extension.toLowerCase() === 'zip') {
+            return await getFirstImageFromZip(app, fileByPath);
+        }
         return app.vault.getResourcePath(fileByPath);
     }
 

@@ -1,5 +1,47 @@
-import { App, Modal, TFile, Menu, setIcon } from 'obsidian';
+import { App, Modal, TFile, Menu, setIcon, Platform } from 'obsidian';
 import { isImageFile, isVideoFile, isAudioFile } from '../utils/fileUtils';
+
+export interface VirtualMediaFile {
+    name: string;
+    path: string;
+    isVirtual: true;
+    getBlobUrl: () => Promise<string>;
+}
+
+export type MediaFile = TFile | VirtualMediaFile;
+
+export function isImage(file: MediaFile): boolean {
+    if ('isVirtual' in file && file.isVirtual) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'].includes(ext);
+    }
+    if (file instanceof TFile) {
+        return isImageFile(file);
+    }
+    return false;
+}
+
+export function isVideo(file: MediaFile): boolean {
+    if ('isVirtual' in file && file.isVirtual) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        return ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogv'].includes(ext);
+    }
+    if (file instanceof TFile) {
+        return isVideoFile(file);
+    }
+    return false;
+}
+
+export function isAudio(file: MediaFile): boolean {
+    if ('isVirtual' in file && file.isVirtual) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        return ['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp'].includes(ext);
+    }
+    if (file instanceof TFile) {
+        return isAudioFile(file);
+    }
+    return false;
+}
 
 interface GridViewFocusTarget {
     gridItems: HTMLElement[];
@@ -8,8 +50,8 @@ interface GridViewFocusTarget {
 }
 
 export class MediaModal extends Modal {
-    private file: TFile;
-    private mediaFiles: TFile[];
+    private file: MediaFile;
+    private mediaFiles: MediaFile[];
     private currentIndex: number;
     private currentMediaElement: HTMLElement | null = null;
     private isZoomed = false;
@@ -24,7 +66,7 @@ export class MediaModal extends Modal {
     private minSwipeDistance = 50; // 最小滑動距離
     private maxSwipeTime = 300; // 最大滑動時間（毫秒）
 
-    constructor(app: App, file: TFile, mediaFiles: TFile[], gridView?: GridViewFocusTarget) {
+    constructor(app: App, file: MediaFile, mediaFiles: MediaFile[], gridView?: GridViewFocusTarget) {
         super(app);
         this.file = file;
         this.mediaFiles = mediaFiles;
@@ -103,6 +145,28 @@ export class MediaModal extends Modal {
             return false;
         });
 
+        this.scope.register(null, 'Home', () => {
+            this.showMediaAtIndex(0);
+            return false;
+        });
+
+        this.scope.register(null, 'End', () => {
+            this.showMediaAtIndex(this.mediaFiles.length - 1);
+            return false;
+        });
+
+        this.scope.register(null, 'PageUp', () => {
+            const prevIndex = Math.max(0, this.currentIndex - 5);
+            this.showMediaAtIndex(prevIndex);
+            return false;
+        });
+
+        this.scope.register(null, 'PageDown', () => {
+            const nextIndex = Math.min(this.mediaFiles.length - 1, this.currentIndex + 5);
+            this.showMediaAtIndex(nextIndex);
+            return false;
+        });
+
         // 註冊觸控事件（行動裝置拖曳翻頁）
         this.registerTouchEvents(this.contentEl);
 
@@ -173,12 +237,11 @@ export class MediaModal extends Modal {
 
         const mediaFile = this.mediaFiles[index];
 
-        if (isImageFile(mediaFile)) {
+        if (isImage(mediaFile)) {
             // 創建圖片元素
             const img = activeDocument.createElement('img');
             img.className = 'ge-fullscreen-image';
             img.addClass('ge-hidden'); // 先隱藏新圖片
-            img.src = this.app.vault.getResourcePath(mediaFile);
 
             // 等待新圖片載入完成
             img.onload = () => {
@@ -193,15 +256,30 @@ export class MediaModal extends Modal {
                 img.removeClass('ge-hidden');
             };
 
+            if ('isVirtual' in mediaFile && mediaFile.isVirtual) {
+                mediaFile.getBlobUrl().then(url => {
+                    img.src = url;
+                }).catch(err => console.error("Error loading virtual image:", err));
+            } else if (mediaFile instanceof TFile) {
+                img.src = this.app.vault.getResourcePath(mediaFile);
+            }
+
             mediaContainer.appendChild(img);
 
             // 圖片點擊事件（放大/縮小）
-            img.addEventListener('click', (event) => {
-                event.stopPropagation();
-                this.toggleImageZoom(img, event);
-            });
+            if (Platform.isMobile) {
+                img.addEventListener('dblclick', (event) => {
+                    event.stopPropagation();
+                    this.toggleImageZoom(img, event);
+                });
+            } else {
+                img.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    this.toggleImageZoom(img, event);
+                });
+            }
 
-        } else if (isVideoFile(mediaFile) || isAudioFile(mediaFile)) {
+        } else if (isVideo(mediaFile) || isAudio(mediaFile)) {
             // 對於影片和音樂，維持原有的處理方式
             if (this.currentMediaElement) {
                 this.currentMediaElement.remove();
@@ -210,7 +288,14 @@ export class MediaModal extends Modal {
             video.className = 'ge-fullscreen-video';
             video.controls = true;
             video.autoplay = true;
-            video.src = this.app.vault.getResourcePath(mediaFile);
+
+            if ('isVirtual' in mediaFile && mediaFile.isVirtual) {
+                mediaFile.getBlobUrl().then(url => {
+                    video.src = url;
+                }).catch(err => console.error("Error loading virtual video/audio:", err));
+            } else if (mediaFile instanceof TFile) {
+                video.src = this.app.vault.getResourcePath(mediaFile);
+            }
 
             mediaContainer.appendChild(video);
             this.currentMediaElement = video;
@@ -221,7 +306,7 @@ export class MediaModal extends Modal {
             oldFileNameElement.remove();
         }
 
-        if (isAudioFile(mediaFile)) {
+        if (isAudio(mediaFile)) {
             //顯示檔案名稱
             const fileName = mediaFile.name;
             const fileNameElement = activeDocument.createElement('div');
@@ -382,10 +467,15 @@ export class MediaModal extends Modal {
     }
 
     // 處理媒體右鍵選單
-    private onMediaContextMenu(event: MouseEvent, file: TFile) {
+    private onMediaContextMenu(event: MouseEvent, file: MediaFile) {
+        if ('isVirtual' in file && file.isVirtual) {
+            return;
+        }
         event.preventDefault();
         const menu = new Menu();
-        this.app.workspace.trigger('file-menu', menu, file, 'media-viewer');
+        if (file instanceof TFile) {
+            this.app.workspace.trigger('file-menu', menu, file, 'media-viewer');
+        }
         menu.showAtMouseEvent(event);
     }
 

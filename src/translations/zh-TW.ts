@@ -312,6 +312,13 @@ export default {
     'open_quick_access_folder': '開啟快速存取資料夾',
     'open_quick_access_mode': '開啟快速存取模式',
 
+    // ZIP 檢視器
+    'zip_open_file': '開啟 ZIP 檔案',
+    'zip_close_view': '關閉 ZIP 檢視',
+    'zip_loading': '正在讀取 ZIP 檔案...',
+    'zip_no_images': 'ZIP 檔案中找不到圖片',
+    'zip_load_error': '無法載入 ZIP 檔案內容',
+
     // Explorer Stash
     'stash': '暫存區',
     'drop_files_here': '拖曳檔案到此暫存',

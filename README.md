@@ -66,6 +66,7 @@ Find "GridExplorer" in the Community plugins through the Obsidian app.
 - `pdf`
 - `canvas`
 - `base`
+- `zip`
 
 ## Folder Notes
 

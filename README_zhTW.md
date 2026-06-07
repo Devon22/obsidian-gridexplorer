@@ -66,6 +66,7 @@
 - `pdf`
 - `canvas`
 - `base`
+- `zip`
 
 
 ## 資料夾筆記

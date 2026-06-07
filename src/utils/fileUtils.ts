@@ -18,7 +18,7 @@ declare module 'obsidian' {
 export const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg']);
 export const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogv']);
 export const AUDIO_EXTENSIONS = new Set(['flac', 'm4a', 'mp3', 'ogg', 'wav', '3gp']);
-export const DOCUMENT_EXTENSIONS = new Set(['md', 'pdf', 'canvas', 'base']);
+export const DOCUMENT_EXTENSIONS = new Set(['md', 'pdf', 'canvas', 'base', 'zip']);
 
 let customDocumentExtensions: string[] = [];
 
