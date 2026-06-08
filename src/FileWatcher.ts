@@ -1,21 +1,7 @@
-import { App, TFile, EventRef } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isDocumentFile, isMediaFile } from './utils/fileUtils';
-
-interface BookmarksPlugin {
-    instance: {
-        on(name: string, callback: () => void): EventRef;
-    };
-}
-
-interface AppWithInternalPlugins extends App {
-    internalPlugins: {
-        plugins: {
-            bookmarks: BookmarksPlugin;
-        };
-    };
-}
 
 //檔案監聽器
 export class FileWatcher {
@@ -144,7 +130,7 @@ export class FileWatcher {
         );
     
         // 處理書籤變更
-        const bookmarks = (this.app as unknown as AppWithInternalPlugins).internalPlugins.plugins.bookmarks;
+        const bookmarks = this.app.internalPlugins.plugins.bookmarks;
         if (bookmarks?.instance) {
             this.plugin.registerEvent(
                 bookmarks.instance.on('changed', () => {

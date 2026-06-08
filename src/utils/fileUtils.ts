@@ -1,14 +1,76 @@
-import { TFile, TFolder, getFrontMatterInfo, Notice } from 'obsidian';
+import { TFile, TFolder, getFrontMatterInfo, Notice, View, EventRef } from 'obsidian';
 import { GridView } from '../GridView';
 import { type GallerySettings } from '../settings';
 import { t } from '../translations';
 
+interface DataviewTask {
+    path: string;
+    completed: boolean;
+}
+
+interface DataviewTaskArray {
+    where: (predicate: (t: { completed: boolean }) => boolean) => DataviewTaskArray;
+    array: () => DataviewTask[];
+}
+
+interface DataviewApi {
+    pages: (query?: string) => {
+        file: {
+            tasks: DataviewTaskArray;
+        };
+    };
+    page: (path: string) => Record<string, unknown>;
+    current?: () => Record<string, unknown>;
+}
+
+interface TasksPlugin {
+    getTasks?: () => Array<{ path: string; isDone: boolean }>;
+}
+
+interface BookmarkItem {
+    type: 'file' | 'group' | (string & {});
+    path?: string;
+    title?: string;
+    items?: BookmarkItem[];
+}
+
+interface BookmarksPlugin {
+    enabled: boolean;
+    instance: {
+        items: BookmarkItem[];
+        on(name: string, callback: () => void): EventRef;
+    };
+}
+
+interface GlobalSearchPlugin {
+    enabled: boolean;
+    instance?: Record<string, unknown>;
+}
+
+interface SearchView extends View {
+    dom?: {
+        resultDomLookup?: Map<TFile, unknown>;
+    };
+}
+
 // 擴展 App 類型以包含 plugins 屬性
 declare module 'obsidian' {
     interface App {
+        internalPlugins: {
+            plugins: {
+                bookmarks?: BookmarksPlugin;
+                [id: string]: unknown;
+            };
+            getPluginById(id: 'global-search'): GlobalSearchPlugin | undefined;
+            getPluginById(id: string): unknown;
+        };
         plugins: {
             plugins: {
-                [id: string]: any;
+                dataview?: {
+                    api: DataviewApi;
+                };
+                'obsidian-tasks-plugin'?: TasksPlugin;
+                [id: string]: unknown;
             };
         };
     }
@@ -280,13 +342,13 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         return [];
     } else if (sourceMode === 'search') {
         // 搜尋模式：使用 Obsidian 的搜尋功能
-        const globalSearchPlugin = (app as any).internalPlugins.getPluginById('global-search');
+        const globalSearchPlugin = app.internalPlugins.getPluginById('global-search');
         if (globalSearchPlugin?.instance) {
-            const searchLeaf = (app as any).workspace.getLeavesOfType('search')[0];
-            if (searchLeaf && searchLeaf.view && searchLeaf.view.dom) {
-                const resultDomLookup = searchLeaf.view.dom.resultDomLookup;
-                if (resultDomLookup) {
-                    const files = Array.from(resultDomLookup.keys())
+            const searchLeaf = app.workspace.getLeavesOfType('search')[0];
+            if (searchLeaf) {
+                const searchView = searchLeaf.view as SearchView;
+                if (searchView.dom?.resultDomLookup) {
+                    const files = Array.from(searchView.dom.resultDomLookup.keys())
                         .filter((file): file is TFile => file instanceof TFile);
                     return sortFiles(files, gridView);
                 }
@@ -366,16 +428,16 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         return sortFiles(Array.from(outgoingLinks), gridView);
     } else if (sourceMode === 'bookmarks') {
         // 書籤模式
-        const bookmarksPlugin = (app as any).internalPlugins.plugins.bookmarks;
+        const bookmarksPlugin = app.internalPlugins.plugins.bookmarks;
         if (!bookmarksPlugin?.enabled) {
             return [];
         }
 
         const bookmarks = bookmarksPlugin.instance.items;
-        const bookmarkedFiles = new Set();
+        const bookmarkedFiles = new Set<TFile>();
 
-        const processBookmarkItem = (item: any) => {
-            if (item.type === 'file') {
+        const processBookmarkItem = (item: BookmarkItem) => {
+            if (item.type === 'file' && item.path) {
                 const file = app.vault.getAbstractFileByPath(item.path);
                 if (file instanceof TFile) {
                     // 根據設定決定是否包含媒體檔案
@@ -394,19 +456,19 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             bookmarks.forEach(processBookmarkItem);
         } else if (bookmarkGroupId === 'ungrouped') {
             // 只處理根目錄下的檔案項目
-            bookmarks.forEach((item: any) => {
+            bookmarks.forEach((item) => {
                 if (item.type === 'file') {
                     processBookmarkItem(item);
                 }
             });
         } else {
             // 遞迴尋找指定的群組
-            const findAndProcessGroup = (items: any[]) => {
+            const findAndProcessGroup = (items: BookmarkItem[]) => {
                 for (const item of items) {
                     if (item.type === 'group') {
                         // 使用 title 作為 ID
                         if (item.title === bookmarkGroupId) {
-                            item.items.forEach(processBookmarkItem);
+                            item.items?.forEach(processBookmarkItem);
                             return true;
                         }
                         if (item.items && findAndProcessGroup(item.items)) {
@@ -418,7 +480,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             };
             findAndProcessGroup(bookmarks);
         }
-        return Array.from(bookmarkedFiles) as TFile[];
+        return Array.from(bookmarkedFiles);
     } else if (sourceMode === 'tasks') {
         // 任務模式
         const filesWithTasks = new Set<TFile>();
@@ -556,7 +618,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
         // 依據 GridView 目前選擇的選項決定要使用哪段 Dataview 程式碼
         let dvCode: string | undefined = mode?.dataviewCode;
         if (mode && mode.options && mode.options.length > 0) {
-            const idx = (gridView as any).customOptionIndex ?? -1;
+            const idx = gridView.customOptionIndex ?? -1;
             if (idx >= 0 && idx < mode.options.length) {
                 dvCode = mode.options[idx].dataviewCode;
             }
@@ -570,8 +632,10 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             }
 
             const func = new Function('app', 'dv', dvCode);
-            const dvPagesResult = func(app, dvApi);
-            const dvPages = Array.isArray(dvPagesResult) ? dvPagesResult : Array.from(dvPagesResult || []);
+            const dvPagesResult = func(app, dvApi) as unknown;
+            const dvPages = Array.isArray(dvPagesResult)
+                ? (dvPagesResult as unknown[])
+                : Array.from((dvPagesResult as Iterable<unknown> | null | undefined) || []);
 
             if (!dvPages || dvPages.length === 0) {
                 return [];
@@ -579,7 +643,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
 
             const files = new Set<TFile>();
 
-            for (const page of dvPages) {
+            for (const page of dvPages as Array<{ file?: { path?: string } } | null | undefined>) {
                 // Add null checks for page and page.file
                 if (page?.file?.path) {
                     const file = app.vault.getAbstractFileByPath(page.file.path);

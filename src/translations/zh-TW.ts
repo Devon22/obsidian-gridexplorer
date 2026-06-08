@@ -68,6 +68,7 @@ export default {
     'folder_display_style': '資料夾顯示樣式',
     'folder_display_style_desc': '設定資料夾在網格視圖中的顯示方式',
     'folder_display_style_show': '直接顯示',
+    'folder_display_style_compact': '直接顯示 (緊湊)',
     'folder_display_style_menu': '以選單顯示',
     'folder_display_style_hide': '不顯示',
     'show_media_files': '顯示媒體檔案',

@@ -67,6 +67,7 @@ export default {
     'folder_display_style': 'Стиль відображення папок',
     'folder_display_style_desc': 'Налаштуйте спосіб відображення папок у сітковому вигляді',
     'folder_display_style_show': 'Показувати напряму',
+    'folder_display_style_compact': 'Показувати напряму (компакт)',
     'folder_display_style_menu': 'Показувати в меню',
     'folder_display_style_hide': 'Приховати',
     'show_media_files': 'Показувати медіафайли',

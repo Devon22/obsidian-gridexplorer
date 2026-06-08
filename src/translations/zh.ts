@@ -67,6 +67,7 @@ export default {
     'folder_display_style': '文件夹显示样式',
     'folder_display_style_desc': '设置文件夹在网格视图中的显示方式',
     'folder_display_style_show': '直接显示',
+    'folder_display_style_compact': '直接显示 (紧凑)',
     'folder_display_style_menu': '以菜单显示',
     'folder_display_style_hide': '不显示',
     'show_media_files': '显示媒体文件',

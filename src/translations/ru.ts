@@ -67,6 +67,7 @@ export default {
     'folder_display_style': 'Стиль отображения папок',
     'folder_display_style_desc': 'Настройка способа отображения папок в сеточном виде',
     'folder_display_style_show': 'Показывать напрямую',
+    'folder_display_style_compact': 'Показывать напрямую (компакт)',
     'folder_display_style_menu': 'Показывать в меню',
     'folder_display_style_hide': 'Скрыть',
     'show_media_files': 'Показывать медиафайлы',

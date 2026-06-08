@@ -68,6 +68,7 @@ export default {
     'folder_display_style': 'Folder display style',
     'folder_display_style_desc': 'Set how folders are displayed in the grid view',
     'folder_display_style_show': 'Show directly',
+    'folder_display_style_compact': 'Show directly (compact)',
     'folder_display_style_menu': 'Show in menu',
     'folder_display_style_hide': 'Hide',
     'show_media_files': 'Show media files',

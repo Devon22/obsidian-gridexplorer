@@ -68,6 +68,7 @@ export default {
     'folder_display_style': '폴더 표시 스타일',
     'folder_display_style_desc': '그리드 뷰에서 폴더 표시 방법 설정',
     'folder_display_style_show': '직접 표시',
+    'folder_display_style_compact': '직접 표시 (컴팩트)',
     'folder_display_style_menu': '메뉴에 표시',
     'folder_display_style_hide': '숨기기',
     'show_media_files': '미디어 파일 표시',

@@ -165,17 +165,17 @@
 }
 
 /* 多行標題支援 Multiline Title */
-.ge-title-container:has(.ge-multiline-title) {
+.ge-title-container.has-multiline-title {
     align-items: flex-start;
 }
 
-.ge-title-container:has(.ge-multiline-title) .ge-icon-container {
+.ge-title-container.has-multiline-title .ge-icon-container {
     width: 16px;
     height: 16px;
     margin-top: 2px;
 }
 
-.ge-title-container:has(.ge-multiline-title) .ge-icon-container svg {
+.ge-title-container.has-multiline-title .ge-icon-container svg {
     width: 14px;
     height: 14px;
 }
@@ -970,6 +970,14 @@ span.ge-mode-title {
     list-style: none;
 }
 
+.ge-settings-section-summary .setting-item {
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    flex-grow: 1;
+}
+
 .ge-settings-section-summary h3 {
     margin: 0 !important;
     font-size: 1.1em;
@@ -997,6 +1005,191 @@ span.ge-mode-title {
 .is-mobile .ge-settings-section-content {
     padding: 10px 10px 15px 10px;
 }
+
+/* 自訂模式列表緊湊樣式 */
+.ge-custom-modes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.ge-custom-mode-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    gap: 10px;
+}
+
+.ge-custom-mode-item:hover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border-focus);
+}
+
+.ge-custom-mode-drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: grab;
+    padding: 2px;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.ge-custom-mode-drag:hover {
+    opacity: 1;
+    color: var(--text-normal);
+}
+
+.ge-custom-mode-drag svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ge-custom-mode-checkbox {
+    cursor: pointer;
+    margin: 0;
+}
+
+.ge-custom-mode-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.ge-custom-mode-icon {
+    font-size: 1.1em;
+    flex-shrink: 0;
+}
+
+.ge-custom-mode-name {
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.ge-custom-mode-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ge-custom-mode-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ge-custom-mode-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.ge-custom-mode-btn.ge-remove-btn:hover {
+    color: var(--text-error, #f44336);
+    background-color: var(--background-modifier-error-hover, rgba(244, 67, 54, 0.1));
+}
+
+.ge-custom-mode-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.ge-custom-modes-buttons-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+/* 顯示模式列表緊湊樣式 */
+.ge-display-modes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.ge-display-mode-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    gap: 10px;
+}
+
+.ge-display-mode-item:hover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border-focus);
+}
+
+.ge-display-mode-checkbox {
+    cursor: pointer;
+    margin: 0;
+}
+
+.ge-display-mode-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.ge-display-mode-icon {
+    font-size: 1.1em;
+    flex-shrink: 0;
+}
+
+.ge-display-mode-name {
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.ge-display-mode-extra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+}
+
+.ge-display-mode-extra input[type="number"] {
+    width: 65px;
+    height: 26px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-small);
+    text-align: center;
+}
+
+
+
 
 /* 路徑容器樣式 */
 .ge-path-container {
@@ -2883,7 +3076,7 @@ a.ge-current-folder:hover {
 /* =========================================================================== */
 
 /* 移除 view-content 的內距，使 zip viewer 滿版 */
-.workspace-leaf:has(.zip-viewer-container) .view-content {
+.workspace-leaf .zip-viewer-container {
     padding: 0 !important;
     overflow: hidden !important;
 }
@@ -3195,4 +3388,119 @@ a.ge-current-folder:hover {
 .is-mobile .ge-zip-view-container::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
+}
+
+/* =========================================================================== */
+/* 資料夾以小按鈕並排顯示的樣式 Inline Folders Container & Buttons */
+/* =========================================================================== */
+
+.ge-folders-container {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: transparent;
+    width: 100%;
+}
+
+.ge-folder-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 7px;
+    background-color: var(--background-primary-alt);
+    border: 2px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    cursor: pointer;
+    font-size: var(--title-font-size);
+    user-select: none;
+    transition: all 0.2s ease;
+    flex: 1 1 120px;
+    max-width: 100%;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+@media (hover: hover) {
+    .ge-folder-button:hover {
+        background-color: var(--background-modifier-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.ge-folder-button .ge-title-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.ge-folder-button .ge-title {
+    margin: 0;
+    font-size: inherit;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-normal);
+}
+
+.ge-folder-button.ge-dragover {
+    transform: scale(1.05);
+}
+
+/* 顏色及忽略樣式 */
+.ge-folder-button.ge-folder-ignored {
+    opacity: 0.5;
+    border-style: dashed;
+    border-width: 1px;
+    background-color: var(--background-modifier-border);
+}
+
+@media (hover: hover) {
+    .ge-folder-button.ge-folder-ignored:hover {
+        opacity: 0.7;
+    }
+}
+
+.ge-folder-button.ge-folder-ignored .ge-title {
+    color: var(--text-muted);
+}
+
+/* 顏色樣式 */
+.ge-folder-button.ge-folder-color-red {
+    background-color: rgba(var(--color-red-rgb), 0.2);
+    border-color: rgba(var(--color-red-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-orange {
+    background-color: rgba(var(--color-orange-rgb), 0.2);
+    border-color: rgba(var(--color-orange-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-yellow {
+    background-color: rgba(var(--color-yellow-rgb), 0.2);
+    border-color: rgba(var(--color-yellow-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-green {
+    background-color: rgba(var(--color-green-rgb), 0.2);
+    border-color: rgba(var(--color-green-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-cyan {
+    background-color: rgba(var(--color-cyan-rgb), 0.2);
+    border-color: rgba(var(--color-cyan-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-blue {
+    background-color: rgba(var(--color-blue-rgb), 0.2);
+    border-color: rgba(var(--color-blue-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-purple {
+    background-color: rgba(var(--color-purple-rgb), 0.2);
+    border-color: rgba(var(--color-purple-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-pink {
+    background-color: rgba(var(--color-pink-rgb), 0.2);
+    border-color: rgba(var(--color-pink-rgb), 0.5);
+}
+.ge-folder-button.ge-folder-color-custom {
+    background-color: var(--ge-folder-color-bg);
+    border-color: var(--ge-folder-color-border);
 }

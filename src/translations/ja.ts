@@ -67,6 +67,7 @@ export default {
     'folder_display_style': 'フォルダ表示スタイル',
     'folder_display_style_desc': 'グリッドビューでのフォルダの表示方法を設定します',
     'folder_display_style_show': '直接表示',
+    'folder_display_style_compact': '直接表示 (コンパクト)',
     'folder_display_style_menu': 'メニューで表示',
     'folder_display_style_hide': '非表示',
     'show_media_files': 'メディアファイルを表示',

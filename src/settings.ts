@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent, Platform } from 'obsidian';
+import { App, PluginSettingTab, Setting, AbstractInputSuggest, Notice, ButtonComponent, Platform, setIcon } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { CustomModeModal } from './modal/customModeModal';
 import { t } from './translations';
@@ -53,7 +53,7 @@ export interface GallerySettings {
     multiLineTitle: boolean; // 標題允許兩行顯示
     summaryLength: number; // 筆記摘要的字數
     enableFileWatcher: boolean; // 是否啟用檔案監控
-    folderDisplayStyle: 'show' | 'menu' | 'hide'; // 資料夾顯示樣式：直接顯示、以選單顯示、不顯示
+    folderDisplayStyle: 'show' | 'compact' | 'menu' | 'hide'; // 資料夾顯示樣式：直接顯示、緊湊、以選單顯示、不顯示
     showMediaFiles: boolean; // 是否顯示圖片和影片
     showVideoThumbnails: boolean; // 是否顯示影片縮圖
     defaultOpenLocation: string; // 預設開啟位置
@@ -270,7 +270,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         });
 
         const summary = details.createEl('summary', { cls: 'ge-settings-section-summary' });
-        summary.createEl('h3', { text: title });
+        new Setting(summary).setName(title).setHeading();
         return details.createDiv({ cls: 'ge-settings-section-content' });
     }
 
@@ -283,40 +283,80 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         // 自訂模式設定
         sectionEl = this.createSection(t('custom_mode_settings'));
 
-        const customModesContainer = sectionEl.createDiv();
+        const customModesContainer = sectionEl.createDiv({ cls: 'ge-custom-modes-list' });
         this.plugin.settings.customModes.forEach((mode, index) => {
-            const setting = new Setting(customModesContainer)
-                .setName(`${mode.icon} ${mode.displayName}`)
-                .addToggle(toggle => {
-                    toggle
-                        .setValue(mode.enabled ?? true)
-                        .onChange(async (value) => {
-                            mode.enabled = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
+            const itemEl = customModesContainer.createDiv({ cls: 'ge-custom-mode-item' });
+            itemEl.setAttr('draggable', 'true');
 
-            // 讓設定項目可以被拖曳
-            setting.settingEl.setAttr('draggable', 'true');
+            // 拖曳圖示
+            const dragHandle = itemEl.createDiv({ cls: 'ge-custom-mode-drag' });
+            setIcon(dragHandle, 'grip-vertical');
 
-            // 拖曳開始時，儲存被拖曳項目的索引
-            setting.settingEl.addEventListener('dragstart', (event: DragEvent) => {
+            // 啟用切換
+            const checkbox = itemEl.createEl('input', {
+                type: 'checkbox',
+                cls: 'ge-custom-mode-checkbox'
+            });
+            checkbox.checked = mode.enabled ?? true;
+            checkbox.addEventListener('change', () => {
+                mode.enabled = checkbox.checked;
+                void this.plugin.saveSettings();
+            });
+
+            // 顯示名稱與圖示
+            const infoEl = itemEl.createDiv({ cls: 'ge-custom-mode-info' });
+            infoEl.createSpan({ text: mode.icon || '🧩', cls: 'ge-custom-mode-icon' });
+            infoEl.createSpan({ text: mode.displayName, cls: 'ge-custom-mode-name' });
+
+            // 操作按鈕
+            const actionsEl = itemEl.createDiv({ cls: 'ge-custom-mode-actions' });
+
+            // 編輯按鈕
+            const editBtn = actionsEl.createEl('button', {
+                cls: 'ge-custom-mode-btn ge-edit-btn',
+                attr: { 'aria-label': t('edit'), 'title': t('edit') }
+            });
+            setIcon(editBtn, 'pencil');
+            editBtn.addEventListener('click', () => {
+                const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                if (modeIndex === -1) return;
+                new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
+                    this.plugin.settings.customModes[modeIndex] = result;
+                    void this.plugin.saveSettings();
+                    this.display();
+                }).open();
+            });
+
+            // 移除按鈕
+            const removeBtn = actionsEl.createEl('button', {
+                cls: 'ge-custom-mode-btn ge-remove-btn',
+                attr: { 'aria-label': t('remove'), 'title': t('remove') }
+            });
+            setIcon(removeBtn, 'trash-2');
+            removeBtn.addEventListener('click', () => {
+                const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
+                if (modeIndex === -1) return;
+                this.plugin.settings.customModes.splice(modeIndex, 1);
+                void this.plugin.saveSettings();
+                this.display();
+            });
+
+            // 拖曳事件處理
+            itemEl.addEventListener('dragstart', (event: DragEvent) => {
                 if (event.dataTransfer) {
                     event.dataTransfer.setData('text/plain', index.toString());
                     event.dataTransfer.effectAllowed = 'move';
                 }
             });
 
-            // 當拖曳到其他項目上時，允許放下
-            setting.settingEl.addEventListener('dragover', (event: DragEvent) => {
+            itemEl.addEventListener('dragover', (event: DragEvent) => {
                 event.preventDefault();
                 if (event.dataTransfer) {
                     event.dataTransfer.dropEffect = 'move';
                 }
             });
 
-            // 放下項目時，更新順序
-            setting.settingEl.addEventListener('drop', (event: DragEvent) => {
+            itemEl.addEventListener('drop', (event: DragEvent) => {
                 void (async () => {
                     event.preventDefault();
                     if (!event.dataTransfer) return;
@@ -329,321 +369,252 @@ export class GridExplorerSettingTab extends PluginSettingTab {
 
                     if (fromIndex === toIndex) return;
 
-                    // 重新排序陣列
                     const modes = this.plugin.settings.customModes;
                     const movedMode = modes.splice(fromIndex, 1)[0];
                     modes.splice(toIndex, 0, movedMode);
 
-                    // 儲存設定並重新整理顯示
                     await this.plugin.saveSettings();
                     this.display();
                 })();
             });
-
-            // 編輯按鈕
-            setting.addButton((button: ButtonComponent) => {
-                button.setIcon('pencil')
-                    .setClass('ge-edit-button')
-                    .setTooltip(t('edit'))
-                    .onClick(() => {
-                        // 找到正確的索引，以防萬一順序已變
-                        const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
-                        if (modeIndex === -1) return;
-                        new CustomModeModal(this.app, this.plugin, this.plugin.settings.customModes[modeIndex], (result) => {
-                            this.plugin.settings.customModes[modeIndex] = result;
-                            void this.plugin.saveSettings();
-                            this.display();
-                        }).open();
-                    });
-            });
-
-            // 移除按鈕
-            setting.addButton((button: ButtonComponent) => {
-                button.setIcon('trash-2')
-                    .setClass('ge-remove-button')
-                    .setTooltip(t('remove'))
-                    .setWarning()
-                    .onClick(() => {
-                        // 找到正確的索引，以防萬一順序已變
-                        const modeIndex = this.plugin.settings.customModes.findIndex(m => m.internalName === mode.internalName);
-                        if (modeIndex === -1) return;
-                        this.plugin.settings.customModes.splice(modeIndex, 1);
-                        void this.plugin.saveSettings();
-                        this.display();
-                    });
-            });
         });
 
-        new Setting(sectionEl)
-            .addButton(button => {
-                button.setButtonText(t('add_custom_mode'))
-                    .setCta()
-                    .setTooltip(t('add_custom_mode'))
-                    .onClick(() => {
-                        new CustomModeModal(this.app, this.plugin, null, (result) => {
-                            void (async () => {
-                                this.plugin.settings.customModes.push(result);
-                                await this.plugin.saveSettings();
-                                this.display();
-                            })();
-                        }).open();
-                    });
-            })
-            .addButton(button => {
-                button.setButtonText(t('export'))
-                    .setTooltip(t('export'))
-                    .onClick(async () => {
-                        if (this.plugin.settings.customModes.length === 0) {
-                            new Notice(t('no_custom_modes_to_export'));
+        const buttonsContainer = sectionEl.createDiv({ cls: 'ge-custom-modes-buttons-container' });
+
+        new ButtonComponent(buttonsContainer)
+            .setButtonText(t('add_custom_mode'))
+            .setCta()
+            .setTooltip(t('add_custom_mode'))
+            .onClick(() => {
+                new CustomModeModal(this.app, this.plugin, null, (result) => {
+                    void (async () => {
+                        this.plugin.settings.customModes.push(result);
+                        await this.plugin.saveSettings();
+                        this.display();
+                    })();
+                }).open();
+            });
+
+        new ButtonComponent(buttonsContainer)
+            .setButtonText(t('export'))
+            .setTooltip(t('export'))
+            .onClick(async () => {
+                if (this.plugin.settings.customModes.length === 0) {
+                    new Notice(t('no_custom_modes_to_export'));
+                    return;
+                }
+
+                const data = JSON.stringify(this.plugin.settings.customModes, null, 2);
+
+                if (!Platform.isDesktop) {
+                    // 行動裝置：使用 Obsidian 的檔案 API
+                    try {
+                        const fileName = 'gridexplorer-custom-modes.json';
+                        let filePath = fileName;
+                        let counter = 1;
+
+                        // 檢查檔案是否已存在，如果存在則添加數字後綴
+                        while (this.app.vault.getAbstractFileByPath(filePath)) {
+                            filePath = `gridexplorer-custom-modes-${counter}.json`;
+                            counter++;
+                        }
+
+                        await this.app.vault.create(filePath, data);
+                        new Notice(t('export_success_vault').replace('{filename}', filePath));
+                    } catch (error) {
+                        console.error('GridExplorer: Failed to export using Obsidian API on mobile', error);
+                        new Notice(t('export_error'));
+                    }
+                } else {
+                    // 桌面版：使用傳統的瀏覽器下載方法
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = activeDocument.createElement('a');
+                    a.href = url;
+                    a.download = 'gridexplorer-custom-modes.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            });
+
+        new ButtonComponent(buttonsContainer)
+            .setButtonText(t('import'))
+            .setTooltip(t('import'))
+            .onClick(() => {
+                const input = activeDocument.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (!files || files.length === 0) {
+                        return;
+                    }
+                    const file = files[0];
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        if (!e.target || typeof e.target.result !== 'string') {
+                            new Notice(t('import_error'));
                             return;
                         }
 
-                        const data = JSON.stringify(this.plugin.settings.customModes, null, 2);
+                        try {
+                            const content = e.target.result;
+                            const importedModes: unknown = JSON.parse(content);
+                            if (Array.isArray(importedModes)) {
+                                const validModes = importedModes.filter(isCustomMode);
+                                if (validModes.length > 0) {
+                                    validModes.forEach(importedMode => {
+                                        const existingModeIndex = this.plugin.settings.customModes.findIndex(
+                                            m => m.internalName === importedMode.internalName
+                                        );
 
-                        if (!Platform.isDesktop) {
-                            // 行動裝置：使用 Obsidian 的檔案 API
-                            try {
-                                const fileName = 'gridexplorer-custom-modes.json';
-                                let filePath = fileName;
-                                let counter = 1;
-
-                                // 檢查檔案是否已存在，如果存在則添加數字後綴
-                                while (this.app.vault.getAbstractFileByPath(filePath)) {
-                                    filePath = `gridexplorer-custom-modes-${counter}.json`;
-                                    counter++;
-                                }
-
-                                await this.app.vault.create(filePath, data);
-                                new Notice(t('export_success_vault').replace('{filename}', filePath));
-                            } catch (error) {
-                                console.error('GridExplorer: Failed to export using Obsidian API on mobile', error);
-                                new Notice(t('export_error'));
-                            }
-                        } else {
-                            // 桌面版：使用傳統的瀏覽器下載方法
-                            const blob = new Blob([data], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = activeDocument.createElement('a');
-                            a.href = url;
-                            a.download = 'gridexplorer-custom-modes.json';
-                            a.click();
-                            URL.revokeObjectURL(url);
-                        }
-                    });
-            })
-            .addButton(button => {
-                button.setButtonText(t('import'))
-                    .setTooltip(t('import'))
-                    .onClick(() => {
-                        const input = activeDocument.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.json';
-                        input.onchange = async (e) => {
-                            const files = (e.target as HTMLInputElement).files;
-                            if (!files || files.length === 0) {
-                                return;
-                            }
-                            const file = files[0];
-
-                            const reader = new FileReader();
-                            reader.onload = async (e) => {
-                                if (!e.target || typeof e.target.result !== 'string') {
-                                    new Notice(t('import_error'));
-                                    return;
-                                }
-
-                                try {
-                                    const content = e.target.result;
-                                    const importedModes: unknown = JSON.parse(content);
-                                    if (Array.isArray(importedModes)) {
-                                        const validModes = importedModes.filter(isCustomMode);
-                                        if (validModes.length > 0) {
-                                            validModes.forEach(importedMode => {
-                                                const existingModeIndex = this.plugin.settings.customModes.findIndex(
-                                                    m => m.internalName === importedMode.internalName
-                                                );
-
-                                                if (existingModeIndex !== -1) {
-                                                    // Update existing mode
-                                                    this.plugin.settings.customModes[existingModeIndex] = importedMode;
-                                                } else {
-                                                    // Add new mode
-                                                    this.plugin.settings.customModes.push(importedMode);
-                                                }
-                                            });
-
-                                            await this.plugin.saveSettings();
-                                            this.display();
-                                            new Notice(t('import_success'));
+                                        if (existingModeIndex !== -1) {
+                                            // Update existing mode
+                                            this.plugin.settings.customModes[existingModeIndex] = importedMode;
                                         } else {
-                                            new Notice(t('import_error'));
+                                            // Add new mode
+                                            this.plugin.settings.customModes.push(importedMode);
                                         }
-                                    } else {
-                                        new Notice(t('import_error'));
-                                    }
-                                } catch (error) {
+                                    });
+
+                                    await this.plugin.saveSettings();
+                                    this.display();
+                                    new Notice(t('import_success'));
+                                } else {
                                     new Notice(t('import_error'));
-                                    console.error("Grid Explorer: Error importing custom modes", error);
                                 }
-                            };
-                            reader.readAsText(file);
-                        };
-                        input.click();
-                    });
+                            } else {
+                                new Notice(t('import_error'));
+                            }
+                        } catch (error) {
+                            new Notice(t('import_error'));
+                            console.error("Grid Explorer: Error importing custom modes", error);
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
             });
 
         // 顯示模式設定區域
         sectionEl = this.createSection(t('display_mode_settings'));
 
-        // 設定是否顯示書籤模式
-        new Setting(sectionEl)
-            .setName(`📑 ${t('show_bookmarks_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showBookmarksMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showBookmarksMode = value;
-                        await this.plugin.saveSettings();
-                    });
+        const displayModesContainer = sectionEl.createDiv({ cls: 'ge-display-modes-list' });
+
+        const createDisplayModeItem = (
+            icon: string,
+            title: string,
+            value: boolean,
+            onChange: (checked: boolean) => void,
+            extraRenderer?: (container: HTMLElement) => void
+        ) => {
+            const itemEl = displayModesContainer.createDiv({ cls: 'ge-display-mode-item' });
+
+            const checkbox = itemEl.createEl('input', {
+                type: 'checkbox',
+                cls: 'ge-display-mode-checkbox'
+            });
+            checkbox.checked = value;
+            checkbox.addEventListener('change', () => {
+                onChange(checkbox.checked);
             });
 
-        // 設定是否顯示搜尋結果模式
-        new Setting(sectionEl)
-            .setName(`🔍 ${t('show_search_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showSearchMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showSearchMode = value;
-                        await this.plugin.saveSettings();
-                    });
+            const infoEl = itemEl.createDiv({ cls: 'ge-display-mode-info' });
+            infoEl.createSpan({ text: icon, cls: 'ge-display-mode-icon' });
+            infoEl.createSpan({ text: title, cls: 'ge-display-mode-name' });
+
+            if (extraRenderer) {
+                const extraEl = itemEl.createDiv({ cls: 'ge-display-mode-extra' });
+                extraRenderer(extraEl);
+            }
+        };
+
+        // 📑 書籤模式
+        createDisplayModeItem('📑', t('show_bookmarks_mode'), this.plugin.settings.showBookmarksMode, (checked) => {
+            this.plugin.settings.showBookmarksMode = checked;
+            void this.plugin.saveSettings();
+        });
+
+        // 🔍 搜尋結果模式
+        createDisplayModeItem('🔍', t('show_search_mode'), this.plugin.settings.showSearchMode, (checked) => {
+            this.plugin.settings.showSearchMode = checked;
+            void this.plugin.saveSettings();
+        });
+
+        // 🔗 反向連結模式
+        createDisplayModeItem('🔗', t('show_backlinks_mode'), this.plugin.settings.showBacklinksMode, (checked) => {
+            this.plugin.settings.showBacklinksMode = checked;
+            void this.plugin.saveSettings();
+        });
+
+        // 🔗 外部連結模式
+        createDisplayModeItem('🔗', t('show_outgoinglinks_mode'), this.plugin.settings.showOutgoinglinksMode, (checked) => {
+            this.plugin.settings.showOutgoinglinksMode = checked;
+            void this.plugin.saveSettings();
+        });
+
+        // 📔 所有檔案模式
+        createDisplayModeItem('📔', t('show_all_files_mode'), this.plugin.settings.showAllFilesMode, (checked) => {
+            this.plugin.settings.showAllFilesMode = checked;
+            void this.plugin.saveSettings();
+        });
+
+        // 📅 最近檔案模式
+        createDisplayModeItem('📅', t('show_recent_files_mode'), this.plugin.settings.showRecentFilesMode, (checked) => {
+            this.plugin.settings.showRecentFilesMode = checked;
+            void this.plugin.saveSettings();
+        }, (extraEl) => {
+            extraEl.createSpan({ text: t('recent_files_count') });
+            const recentInput = extraEl.createEl('input', {
+                type: 'number',
+                value: this.plugin.settings.recentFilesCount.toString(),
+                cls: 'ge-setting-number-input'
             });
-
-        // 設定是否顯示反向連結模式
-        new Setting(sectionEl)
-            .setName(`🔗 ${t('show_backlinks_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showBacklinksMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showBacklinksMode = value;
-                        await this.plugin.saveSettings();
-                    });
+            recentInput.addEventListener('change', (e) => {
+                void (async () => {
+                    const target = e.target as HTMLInputElement;
+                    const val = parseInt(target.value);
+                    if (!isNaN(val) && val > 0) {
+                        this.plugin.settings.recentFilesCount = val;
+                        await this.plugin.saveSettings(false);
+                    } else {
+                        target.value = this.plugin.settings.recentFilesCount.toString();
+                    }
+                })();
             });
+        });
 
-        // 設定是否顯示外部連結模式
-        new Setting(sectionEl)
-            .setName(`🔗 ${t('show_outgoinglinks_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showOutgoinglinksMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showOutgoinglinksMode = value;
-                        await this.plugin.saveSettings();
-                    });
+        // 🎲 隨機筆記模式
+        createDisplayModeItem('🎲', t('show_random_note_mode'), this.plugin.settings.showRandomNoteMode, (checked) => {
+            this.plugin.settings.showRandomNoteMode = checked;
+            void this.plugin.saveSettings();
+        }, (extraEl) => {
+            extraEl.createSpan({ text: t('random_note_count') });
+            const randomInput = extraEl.createEl('input', {
+                type: 'number',
+                value: this.plugin.settings.randomNoteCount.toString(),
+                cls: 'ge-setting-number-input'
             });
-
-        // 設定是否顯示所有檔案模式
-        new Setting(sectionEl)
-            .setName(`📔 ${t('show_all_files_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showAllFilesMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showAllFilesMode = value;
-                        await this.plugin.saveSettings();
-                    });
+            randomInput.addEventListener('change', (e) => {
+                void (async () => {
+                    const target = e.target as HTMLInputElement;
+                    const val = parseInt(target.value);
+                    if (!isNaN(val) && val > 0) {
+                        this.plugin.settings.randomNoteCount = val;
+                        await this.plugin.saveSettings(false);
+                    } else {
+                        target.value = this.plugin.settings.randomNoteCount.toString();
+                    }
+                })();
             });
-
-        // 最近檔案模式設定
-        const recentFilesSetting = new Setting(sectionEl)
-            .setName(`📅 ${t('show_recent_files_mode')}`);
-
-        // 添加切換按鈕
-        recentFilesSetting.addToggle(toggle => {
-            toggle
-                .setValue(this.plugin.settings.showRecentFilesMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.showRecentFilesMode = value;
-                    await this.plugin.saveSettings();
-                });
         });
 
-        // 在設定描述區域添加數字輸入框
-        const recentDescEl = recentFilesSetting.descEl.createDiv({ cls: 'ge-setting-desc' });
-
-        recentDescEl.createSpan({ text: t('recent_files_count') })
-
-        const recentInput = recentDescEl.createEl('input', {
-            type: 'number',
-            value: this.plugin.settings.recentFilesCount.toString(),
-            cls: 'ge-setting-number-input'
+        // ☑️ 顯示任務模式
+        createDisplayModeItem('☑️', t('show_tasks_mode'), this.plugin.settings.showTasksMode, (checked) => {
+            this.plugin.settings.showTasksMode = checked;
+            void this.plugin.saveSettings();
         });
-
-        recentInput.addEventListener('change', (e) => {
-            void (async () => {
-                const target = e.target as HTMLInputElement;
-                const value = parseInt(target.value);
-                if (!isNaN(value) && value > 0) {
-                    this.plugin.settings.recentFilesCount = value;
-                    await this.plugin.saveSettings(false);
-                } else {
-                    target.value = this.plugin.settings.recentFilesCount.toString();
-                }
-            })();
-        });
-
-        // 隨機筆記模式設定
-        const randomNoteSetting = new Setting(sectionEl)
-            .setName(`🎲 ${t('show_random_note_mode')}`);
-
-        // 添加切換按鈕
-        randomNoteSetting.addToggle(toggle => {
-            toggle
-                .setValue(this.plugin.settings.showRandomNoteMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.showRandomNoteMode = value;
-                    await this.plugin.saveSettings();
-                });
-        });
-
-        // 在設定描述區域添加數字輸入框
-        const descEl = randomNoteSetting.descEl.createDiv({ cls: 'ge-setting-desc' });
-
-        descEl.createSpan({ text: t('random_note_count') })
-
-        const input = descEl.createEl('input', {
-            type: 'number',
-            value: this.plugin.settings.randomNoteCount.toString(),
-            cls: 'ge-setting-number-input'
-        });
-
-        input.addEventListener('change', (e) => {
-            void (async () => {
-                const target = e.target as HTMLInputElement;
-                const value = parseInt(target.value);
-
-                if (!isNaN(value) && value > 0) {
-                    this.plugin.settings.randomNoteCount = value;
-                    await this.plugin.saveSettings(false);
-                } else {
-                    target.value = this.plugin.settings.randomNoteCount.toString();
-                }
-            })();
-        });
-
-
-        // 顯示任務模式
-        new Setting(sectionEl)
-            .setName(`☑️ ${t('show_tasks_mode')}`)
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.showTasksMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showTasksMode = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
 
         sectionEl = this.createSection(t('grid_view_settings'), true);
 
@@ -733,11 +704,12 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .addDropdown(dropdown => {
                 dropdown
                     .addOption('show', t('folder_display_style_show'))
+                    .addOption('compact', t('folder_display_style_compact'))
                     .addOption('menu', t('folder_display_style_menu'))
                     .addOption('hide', t('folder_display_style_hide'))
                     .setValue(this.plugin.settings.folderDisplayStyle)
                     .onChange(async (value) => {
-                        this.plugin.settings.folderDisplayStyle = value as 'show' | 'menu' | 'hide';
+                        this.plugin.settings.folderDisplayStyle = value as 'show' | 'compact' | 'menu' | 'hide';
                         await this.plugin.saveSettings();
                     });
             });
@@ -816,7 +788,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .setName(t('note_title_field'))
             .setDesc(t('note_title_field_desc'))
             .addText(text => text
-                .setPlaceholder('title')
+                .setPlaceholder('Title')
                 .setValue(this.plugin.settings.noteTitleField)
                 .onChange(async (value) => {
                     this.plugin.settings.noteTitleField = value;
@@ -828,7 +800,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .setName(t('note_summary_field'))
             .setDesc(t('note_summary_field_desc'))
             .addText(text => text
-                .setPlaceholder('summary')
+                .setPlaceholder('Summary')
                 .setValue(this.plugin.settings.noteSummaryField)
                 .onChange(async (value) => {
                     this.plugin.settings.noteSummaryField = value;
@@ -840,7 +812,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .setName(t('modified_date_field'))
             .setDesc(t('modified_date_field_desc'))
             .addText(text => text
-                .setPlaceholder('modified_date')
+                .setPlaceholder('Modified_date')
                 .setValue(this.plugin.settings.modifiedDateField)
                 .onChange(async (value) => {
                     this.plugin.settings.modifiedDateField = value;
@@ -852,7 +824,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .setName(t('created_date_field'))
             .setDesc(t('created_date_field_desc'))
             .addText(text => text
-                .setPlaceholder('created_date')
+                .setPlaceholder('Created_date')
                 .setValue(this.plugin.settings.createdDateField)
                 .onChange(async (value) => {
                     this.plugin.settings.createdDateField = value;

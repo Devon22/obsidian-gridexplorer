@@ -1609,7 +1609,10 @@ export class GridView extends ItemView {
         const shouldShowExtension = this.minMode && extension !== 'md';
         const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
         const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
-        if (this.plugin.settings.multiLineTitle) titleEl.addClass('ge-multiline-title');
+        if (this.plugin.settings.multiLineTitle) {
+            titleEl.addClass('ge-multiline-title');
+            titleContainer.addClass('has-multiline-title');
+        }
 
         // 創建圖片區域，但先不載入圖片
         if (!this.minMode) {

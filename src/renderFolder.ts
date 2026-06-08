@@ -25,7 +25,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
             if (Platform.isDesktop) {
                 container.addEventListener('dragover', (event) => {
                     // 如果拖曳目標是資料夾項目，則不處理
-                    if ((event.target as HTMLElement).closest('.ge-folder-item')) {
+                    if ((event.target as HTMLElement).closest('.ge-folder-item, .ge-folder-button')) {
                         return;
                     }
                     // 防止預設行為以允許放置
@@ -48,7 +48,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 container.addEventListener('drop', (event) => {
                     void (async () => {
                         // 如果拖曳目標是資料夾項目，則不處理
-                        if ((event.target as HTMLElement).closest('.ge-folder-item')) {
+                        if ((event.target as HTMLElement).closest('.ge-folder-item, .ge-folder-button')) {
                             return;
                         }
 
@@ -153,10 +153,12 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
             }
 
             // 根據資料夾顯示模式決定是否顯示資料夾
-            // 'show': 直接顯示資料夾
+            // 'show': 直接顯示資料夾 (Grid 項目)
+            // 'compact': 緊湊按鈕並排顯示
             // 'menu': 資料夾會在選單中顯示，這裡不直接顯示
             // 'hide': 完全不顯示資料夾
-            if (gridView.plugin.settings.folderDisplayStyle !== 'show') return;
+            const folderStyle = gridView.plugin.settings.folderDisplayStyle;
+            if (folderStyle !== 'show' && folderStyle !== 'compact') return;
 
             // 顯示子資料夾
             const subfolders = currentFolder.children
@@ -170,277 +172,286 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                 false
             );
 
-            for (const folder of subfolders) {
-                if (!gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) continue;
+            // 過濾要顯示的資料夾
+            const visibleSubfolders = subfolders.filter(folder => gridView.showIgnoredItems || !isFolderActuallyIgnored(folder));
 
-                const folderEl = container.createDiv('ge-grid-item ge-folder-item');
-                if (gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) {
-                    folderEl.addClass('ge-folder-ignored');
-                }
-                gridView.gridItems.push(folderEl); // 添加到網格項目數組
+            if (visibleSubfolders.length > 0) {
+                const isCompact = folderStyle === 'compact';
+                const foldersContainer = isCompact ? container.createDiv('ge-folders-container') : null;
 
-                // 設置資料夾路徑屬性，用於拖曳功能
-                folderEl.dataset.folderPath = folder.path;
+                for (const folder of visibleSubfolders) {
+                    const folderEl = isCompact && foldersContainer
+                        ? foldersContainer.createDiv('ge-folder-button')
+                        : container.createDiv('ge-grid-item ge-folder-item');
 
-                const contentArea = folderEl.createDiv('ge-content-area');
-                const titleContainer = contentArea.createDiv('ge-title-container');
-                const customFolderIcon = gridView.plugin.settings.customFolderIcon;
-                titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
-                setTooltip(folderEl, folder.name, { placement: gridView.cardLayout === 'vertical' ? 'bottom' : 'right' });
-
-                // 檢查同名筆記是否存在
-                const notePath = `${folder.path}/${folder.name}.md`;
-                const noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
-
-                if (noteFile instanceof TFile) {
-                    // 使用 span 代替 button，只顯示圖示
-                    const noteIcon = titleContainer.createEl('span', {
-                        cls: 'ge-foldernote-button'
-                    });
-                    setIcon(noteIcon, 'panel-left-open');
-
-                    // 點擊圖示時開啟同名筆記
-                    noteIcon.addEventListener('click', (e) => {
-                        e.stopPropagation(); // 防止觸發資料夾的點擊事件
-                        if (!gridView.openShortcutFile(noteFile)) {
-                            void gridView.app.workspace.getLeaf().openFile(noteFile);
-                        }
-                    });
-
-                    // 根據同名筆記設置背景色
-                    const metadata = gridView.app.metadataCache.getFileCache(noteFile)?.frontmatter;
-                    const colorValue: unknown = metadata?.color;
-                    if (typeof colorValue === 'string' && colorValue) {
-                        // 檢查是否為 HEX 色值
-                        if (isHexColor(colorValue)) {
-                            // 使用自訂 CSS 變數來設置 HEX 顏色
-                            folderEl.addClass('ge-folder-color-custom');
-                            folderEl.style.setProperty('--ge-folder-color-bg', hexToRgba(colorValue, 0.2));
-                            folderEl.style.setProperty('--ge-folder-color-border', hexToRgba(colorValue, 0.5));
-                        } else {
-                            // 依顏色名稱加入對應的樣式類別
-                            folderEl.addClass(`ge-folder-color-${colorValue}`);
-                        }
+                    if (gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) {
+                        folderEl.addClass('ge-folder-ignored');
                     }
-                    const iconValue: unknown = metadata?.icon;
-                    if (typeof iconValue === 'string' && iconValue) {
-                        // 修改原本的title文字
-                        const title = folderEl.querySelector<HTMLElement>('.ge-title');
-                        if (title) {
-                            title.textContent = `${iconValue} ${folder.name}`;
-                        }
-                    }
+                    gridView.gridItems.push(folderEl); // 添加到網格項目數組
 
-                }
+                    // 設置資料夾路徑屬性，用於拖曳功能
+                    folderEl.dataset.folderPath = folder.path;
 
-                // 點擊時進入子資料夾
-                folderEl.addEventListener('click', (event) => {
-                    if (event.ctrlKey || event.metaKey) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        openFolderInNewView(gridView, folder.path);
-                    } else {
-                        void gridView.setSource('folder', folder.path);
-                        gridView.clearSelection();
-                    }
-                });
-
-                // 添加右鍵選單
-                folderEl.addEventListener('contextmenu', (event) => {
-                    event.preventDefault();
-                    const menu = new Menu();
-
-                    //在新網格視圖開啟
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('open_in_new_grid_view'))
-                            .setIcon('grid')
-                            .onClick(() => {
-                                openFolderInNewView(gridView, folder.path);
-                            });
-                    });
-                    // 在系統檔案總管開啟
-                    if (Platform.isDesktop) {
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('open_in_file_explorer'))
-                                .setIcon('arrow-up-right')
-                                .onClick(() => {
-                                    (gridView.app as AppWithShowInFolder).showInFolder?.(folder.path);
-                                });
-                        });
-                    }
-                    menu.addSeparator();
-
-                    // 新增筆記相關選項
-                    menu.addItem((item) => {
-                        item.setTitle(t('new_note'))
-                            .setIcon('square-pen')
-                            .onClick(() => {
-                                void createNewNote(gridView.app, folder.path);
-                            });
-                    });
-                    menu.addItem((item) => {
-                        item.setTitle(t('new_folder'))
-                            .setIcon('folder-plus')
-                            .onClick(() => {
-                                void (async () => {
-                                    await createNewFolder(gridView.app, folder.path);
-                                // 重新渲染視圖
-                                    window.requestAnimationFrame(() => {
-                                        void gridView.render();
-                                    });
-                                })();
-                            });
-                    });
-                    menu.addItem((item) => {
-                        item.setTitle(t('new_canvas'))
-                            .setIcon('layout-dashboard')
-                            .onClick(() => {
-                                void createNewCanvas(gridView.app, folder.path);
-                            });
-                    });
-                    menu.addItem((item) => {
-                        item.setTitle(t('new_base'))
-                            .setIcon('database')
-                            .onClick(() => {
-                                void createNewBase(gridView.app, folder.path);
-                            });
-                    });
-                    menu.addItem((item) => {
-                        item.setTitle(t('new_shortcut'))
-                            .setIcon('link')
-                            .onClick(() => {
-                                new ShortcutSelectionModal(gridView.app, gridView.plugin, (option) => {
-                                    void createShortcut(gridView.app, folder.path, option);
-                                }).open();
-                            });
-                    });
-                    menu.addSeparator();
+                    // 'show' 模式下，文字和按鈕放在 'ge-content-area' 中，以保持原本的 Grid 排版
+                    const parentContainer = isCompact ? folderEl : folderEl.createDiv('ge-content-area');
+                    const titleContainer = parentContainer.createDiv('ge-title-container');
+                    const customFolderIcon = gridView.plugin.settings.customFolderIcon;
+                    titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
+                    setTooltip(folderEl, folder.name, { placement: gridView.cardLayout === 'vertical' ? 'bottom' : 'right' });
 
                     // 檢查同名筆記是否存在
                     const notePath = `${folder.path}/${folder.name}.md`;
-                    let noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
-                    if (noteFile instanceof TFile) {
-                        //打開資料夾筆記
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('open_folder_note'))
-                                .setIcon('panel-left-open')
-                                .onClick(() => {
-                                    if (noteFile instanceof TFile) {
-                                        if (!gridView.openShortcutFile(noteFile)) {
-                                            void gridView.app.workspace.getLeaf().openFile(noteFile);
-                                        }
-                                    }
-                                });
-                        });
-                        //編輯資料夾筆記設定
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('edit_folder_note_settings'))
-                                .setIcon('settings-2')
-                                .onClick(() => {
-                                    if (folder instanceof TFolder) {
-                                        showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
-                                    }
-                                });
-                        });
-                        //刪除資料夾筆記
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('delete_folder_note'))
-                                .setIcon('folder-x')
-                                .onClick(() => {
-                                    if (noteFile instanceof TFile) {
-                                        void gridView.app.fileManager.trashFile(noteFile);
-                                    }
-                                });
-                        });
-                    } else {
-                        //建立Folder note
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('create_folder_note'))
-                                .setIcon('file-cog')
-                                .onClick(() => {
-                                    if (folder instanceof TFolder) {
-                                        showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
-                                    }
-                                });
-                        });
-                    }
-                    menu.addSeparator();
+                    const noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
 
-                    if (!gridView.plugin.settings.ignoredFolders.includes(folder.path)) {
-                        //加入"忽略此資料夾"選項
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('ignore_folder'))
-                                .setIcon('folder-x')
-                                .onClick(() => {
-                                    gridView.plugin.settings.ignoredFolders.push(folder.path);
-                                    void gridView.plugin.saveSettings();
-                                });
+                    if (noteFile instanceof TFile) {
+                        // 使用 span 代替 button，只顯示圖示
+                        const noteIcon = titleContainer.createEl('span', {
+                            cls: 'ge-foldernote-button'
                         });
-                    } else {
-                        //加入"取消忽略此資料夾"選項
-                        menu.addItem((item) => {
-                            item
-                                .setTitle(t('unignore_folder'))
-                                .setIcon('folder-up')
-                                .onClick(() => {
-                                    gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
-                                    void gridView.plugin.saveSettings();
-                                });
+                        setIcon(noteIcon, 'panel-left-open');
+
+                        // 點擊圖示時開啟同名筆記
+                        noteIcon.addEventListener('click', (e) => {
+                            e.stopPropagation(); // 防止觸發資料夾的點擊事件
+                            if (!gridView.openShortcutFile(noteFile)) {
+                                void gridView.app.workspace.getLeaf().openFile(noteFile);
+                            }
                         });
+
+                        // 根據同名筆記設置背景色
+                        const metadata = gridView.app.metadataCache.getFileCache(noteFile)?.frontmatter;
+                        const colorValue: unknown = metadata?.color;
+                        if (typeof colorValue === 'string' && colorValue) {
+                            // 檢查是否為 HEX 色值
+                            if (isHexColor(colorValue)) {
+                                // 使用自訂 CSS 變數來設置 HEX 顏色
+                                folderEl.addClass('ge-folder-color-custom');
+                                folderEl.style.setProperty('--ge-folder-color-bg', hexToRgba(colorValue, 0.2));
+                                folderEl.style.setProperty('--ge-folder-color-border', hexToRgba(colorValue, 0.5));
+                            } else {
+                                // 依顏色名稱加入對應的樣式類別
+                                folderEl.addClass(`ge-folder-color-${colorValue}`);
+                            }
+                        }
+                        const iconValue: unknown = metadata?.icon;
+                        if (typeof iconValue === 'string' && iconValue) {
+                            // 修改原本的title文字
+                            const title = folderEl.querySelector<HTMLElement>('.ge-title');
+                            if (title) {
+                                title.textContent = `${iconValue} ${folder.name}`;
+                            }
+                        }
                     }
-                    // 搬移資料夾
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('move_folder'))
-                            .setIcon('folder-cog')
-                            .onClick(() => {
-                                if (folder instanceof TFolder) {
-                                    new showFolderMoveModal(gridView.plugin, folder, gridView).open();
-                                }
-                            });
+
+                    // 點擊時進入子資料夾
+                    folderEl.addEventListener('click', (event) => {
+                        if (event.ctrlKey || event.metaKey) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openFolderInNewView(gridView, folder.path);
+                        } else {
+                            void gridView.setSource('folder', folder.path);
+                            gridView.clearSelection();
+                        }
                     });
-                    // 重新命名資料夾
-                    menu.addItem((item) => {
-                        item
-                            .setTitle(t('rename_folder'))
-                            .setIcon('file-cog')
-                            .onClick(() => {
-                                if (folder instanceof TFolder) {
-                                    showFolderRenameModal(gridView.app, gridView.plugin, folder, gridView);
-                                }
+
+                    // 添加右鍵選單
+                    folderEl.addEventListener('contextmenu', (event) => {
+                        event.preventDefault();
+                        const menu = new Menu();
+
+                        //在新網格視圖開啟
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('open_in_new_grid_view'))
+                                .setIcon('grid')
+                                .onClick(() => {
+                                    openFolderInNewView(gridView, folder.path);
+                                });
+                        });
+                        // 在系統檔案總管開啟
+                        if (Platform.isDesktop) {
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_in_file_explorer'))
+                                    .setIcon('arrow-up-right')
+                                    .onClick(() => {
+                                        (gridView.app as AppWithShowInFolder).showInFolder?.(folder.path);
+                                    });
                             });
-                    });
-                    // 刪除資料夾
-                    menu.addItem((item) => {
-                        item
-                            .setWarning(true)
-                            .setTitle(t('delete_folder'))
-                            .setIcon('trash')
-                            .onClick(() => {
-                                void (async () => {
-                                    if (folder instanceof TFolder) {
-                                        await gridView.app.fileManager.trashFile(folder);
-                                        // 重新渲染視圖
+                        }
+                        menu.addSeparator();
+
+                        // 新增筆記相關選項
+                        menu.addItem((item) => {
+                            item.setTitle(t('new_note'))
+                                .setIcon('square-pen')
+                                .onClick(() => {
+                                    void createNewNote(gridView.app, folder.path);
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('new_folder'))
+                                .setIcon('folder-plus')
+                                .onClick(() => {
+                                    void (async () => {
+                                        await createNewFolder(gridView.app, folder.path);
+                                    // 重新渲染視圖
                                         window.requestAnimationFrame(() => {
                                             void gridView.render();
                                         });
-                                    }
-                                })();
+                                    })();
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('new_canvas'))
+                                .setIcon('layout-dashboard')
+                                .onClick(() => {
+                                    void createNewCanvas(gridView.app, folder.path);
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('new_base'))
+                                .setIcon('database')
+                                .onClick(() => {
+                                    void createNewBase(gridView.app, folder.path);
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('new_shortcut'))
+                                .setIcon('link')
+                                .onClick(() => {
+                                    new ShortcutSelectionModal(gridView.app, gridView.plugin, (option) => {
+                                        void createShortcut(gridView.app, folder.path, option);
+                                    }).open();
+                                });
+                        });
+                        menu.addSeparator();
+
+                        // 檢查同名筆記是否存在
+                        const notePath = `${folder.path}/${folder.name}.md`;
+                        let noteFile = gridView.app.vault.getAbstractFileByPath(notePath);
+                        if (noteFile instanceof TFile) {
+                            //打開資料夾筆記
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('open_folder_note'))
+                                    .setIcon('panel-left-open')
+                                    .onClick(() => {
+                                        if (noteFile instanceof TFile) {
+                                            if (!gridView.openShortcutFile(noteFile)) {
+                                                void gridView.app.workspace.getLeaf().openFile(noteFile);
+                                            }
+                                        }
+                                    });
                             });
+                            //編輯資料夾筆記設定
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('edit_folder_note_settings'))
+                                    .setIcon('settings-2')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
+                                        }
+                                    });
+                            });
+                            //刪除資料夾筆記
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('delete_folder_note'))
+                                    .setIcon('folder-x')
+                                    .onClick(() => {
+                                        if (noteFile instanceof TFile) {
+                                            void gridView.app.fileManager.trashFile(noteFile);
+                                        }
+                                    });
+                            });
+                        } else {
+                            //建立Folder note
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('create_folder_note'))
+                                    .setIcon('file-cog')
+                                    .onClick(() => {
+                                        if (folder instanceof TFolder) {
+                                            showFolderNoteSettingsModal(gridView.app, gridView.plugin, folder, gridView);
+                                        }
+                                    });
+                            });
+                        }
+                        menu.addSeparator();
+
+                        if (!gridView.plugin.settings.ignoredFolders.includes(folder.path)) {
+                            //加入"忽略此資料夾"選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('ignore_folder'))
+                                    .setIcon('folder-x')
+                                    .onClick(() => {
+                                        gridView.plugin.settings.ignoredFolders.push(folder.path);
+                                        void gridView.plugin.saveSettings();
+                                    });
+                            });
+                        } else {
+                            //加入"取消忽略此資料夾"選項
+                            menu.addItem((item) => {
+                                item
+                                    .setTitle(t('unignore_folder'))
+                                    .setIcon('folder-up')
+                                    .onClick(() => {
+                                        gridView.plugin.settings.ignoredFolders = gridView.plugin.settings.ignoredFolders.filter((path) => path !== folder.path);
+                                        void gridView.plugin.saveSettings();
+                                    });
+                            });
+                        }
+                        // 搬移資料夾
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('move_folder'))
+                                .setIcon('folder-cog')
+                                .onClick(() => {
+                                    if (folder instanceof TFolder) {
+                                        new showFolderMoveModal(gridView.plugin, folder, gridView).open();
+                                    }
+                                });
+                        });
+                        // 重新命名資料夾
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(t('rename_folder'))
+                                .setIcon('file-cog')
+                                .onClick(() => {
+                                    if (folder instanceof TFolder) {
+                                        showFolderRenameModal(gridView.app, gridView.plugin, folder, gridView);
+                                    }
+                                });
+                        });
+                        // 刪除資料夾
+                        menu.addItem((item) => {
+                            item
+                                .setWarning(true)
+                                .setTitle(t('delete_folder'))
+                                .setIcon('trash')
+                                .onClick(() => {
+                                    void (async () => {
+                                        if (folder instanceof TFolder) {
+                                            await gridView.app.fileManager.trashFile(folder);
+                                            // 重新渲染視圖
+                                            window.requestAnimationFrame(() => {
+                                                void gridView.render();
+                                            });
+                                        }
+                                    })();
+                                });
+                        });
+                        menu.showAtMouseEvent(event);
                     });
-                    menu.showAtMouseEvent(event);
-                });
+                }
             }
 
             // 資料夾渲染完插入 break（僅當有資料夾）
-            if (subfolders.length > 0) {
+            if (visibleSubfolders.length > 0) {
                 container.createDiv('ge-break');
             }
         }
@@ -448,7 +459,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
     // 為資料夾項目添加拖曳目標功能
     if (Platform.isDesktop) {
-        const folderItems = gridView.containerEl.querySelectorAll<HTMLElement>('.ge-folder-item');
+        const folderItems = gridView.containerEl.querySelectorAll<HTMLElement>('.ge-folder-item, .ge-folder-button');
         folderItems.forEach(folderItem => {
             folderItem.addEventListener('dragover', (event) => {
                 // 防止預設行為以允許放置
