@@ -161,7 +161,7 @@ export default {
     'custom_mode_display_name': '표시 이름',
     'custom_mode_display_name_desc': '모드 메뉴에 표시되는 이름',
     'custom_mode_dataview_code': 'Dataview 쿼리',
-    'custom_mode_dataview_code_desc': 'Dataview 쿼리를 입력하여 파일 목록 가져오기',
+    'custom_mode_dataview_code_desc': '파일 목록을 가져올 Dataview 쿼리를 입력하세요 (예: LIST FROM #tag)',
     'custom_mode_sub_options': '사용자 정의 모드 하위 옵션',
     'custom_mode_fields_placeholder': '프론트매터 필드 이름을 쉼표로 구분하여 입력 (예: date,category,status) (선택사항)',
     'dataview_plugin_not_enabled': 'Dataview 플러그인이 활성화되지 않았습니다',

@@ -177,12 +177,14 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
             if (visibleSubfolders.length > 0) {
                 const isCompact = folderStyle === 'compact';
-                const foldersContainer = isCompact ? container.createDiv('ge-folders-container') : null;
+                const foldersContainer = isCompact
+                    ? container.createDiv('ge-folders-container')
+                    : container.createDiv('ge-folders-grid-container');
 
                 for (const folder of visibleSubfolders) {
-                    const folderEl = isCompact && foldersContainer
-                        ? foldersContainer.createDiv('ge-folder-button')
-                        : container.createDiv('ge-grid-item ge-folder-item');
+                    const folderEl = foldersContainer.createDiv(
+                        isCompact ? 'ge-folder-button' : 'ge-grid-item ge-folder-item'
+                    );
 
                     if (gridView.showIgnoredItems && isFolderActuallyIgnored(folder)) {
                         folderEl.addClass('ge-folder-ignored');

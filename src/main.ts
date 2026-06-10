@@ -795,6 +795,7 @@ export default class GridExplorerPlugin extends Plugin {
     async loadSettings() {
         const loadedSettings = await this.loadData() as Partial<GallerySettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings ?? {});
+        migrateDataviewCodeToQuery(this.settings);
         updateCustomDocumentExtensions(this.settings);
     }
 
@@ -818,6 +819,27 @@ export default class GridExplorerPlugin extends Plugin {
                     void (leaf.view).refresh();
                 }
             });
+        }
+    }
+}
+
+function migrateDataviewCodeToQuery(settings: GallerySettings): void {
+    if (!settings.customModes) return;
+    for (const mode of settings.customModes) {
+        if ('dataviewCode' in mode && !('dataviewQuery' in mode)) {
+            const oldCode = (mode as unknown as { dataviewCode: string }).dataviewCode;
+            (mode as Record<string, unknown>).dataviewQuery = oldCode;
+            // 刪除舊欄位
+            delete (mode as unknown as Record<string, unknown>).dataviewCode;
+        }
+        if (mode.options) {
+            for (const opt of mode.options) {
+                if ('dataviewCode' in opt && !('dataviewQuery' in opt)) {
+                    const oldCode = (opt as unknown as { dataviewCode: string }).dataviewCode;
+                    (opt as Record<string, unknown>).dataviewQuery = oldCode;
+                    delete (opt as unknown as Record<string, unknown>).dataviewCode;
+                }
+            }
         }
     }
 }

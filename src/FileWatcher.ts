@@ -153,11 +153,15 @@ export class FileWatcher {
                         return;
                     }
 
-                    // 處理自訂模式，僅當腳本包含 dv.current 時才觸發
+                    // 處理自訂模式，僅當查詢包含 this.file 時才觸發
                     if (sourceMode.startsWith('custom-')) {
                         const mode = this.plugin.settings.customModes.find(m => m.internalName === sourceMode);
-                        if (mode && mode.dataviewCode.includes('dv.current')) {
-                            this.scheduleRender();
+                        if (mode) {
+                            const hasThisFile = mode.dataviewQuery.includes('this.file') || 
+                                (mode.options && mode.options.some(opt => opt.dataviewQuery.includes('this.file')));
+                            if (hasThisFile) {
+                                this.scheduleRender();
+                            }
                         }
                     }
                 }

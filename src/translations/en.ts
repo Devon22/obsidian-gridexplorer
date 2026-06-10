@@ -161,7 +161,7 @@ export default {
     'custom_mode_display_name': 'Display Name',
     'custom_mode_display_name_desc': 'The name displayed in the mode menu',
     'custom_mode_dataview_code': 'Dataview Query',
-    'custom_mode_dataview_code_desc': 'Enter a Dataview query to get the list of files',
+    'custom_mode_dataview_code_desc': 'Enter a Dataview query to get the list of files, e.g., LIST FROM #tag',
     'custom_mode_sub_options': 'Custom Mode Sub Options',
     'custom_mode_fields_placeholder': 'Enter frontmatter field names, separated by commas (e.g. date,category,status) (optional)',
     'dataview_plugin_not_enabled': 'Dataview plugin is not enabled',

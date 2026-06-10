@@ -180,8 +180,8 @@
     height: 14px;
 }
 
-.ge-multiline-title {
-    white-space: normal !important;
+.ge-title.ge-multiline-title {
+    white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -208,12 +208,11 @@
     margin: 0;
 }
 
-.ge-content-area-p-field,
-.ge-content-area .ge-content-area-p-field {
+.ge-content-area p.ge-content-area-p-field {
     display: block;
-    -webkit-line-clamp: unset !important;
-    line-clamp: unset !important;
-    -webkit-box-orient: unset !important;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: unset;
     white-space: pre-wrap;
     overflow: visible;
     height: auto;
@@ -2171,11 +2170,10 @@ a.ge-current-folder:hover {
 
 /* --------------------------------------------------------------------------- */
 
-/* Popup Modal Styles */
-.ge-popup-modal {
-    background: transparent !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
-    border: none !important;
+.modal-container .modal.ge-popup-modal {
+    background: transparent;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border: none;
 }
 
 .ge-popup-modal-reset {
@@ -2333,7 +2331,7 @@ a.ge-current-folder:hover {
 .is-tablet .ge-note-close-button:not(.clickable-icon),
 .is-tablet .ge-note-edit-button:not(.clickable-icon),
 .is-tablet .ge-note-info-button:not(.clickable-icon) {
-    padding: 6px 12px !important;
+    padding: 6px 12px;
 }
 
 .ge-note-close-button:hover,
@@ -2353,8 +2351,8 @@ a.ge-current-folder:hover {
 .is-mobile .ge-note-info-button:focus,
 .is-mobile .ge-note-info-button:focus-visible {
     outline: none;
-    background-color: var(--interactive-normal) !important;
-    transform: none !important;
+    background-color: var(--interactive-normal);
+    transform: none;
 }
 
 .ge-note-content-container {
@@ -2593,36 +2591,36 @@ a.ge-current-folder:hover {
 /* --------------------------------------------------------------------------- */
 
 /* 通用輸入框樣式 Universal Input Field Styles */
-.ge-input-field {
-    width: 100% !important;
-    padding: 8px 12px !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    border-radius: var(--input-radius) !important;
-    background-color: var(--background-primary) !important;
-    color: var(--text-normal) !important;
-    font-size: 14px !important;
-    font-family: var(--font-interface) !important;
-    transition: border-color 0.2s ease !important;
-    box-sizing: border-box !important;
+.modal-container .modal input.ge-input-field {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--input-radius);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    font-family: var(--font-interface);
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
 }
 
-.ge-input-field:focus {
-    outline: none !important;
+.modal-container .modal input.ge-input-field:focus {
+    outline: none;
 }
 
-.ge-input-field::placeholder {
-    color: var(--text-muted) !important;
-    opacity: 1 !important;
+.modal-container .modal input.ge-input-field::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
 }
 
 /* 確保不同 input type 有一致的外觀 */
-.ge-input-field[type="text"],
-.ge-input-field[type="url"],
-.ge-input-field[type="search"],
-.ge-input-field[type="email"] {
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
+.modal-container .modal input.ge-input-field[type="text"],
+.modal-container .modal input.ge-input-field[type="url"],
+.modal-container .modal input.ge-input-field[type="search"],
+.modal-container .modal input.ge-input-field[type="email"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
 /* 輸入框容器樣式 */
@@ -2725,7 +2723,6 @@ a.ge-current-folder:hover {
 /* 只有有子目錄的資料夾名稱才顯示懸停效果 */
 .ge-explorer-folder-header:not(.ge-no-children) .ge-explorer-folder-name:hover {
     background-color: var(--background-modifier-hover);
-    /* color: var(--text-accent); */
 }
 
 /* 有子目錄的資料夾整個 header 懸停時不顯示效果 */
@@ -3076,9 +3073,9 @@ a.ge-current-folder:hover {
 /* =========================================================================== */
 
 /* 移除 view-content 的內距，使 zip viewer 滿版 */
-.workspace-leaf .zip-viewer-container {
-    padding: 0 !important;
-    overflow: hidden !important;
+.workspace-leaf .view-content.zip-viewer-container {
+    padding: 0;
+    overflow: hidden;
 }
 
 .zip-viewer-container {
@@ -3266,11 +3263,11 @@ a.ge-current-folder:hover {
 
 /* 確保網格滾動最底部時不被底部 Home Indicator 遮擋 */
 .is-phone .zip-viewer-grid-container {
-    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
+    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3));
 }
 
 .is-tablet .zip-viewer-grid-container {
-    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3)) !important;
+    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3));
 }
 
 /* =========================================================================== */
@@ -3366,11 +3363,11 @@ a.ge-current-folder:hover {
 }
 
 .is-phone .ge-zip-content-container {
-    padding-bottom: var(--view-bottom-spacing) !important;
+    padding-bottom: var(--view-bottom-spacing);
 }
 
 .is-tablet .ge-zip-content-container {
-    padding-bottom: var(--safe-area-inset-bottom) !important;
+    padding-bottom: var(--safe-area-inset-bottom);
 }
 
 .ge-zip-sidebar-content-container {
@@ -3386,8 +3383,8 @@ a.ge-current-folder:hover {
 }
 
 .is-mobile .ge-zip-view-container::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
+    display: none;
+    width: 0;
 }
 
 /* =========================================================================== */
@@ -3401,6 +3398,19 @@ a.ge-current-folder:hover {
     gap: 10px;
     background: transparent;
     width: 100%;
+    margin-top: 3px;
+    margin-bottom: 6px;
+}
+
+.ge-folders-grid-container {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-width, 300px), 1fr));
+    gap: 10px;
+    background: transparent;
+    width: 100%;
+    margin-top: 3px;
+    margin-bottom: 6px;
 }
 
 .ge-folder-button {

@@ -5,7 +5,7 @@ import { t } from './translations';
 
 export interface CustomModeOption {
     name: string;
-    dataviewCode: string;
+    dataviewQuery: string;
     fields?: string;
 }
 
@@ -14,7 +14,7 @@ export interface CustomMode {
     icon: string;
     displayName: string;
     name: string;
-    dataviewCode: string;
+    dataviewQuery: string;
     options?: CustomModeOption[];
     enabled?: boolean; // 是否顯示此自訂模式，預設為 true
     fields?: string;
@@ -31,9 +31,9 @@ function isCustomMode(value: unknown): value is CustomMode {
         'displayName' in value &&
         typeof value.displayName === 'string' &&
         value.displayName.length > 0 &&
-        'dataviewCode' in value &&
-        typeof value.dataviewCode === 'string' &&
-        value.dataviewCode.length > 0
+        'dataviewQuery' in value &&
+        typeof value.dataviewQuery === 'string' &&
+        value.dataviewQuery.length > 0
     );
 }
 
@@ -116,7 +116,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     folderDisplayStyle: 'show', // 預設直接顯示資料夾
     showMediaFiles: true, // 預設顯示圖片和影片
     showVideoThumbnails: true, // 預設顯示影片縮圖
-    defaultOpenLocation: 'left', // 預設開啟位置：左側邊欄
+    defaultOpenLocation: Platform.isMobile ? 'tab' : 'left', // 行動裝置預設開啟位置：新分頁，非行動裝置預設開啟位置：左側邊欄
     reuseExistingLeaf: true, // 預設重用現有的網格視圖
     showBookmarksMode: true, // 預設顯示書籤模式
     showSearchMode: true, // 預設顯示搜尋結果模式
@@ -149,7 +149,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
             icon: '🧩',
             displayName: 'My Books (Sample)',
             name: 'Default',
-            dataviewCode: 'return dv.pages("#Book");',
+            dataviewQuery: 'LIST FROM #Book',
         }
     ], // 自訂模式
     quickAccessCommandPath: '', // Path used by "Open quick access folder" command

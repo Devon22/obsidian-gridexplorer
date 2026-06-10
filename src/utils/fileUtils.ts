@@ -1,4 +1,4 @@
-import { TFile, TFolder, getFrontMatterInfo, Notice, View, EventRef } from 'obsidian';
+import { App, TFile, TFolder, getFrontMatterInfo, Notice, View, EventRef } from 'obsidian';
 import { GridView } from '../GridView';
 import { type GallerySettings } from '../settings';
 import { t } from '../translations';
@@ -21,6 +21,14 @@ interface DataviewApi {
     };
     page: (path: string) => Record<string, unknown>;
     current?: () => Record<string, unknown>;
+    query: (query: string, originFile?: string) => Promise<{
+        successful: boolean;
+        value: {
+            type: string;
+            values: unknown[];
+        };
+        error?: string;
+    }>;
 }
 
 interface TasksPlugin {
@@ -615,43 +623,44 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
             return [];
         }
 
-        // 依據 GridView 目前選擇的選項決定要使用哪段 Dataview 程式碼
-        let dvCode: string | undefined = mode?.dataviewCode;
+        let dvQuery: string | undefined = mode?.dataviewQuery;
         if (mode && mode.options && mode.options.length > 0) {
             const idx = gridView.customOptionIndex ?? -1;
             if (idx >= 0 && idx < mode.options.length) {
-                dvCode = mode.options[idx].dataviewCode;
+                dvQuery = mode.options[idx].dataviewQuery;
             }
         }
 
+        if (!dvQuery) return [];
+
         try {
             const activeFile = app.workspace.getActiveFile();
-            if (activeFile) {
-                // 暫時添加 .current 到 dvApi 物件內
-                dvApi.current = () => dvApi.page(activeFile.path);
-            }
+            const originPath = activeFile?.path ?? '';
 
-            const func = new Function('app', 'dv', dvCode);
-            const dvPagesResult = func(app, dvApi) as unknown;
-            const dvPages = Array.isArray(dvPagesResult)
-                ? (dvPagesResult as unknown[])
-                : Array.from((dvPagesResult as Iterable<unknown> | null | undefined) || []);
+            const result = await dvApi.query(dvQuery, originPath);
 
-            if (!dvPages || dvPages.length === 0) {
+            if (!result.successful) {
+                console.error('Grid Explorer: Dataview query failed.', result.error);
                 return [];
             }
 
             const files = new Set<TFile>();
+            const queryResult = result.value;
 
-            for (const page of dvPages as Array<{ file?: { path?: string } } | null | undefined>) {
-                // Add null checks for page and page.file
-                if (page?.file?.path) {
-                    const file = app.vault.getAbstractFileByPath(page.file.path);
-                    if (file instanceof TFile) {
-                        files.add(file);
-                    }
+            if (queryResult.type === 'list') {
+                // LIST 查詢：values 是 Literal[]，每個元素是 Link
+                for (const item of queryResult.values) {
+                    const path = extractPath(item);
+                    if (path) addFileByPath(app, files, path);
+                }
+            } else if (queryResult.type === 'table') {
+                // TABLE 查詢：values 是 Literal[][]，第一欄是 file link
+                for (const row of queryResult.values) {
+                    const path = extractPath((row as unknown[])[0]);
+                    if (path) addFileByPath(app, files, path);
                 }
             }
+
             return sortFiles(Array.from(files), gridView);
         } catch (error) {
             console.error('Grid Explorer: Error executing Dataview query.', error);
@@ -660,4 +669,18 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
     } else {
         return [];
     }
+}
+
+function extractPath(literal: unknown): string | null {
+    // Dataview 的 Link 物件有 .path 屬性
+    if (literal && typeof literal === 'object' && 'path' in literal) {
+        const path = (literal as Record<string, unknown>).path;
+        if (typeof path === 'string') return path;
+    }
+    return null;
+}
+
+function addFileByPath(app: App, files: Set<TFile>, path: string): void {
+    const file = app.vault.getAbstractFileByPath(path);
+    if (file instanceof TFile) files.add(file);
 }

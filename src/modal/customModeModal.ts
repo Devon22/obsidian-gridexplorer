@@ -27,8 +27,8 @@ export class CustomModeModal extends Modal {
         let name = this.mode?.name || t('default');
         // 支援多個子選項，每個選項包含名稱與 Dataview 程式碼
         const options: CustomModeOption[] = this.mode?.options ? this.mode.options.map(opt => ({ ...opt })) : []; // 其他選項（不含 Default）
-        // 向下相容：使用第一個選項作為主要 dataviewCode
-        let dataviewCode = this.mode ? this.mode.dataviewCode : '';
+        // 向下相容：使用第一個選項作為主要 dataviewQuery
+        let dataviewQuery = this.mode ? this.mode.dataviewQuery : '';
         let enabled = this.mode ? (this.mode.enabled ?? true) : true;
         let fields = this.mode ? this.mode.fields : '';
 
@@ -63,14 +63,17 @@ export class CustomModeModal extends Modal {
                 .onChange(v => name = v);
         });
         
+        // 示範查詢
+        const dataviewExampleQuery = 'LIST FROM #tag\nTABLE status FROM "folder" SORT file.mtime DESC'
+
         dvSetting.addTextArea(text => {
-            text.setValue(dataviewCode)
+            text.setValue(dataviewQuery)
                 .onChange(value => {
-                    dataviewCode = value;
+                    dataviewQuery = value;
                 })
-                .setPlaceholder('Dataview js code');
+                .setPlaceholder(dataviewExampleQuery);
             // 給TextArea有足夠的垂直空間和完整的寬度
-            text.inputEl.setAttr('rows', 6);
+            text.inputEl.setAttr('rows', 4);
             text.inputEl.addClass('ge-custommode-code-input');
         });
 
@@ -195,12 +198,12 @@ export class CustomModeModal extends Modal {
                             });
                     })
                     .addTextArea(text => {
-                        text.setPlaceholder('Dataview js code')
-                            .setValue(opt.dataviewCode)
+                        text.setPlaceholder(dataviewExampleQuery)
+                            .setValue(opt.dataviewQuery)
                             .onChange(val => {
-                                opt.dataviewCode = val;
+                                opt.dataviewQuery = val;
                             });
-                        text.inputEl.setAttr('rows', 6);
+                        text.inputEl.setAttr('rows', 4);
                         text.inputEl.addClass('ge-custommode-code-input');
                     })
                     .addText(text => {
@@ -314,7 +317,7 @@ export class CustomModeModal extends Modal {
             .addButton(btn => {
                 btn.setButtonText(t('add_option'))
                     .onClick(() => {
-                        options.push({ name: `${t('option')} ${options.length + 1}`, dataviewCode: '' });
+                        options.push({ name: `${t('option')} ${options.length + 1}`, dataviewQuery: '' });
                         renderOptions();
                     });
             });
@@ -335,7 +338,7 @@ export class CustomModeModal extends Modal {
                             icon,
                             displayName,
                             name,
-                            dataviewCode,
+                            dataviewQuery,
                             options: options,
                             enabled,
                             fields

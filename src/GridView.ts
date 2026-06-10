@@ -72,16 +72,6 @@ interface AppWithCommands {
     commands?: CommandManager;
 }
 
-interface AppWithDataviewPlugin {
-    plugins?: {
-        plugins?: {
-            dataview?: {
-                api?: unknown;
-            };
-        };
-    };
-}
-
 interface MenuItemWithWarning {
     setWarning: (warning: boolean) => void;
 }
@@ -913,59 +903,13 @@ export class GridView extends ItemView {
 
                                         // 如果 fields 不為空，則使用它來顯示摘要
                                         if (fields) {
-                                            // 以逗號拆分，但忽略 {{ ... }} 內的逗號
-                                            const fieldList: string[] = (() => {
-                                                const parts: string[] = [];
-                                                let buf = '';
-                                                let depth = 0; // 在 {{...}} 內時 depth > 0
-                                                for (let i = 0; i < fields.length; i++) {
-                                                    const ch = fields[i];
-                                                    const next = fields[i + 1];
-                                                    // 偵測 '{{'
-                                                    if (ch === '{' && next === '{') {
-                                                        depth++;
-                                                        buf += '{{';
-                                                        i++;
-                                                        continue;
-                                                    }
-                                                    // 偵測 '}}'
-                                                    if (ch === '}' && next === '}') {
-                                                        if (depth > 0) depth--;
-                                                        buf += '}}';
-                                                        i++;
-                                                        continue;
-                                                    }
-                                                    // 只有在不在 {{...}} 內時，逗號才作為分隔符
-                                                    if (ch === ',' && depth === 0) {
-                                                        if (buf.trim()) parts.push(buf.trim());
-                                                        buf = '';
-                                                        continue;
-                                                    }
-                                                    buf += ch;
-                                                }
-                                                if (buf.trim()) parts.push(buf.trim());
-                                                return parts;
-                                            })();
+                                            const fieldList = fields.split(',').map(f => f.trim()).filter(Boolean);
                                             const fieldValues: string[] = [];
 
                                             // 收集所有欄位值，並處理別名（"原始欄位|別名"）
                                             fieldList.forEach(fieldEntry => {
-                                                // 解析欄位 (fieldKey)、別名 (labelName)、運算式 (calcExpr)
-                                                // 格式示例：
-                                                //   birthday|年齡 {{ Math.floor(...) }}
-                                                //   birthday {{ Math.floor(...) }}
-                                                //   birthday|年齡
-                                                //   birthday
-
-                                                let raw = fieldEntry.trim();
-                                                let calcExpr: string | null = null;
-                                                // 先取出運算區塊 {{ ... }}
-                                                const calcMatch = raw.match(/\{\{(.*?)\}\}/);
-                                                if (calcMatch) {
-                                                    calcExpr = calcMatch[1];
-                                                    raw = raw.substring(0, calcMatch.index).trim(); // 去掉運算部分
-                                                }
-                                                // 再處理 alias
+                                                const raw = fieldEntry.trim();
+                                                // 處理 alias
                                                 const aliasIdx = raw.lastIndexOf('|');
                                                 let fieldKey: string;
                                                 let labelName: string;
@@ -979,32 +923,14 @@ export class GridView extends ItemView {
 
                                                 const rawValue = getFrontmatterValue(metadata, fieldKey);
                                                 if (rawValue !== undefined && rawValue !== '' && rawValue !== null) {
-
                                                     const value = formatFrontmatterValue(rawValue);
-
-                                                    // 如果是數字，則加入千位分隔符號
-                                                    // 如果是陣列，則轉換為字串
-
-                                                    let outputValue: unknown = value;
-                                                    if (calcExpr) {
-                                                        try {
-                                                            const fn = new Function('value', 'metadata', 'app', 'dv', `return (${calcExpr});`) as (value: string, metadata: FrontMatterCache | undefined, app: typeof this.app, dv: unknown) => unknown;
-
-                                                            // 獲取 Dataview API
-                                                            const dvApi = (this.app as AppWithDataviewPlugin).plugins?.plugins?.dataview?.api;
-
-                                                            outputValue = fn(value, metadata, this.app, dvApi);
-                                                        } catch (error) {
-                                                            console.error('GridExplorer: evaluate displayName error', error);
-                                                        }
-                                                    }
-                                                    fieldValues.push(`${labelName}: ${formatFrontmatterValue(outputValue)}`);
+                                                    fieldValues.push(`${labelName}: ${value}`);
                                                 }
                                             });
 
                                             // 如果有找到任何欄位值，則組合起來
                                             if (fieldValues.length > 0) {
-                                                summaryValue = fieldValues.join('\n'); // 使用 | 分隔不同欄位
+                                                summaryValue = fieldValues.join('\n');
                                             }
                                         }
                                     }
