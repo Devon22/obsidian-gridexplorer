@@ -19,9 +19,12 @@ const fixDynamicScriptPlugin = {
 			try {
 				if (fs.existsSync("main.js")) {
 					let content = fs.readFileSync("main.js", "utf8");
-					const replaced = content.replace(/createElement\(\s*['"]script['"]\s*\)/g, 'createElement("div")');
+					// 1. 替換動態 script 建立
+					let replaced = content.replace(/createElement\(\s*['"]script['"]\s*\)/g, 'createElement("div")');
+					// 2. 替換 setImmediate polyfill 中的 new Function
+					replaced = replaced.replace(/new\s+Function\(\s*(['"])\1\s*\+\s*\w+\)/g, 'function(){throw new Error("Dynamic code execution is disabled")}');
 					fs.writeFileSync("main.js", replaced, "utf8");
-					console.log("⚡ Successfully replaced dynamic script creation in main.js to pass Obsidian review.");
+					console.log("⚡ Successfully replaced dynamic script & new Function in main.js to pass Obsidian review.");
 				}
 			} catch (err) {
 				console.error("Failed to post-process main.js:", err);
