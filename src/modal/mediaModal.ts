@@ -245,7 +245,7 @@ export class MediaModal extends Modal {
 
             // 等待新圖片載入完成
             img.onload = () => {
-                // 移除舊的媒體元素
+                // 移除舊 of 媒體元素
                 if (this.currentMediaElement) {
                     this.currentMediaElement.remove();
                 }

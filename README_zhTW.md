@@ -4,8 +4,8 @@
 
 這是一個為 Obsidian 設計的網格視圖插件，旨在提供更直觀的方式來瀏覽和管理您的筆記和資料夾。
 
-![screenshot1](assets/screenshot1.png)
 ![screenshot2](assets/screenshot2.png)
+![screenshot1](assets/screenshot1.png)
 
 ## 功能
 

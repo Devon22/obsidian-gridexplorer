@@ -24,7 +24,6 @@ const fixDynamicScriptPlugin = {
 					// 2. 替換 setImmediate polyfill 中的 new Function
 					replaced = replaced.replace(/new\s+Function\(\s*(['"])\1\s*\+\s*\w+\)/g, 'function(){throw new Error("Dynamic code execution is disabled")}');
 					fs.writeFileSync("main.js", replaced, "utf8");
-					console.log("⚡ Successfully replaced dynamic script & new Function in main.js to pass Obsidian review.");
 				}
 			} catch (err) {
 				console.error("Failed to post-process main.js:", err);

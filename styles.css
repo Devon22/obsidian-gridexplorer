@@ -13,18 +13,25 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-width, 300px), 1fr));
     gap: 10px;
-    padding: 10px !important;
     align-items: start;
     align-content: start;
-    background: var(--background-secondary) !important;
     flex: 1;
     overflow-y: auto;
 }
 
+.ge-grid-view-container .ge-grid-container {
+    padding: 10px;
+}
+
+.workspace-leaf .ge-grid-view-container .ge-grid-container,
+.ge-grid-view-container .ge-grid-container {
+    background: var(--background-secondary);
+}
+
 /* 行動裝置隱藏滾動條 Mobile hidden Scrollbar */
 .is-mobile .ge-grid-container::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
+    display: none;
+    width: 0;
 }
 
 /* 網格項目 Grid Item */
@@ -42,9 +49,9 @@
 }
 
 @media (hover: hover) {
-    .ge-grid-item:hover {
+    .ge-grid-view-container .ge-grid-container .ge-grid-item:hover {
         transform: translateY(-2px);
-        background-color: var(--text-selection) !important;
+        background-color: var(--text-selection);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
@@ -240,31 +247,26 @@
 }
 
 /* 直向卡片容器 Vertical Card Container */
-.ge-vertical-card .ge-grid-container {
-    /* 使用既有的欄寬變數，僅改 gap 與 padding 以符合卡片視覺 */
-    gap: 16px;
-    padding: 16px !important;
-}
 
 /* 直向卡片 Vertical Card Item */
-.ge-vertical-card .ge-grid-item {
+.ge-grid-view-container .ge-grid-container.ge-vertical-card .ge-grid-item:not(.ge-folder-item) {
     /* 垂直排列 */
     flex-direction: column;
     align-items: stretch;
     height: var(--grid-item-height);
     /* 與一般網格一致，保持同排等高 */
     gap: 0px;
-    padding: 0px !important;
+    padding: 0px;
 }
 
 /* 摘要文字 Content Area */
-.ge-vertical-card .ge-content-area {
+.ge-vertical-card .ge-grid-item:not(.ge-folder-item) .ge-content-area {
     order: 1;
     flex: 1 1 auto;
     /* 使摘要區撐開，標籤可貼底 */
     flex-grow: 1;
     /* Add this line */
-    padding: 10px !important;
+    padding: 10px;
 }
 
 /* 圖片置中，滿版顯示 Image Area */
@@ -281,31 +283,31 @@
 }
 
 /* 按設定切換直向卡片圖片位置 */
-.ge-vertical-card.ge-image-top .ge-image-area {
+.ge-vertical-card.ge-image-top .ge-grid-item:not(.ge-folder-item) .ge-image-area {
     order: 1;
 }
 
-.ge-vertical-card.ge-image-top .ge-content-area {
+.ge-vertical-card.ge-image-top .ge-grid-item:not(.ge-folder-item) .ge-content-area {
     order: 3;
 }
 
 .ge-vertical-card.ge-image-top .ge-image-area img,
 .ge-vertical-card.ge-image-top .ge-image-area video {
-    border-radius: calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) 0px 0px !important;
+    border-radius: calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) 0px 0px;
 }
 
 /* 預設 bottom 可維持原有順序，以下為明確設置 */
-.ge-vertical-card.ge-image-bottom .ge-image-area {
+.ge-vertical-card.ge-image-bottom .ge-grid-item:not(.ge-folder-item) .ge-image-area {
     order: 3;
 }
 
-.ge-vertical-card.ge-image-bottom .ge-content-area {
+.ge-vertical-card.ge-image-bottom .ge-grid-item:not(.ge-folder-item) .ge-content-area {
     order: 1;
 }
 
 .ge-vertical-card.ge-image-bottom .ge-image-area img,
 .ge-vertical-card.ge-image-bottom .ge-image-area video {
-    border-radius: 0px 0px calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) !important;
+    border-radius: 0px 0px calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width));
 }
 
 /* 鼠標懸停效果：整張卡片微抬升 */
@@ -318,8 +320,6 @@
 /* 僅圖片/影片的直向卡片 Media Card */
 .ge-vertical-card .ge-media-card {
     padding: 0;
-    /* 移除內距，讓媒體填滿 */
-    border: none;
     gap: 0;
     height: var(--grid-item-height);
 }
@@ -331,16 +331,22 @@
     flex: 1 1 auto;
 }
 
-.ge-vertical-card .ge-media-card .ge-image-area img,
-.ge-vertical-card .ge-media-card .ge-image-area video {
-    border-radius: var(--radius-m) !important;
+.ge-vertical-card.ge-image-top .ge-media-card .ge-image-area img,
+.ge-vertical-card.ge-image-top .ge-media-card .ge-image-area video {
+    border-radius: calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width)) 0px 0px;
 }
 
+.ge-vertical-card.ge-image-bottom .ge-media-card .ge-image-area img,
+.ge-vertical-card.ge-image-bottom .ge-media-card .ge-image-area video {
+    border-radius: 0px 0px calc(var(--radius-m) - var(--border-width)) calc(var(--radius-m) - var(--border-width));
+}
+
+/* 隱藏標題、摘要、標籤 */
+/*
 .ge-vertical-card .ge-media-card .ge-content-area,
 .ge-vertical-card .ge-media-card .ge-tags-container {
-    display: none !important;
-    /* 隱藏標題、摘要、標籤 */
-}
+    display: none;
+} */
 
 /* 標籤容器 Tags Container */
 .ge-tags-container {
@@ -387,7 +393,7 @@
 
 /* 選中項目的樣式 Selected Item */
 .ge-selected-item {
-    outline: 1px solid var(--interactive-accent) !important;
+    outline: 1px solid var(--interactive-accent);
     outline-offset: -1px;
     position: relative;
     z-index: 1;
@@ -423,10 +429,7 @@
     }
 }
 
-/* 直向卡片模式下的資料夾項目補正 */
-.ge-vertical-card .ge-folder-item .ge-content-area {
-    padding: 7px !important;
-}
+
 
 .ge-grid-item.ge-folder-item .ge-icon-container {
     color: var(--interactive-accent);
@@ -977,12 +980,6 @@ span.ge-mode-title {
     flex-grow: 1;
 }
 
-.ge-settings-section-summary h3 {
-    margin: 0 !important;
-    font-size: 1.1em;
-    flex-grow: 1;
-}
-
 .ge-settings-section-summary::before {
     content: "▶";
     font-size: 0.8em;
@@ -1255,7 +1252,7 @@ span.ge-mode-title {
 
 a.ge-current-folder {
     text-decoration: none;
-    padding: 3px 8px !important;
+    padding: 3px 8px;
     border: 1px solid var(--background-modifier-hover);
     border-radius: 6px;
     background: var(--background-primary);
@@ -1678,38 +1675,38 @@ a.ge-current-folder:hover {
 /* 鍵盤導航選中項的樣式 */
 .ge-selected-option {
     background-color: var(--background-modifier-hover);
-    border-left: 3px solid var(--interactive-accent) !important;
-    padding-left: 5px !important;
+    border-left: 3px solid var(--interactive-accent);
+    padding-left: 5px;
 }
 
 /* --------------------------------------------------------------------------- */
 
 /* Media Modal */
 .ge-media-modal {
-    padding: 0 !important;
-    background-color: rgba(0, 0, 0, 0.9) !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    margin: 0;
 }
 
 .ge-media-modal .modal-header {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .ge-media-modal .modal-close-button {
-    display: none !important;
+    display: none;
 }
 
-.ge-media-modal-content {
-    background-color: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
+.ge-media-modal .ge-media-modal-content {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -2000,8 +1997,14 @@ a.ge-current-folder:hover {
 }
 
 /* Custom Mode Options */
-.ge-hidden {
-    display: none !important;
+.ge-popup-content .ge-search-clear-button.ge-hidden,
+.ge-popup-content .ge-search-tag-suggestions.ge-hidden,
+.ge-popup-content .ge-search-scope-container.ge-hidden,
+.ge-popup-content .ge-search-name-container.ge-hidden,
+.ge-popup-content .ge-search-media-files-container.ge-hidden,
+.ge-fullscreen-image.ge-hidden,
+.ge-grid-view-folder-option.ge-hidden {
+    display: none;
 }
 
 .ge-custommode-icon-input {
@@ -2198,13 +2201,6 @@ a.ge-current-folder:hover {
 
 .ge-popup-modal-reset .modal-header {
     display: none;
-}
-
-.is-phone .ge-popup-modal-reset.modal {
-    max-width: calc(100vw - 32px);
-    width: calc(100vw - 32px) !important;
-    left: 16px !important;
-    margin: 0 auto;
 }
 
 .ge-popup-content {
@@ -2523,18 +2519,6 @@ a.ge-current-folder:hover {
     border-color: var(--horizontal-line);
 }
 
-/* 隱藏網格內容（跳過隱藏時的樣式/排版/繪製成本） */
-.ge-grid-container.ge-hidden {
-    content-visibility: hidden;
-    pointer-events: none;
-}
-
-/* 行動裝置隱藏滾動條 Mobile hidden Scrollbar */
-.is-mobile .ge-note-view-container::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-}
-
 /* --------------------------------------------------------------------------- */
 
 /* 捷徑選擇 Modal Shortcut Selection Modal */
@@ -2670,7 +2654,7 @@ a.ge-current-folder:hover {
 
 .ge-explorer-folder-header.is-active,
 .ge-explorer-mode-item.is-active {
-    background-color: var(--background-modifier-hover) !important;
+    background-color: var(--background-modifier-hover);
 }
 
 .ge-explorer-folder-header.is-active .ge-explorer-folder-name,
@@ -2727,7 +2711,7 @@ a.ge-current-folder:hover {
 
 /* 有子目錄的資料夾整個 header 懸停時不顯示效果 */
 .ge-explorer-folder-header:not(.ge-no-children):not(.ge-explorer-mode-item):not(.ge-explorer-stash-item):hover {
-    background-color: transparent !important;
+    background-color: transparent;
 }
 
 /* 沒有子目錄的資料夾名稱不顯示特殊游標和懸停效果 */
@@ -2735,9 +2719,9 @@ a.ge-current-folder:hover {
     padding: 0;
 }
 
-.ge-explorer-folder-header.ge-no-children .ge-explorer-folder-name:hover {
-    background-color: transparent !important;
-    color: var(--text-normal) !important;
+.workspace-leaf .ge-explorer-folder-header.ge-no-children .ge-explorer-folder-name:hover {
+    background-color: transparent;
+    color: var(--text-normal);
 }
 
 /* 模式項目和暫存區項目的名稱也不顯示特殊懸停效果 */
@@ -2746,10 +2730,10 @@ a.ge-current-folder:hover {
     padding: 0;
 }
 
-.ge-explorer-mode-item .ge-explorer-folder-name:hover,
-.ge-explorer-stash-item .ge-explorer-folder-name:hover {
-    background-color: transparent !important;
-    color: var(--text-normal) !important;
+.workspace-leaf .ge-explorer-folder-header.ge-explorer-mode-item .ge-explorer-folder-name:hover,
+.workspace-leaf .ge-explorer-folder-header.ge-explorer-stash-item .ge-explorer-folder-name:hover {
+    background-color: transparent;
+    color: var(--text-normal);
 }
 
 .ge-explorer-folder-children {
@@ -2765,11 +2749,8 @@ a.ge-current-folder:hover {
 .is-mobile .ge-explorer-folder-header,
 .is-mobile .ge-explorer-mode-item {
     padding: 8px 10px;
-    /* ↑ from 4px 6px */
     gap: 10px;
-    /* ↑ from 6px */
     min-height: 36px;
-    /* 提升最小點擊高度，可視需要調整到 40–44px */
     border-radius: var(--radius-s);
     -webkit-tap-highlight-color: transparent;
 }
@@ -2784,21 +2765,17 @@ a.ge-current-folder:hover {
 .is-mobile .ge-explorer-folder-toggle,
 .is-mobile .ge-explorer-folder-icon {
     width: 20px;
-    /* ↑ from 16px */
     height: 20px;
-    /* ↑ from 16px */
 }
 
 /* 模式子項的縮排在手機視覺可略加（可選） */
 .is-mobile .ge-explorer-mode-item {
     padding-left: 32px;
-    /* ↑ from 28px */
 }
 
 /* 列與列之間多一點空隙（可選，避免過度擁擠） */
 .is-mobile .ge-explorer-folder-header {
     margin-bottom: 5px;
-    /* ↑ from 3px */
 }
 
 /* --------------------------------------------------------------------------- */
@@ -2963,9 +2940,9 @@ a.ge-current-folder:hover {
 
 /* 在整區拖曳高亮時，隱藏空暫存 dropzone 的邊框/背景，避免覆蓋底部邊線效果 */
 .ge-explorer-stash-node.ge-dragover .ge-explorer-stash-dropzone {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .ge-explorer-stash-dropzone-clickable {
@@ -3031,9 +3008,9 @@ a.ge-current-folder:hover {
 }
 
 /* 輸入錯誤樣式 Input Error Style */
-.ge-input-error {
-    border-color: var(--color-red) !important;
-    background-color: rgba(var(--color-red-rgb), 0.1) !important;
+.modal .ge-input-error {
+    border-color: var(--color-red);
+    background-color: rgba(var(--color-red-rgb), 0.1);
 }
 
 /* --------------------------------------------------------------------------- */
@@ -3048,24 +3025,20 @@ a.ge-current-folder:hover {
     padding-right: var(--safe-area-inset-right);
 }
 
-/* 移除 Obsidian 預設為 .view-content 添加的 margin-top，
-    因為 GridExplorer 的 header buttons 位在 view-content 之外，
-    這會導致 buttons 與 grid 之間出現多餘的空隙。 */
-.is-phone .ge-grid-view-container .view-content {
-    margin-top: 0 !important;
-    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3)) !important;
+.is-phone .ge-grid-view-container .ge-grid-container {
+    padding-bottom: calc(var(--view-bottom-spacing) + var(--size-4-3));
 }
 
-.is-tablet .ge-grid-view-container .view-content {
-    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3)) !important;
+.is-tablet .ge-grid-view-container .ge-grid-container {
+    padding-bottom: calc(var(--safe-area-inset-bottom) + var(--size-4-3));
 }
 
 .is-phone .ge-note-content {
-    padding-bottom: var(--view-bottom-spacing) !important;
+    padding-bottom: var(--view-bottom-spacing);
 }
 
 .is-tablet .ge-note-content {
-    padding-bottom: var(--safe-area-inset-bottom) !important;
+    padding-bottom: var(--safe-area-inset-bottom);
 }
 
 /* =========================================================================== */

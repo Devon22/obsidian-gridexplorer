@@ -512,7 +512,7 @@ export class GridView extends ItemView {
         });
         this.eventCleanupFunctions = [];
 
-        // 清空整個容器
+        // 清空整個容器，移除 Obsidian 原生的標題列以實現滿版
         this.containerEl.empty();
 
         // 添加頂部按鈕
@@ -526,8 +526,8 @@ export class GridView extends ItemView {
             this.renderFileNameFilter();
         }
 
-        // 創建內容區域
-        this.containerEl.createDiv('view-content');
+        // 創建內容區域（使用自訂類別避開行動端 margin-top 影響）
+        this.containerEl.createDiv('ge-view-content');
 
         // 取得置頂清單
         if (this.sourceMode === 'folder' && this.sourcePath !== '/') {
@@ -576,7 +576,7 @@ export class GridView extends ItemView {
     // 渲染檔名篩選框
     renderFileNameFilter() {
         const filterContainer = this.containerEl.createDiv('ge-file-filter-container');
-        const contentEl = this.containerEl.querySelector('.view-content');
+        const contentEl = this.containerEl.querySelector('.ge-view-content');
         if (contentEl) {
             this.containerEl.insertBefore(filterContainer, contentEl);
         }
@@ -697,7 +697,7 @@ export class GridView extends ItemView {
     }
 
     async grid_render() {
-        const container = this.containerEl.querySelector('.view-content') as HTMLElement;
+        const container = this.containerEl.querySelector('.ge-view-content') as HTMLElement;
         container.empty();
         this.renderToken++;
         container.addClass('ge-grid-container');

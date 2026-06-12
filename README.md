@@ -4,8 +4,8 @@ English | [日本語](README_ja.md) | [中文](README_zhTW.md)
 
 This is a grid view plugin designed for Obsidian, aimed at providing a more intuitive way to browse and manage your notes and folders.
 
-![screenshot1](assets/screenshot1.png)
 ![screenshot2](assets/screenshot2.png)
+![screenshot1](assets/screenshot1.png)
 
 ## Features
 
