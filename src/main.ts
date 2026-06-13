@@ -43,6 +43,15 @@ export default class GridExplorerPlugin extends Plugin {
     settings: GallerySettings = DEFAULT_SETTINGS;
     statusBarItem: HTMLElement | null = null;
 
+    async getThumbnail(zipPath: string): Promise<string | null> {
+        const file = this.app.vault.getAbstractFileByPath(zipPath);
+        if (file instanceof TFile && file.extension.toLowerCase() === 'zip') {
+            const { getFirstImageFromZip } = await import('./utils/mediaUtils');
+            return await getFirstImageFromZip(this.app, file);
+        }
+        return null;
+    }
+
     async onload() {
         await this.loadSettings();
 
@@ -63,7 +72,11 @@ export default class GridExplorerPlugin extends Plugin {
             VIEW_TYPE_ZIP,
             (leaf) => new ZipView(leaf)
         );
-        this.registerExtensions(["zip"], VIEW_TYPE_ZIP);
+        try {
+            this.registerExtensions(["zip"], VIEW_TYPE_ZIP);
+        } catch (e) {
+            console.warn("Grid Explorer: Could not register 'zip' extension.", e);
+        }
 
         // 註冊設定頁面
         this.addSettingTab(new GridExplorerSettingTab(this.app, this));
@@ -502,8 +515,18 @@ export default class GridExplorerPlugin extends Plugin {
         }, true); // 使用 capture 階段以確保優先處理
         
 
-        // 設定 Canvas 拖曳處理
+        // 註冊版面拖曳處理
         this.setupCanvasDropHandlers();
+
+        // 暴露 API 供其他外掛使用
+        const appWithPlugins = this.app as {
+            plugins?: {
+                plugins?: Record<string, unknown>;
+            };
+        };
+        if (appWithPlugins.plugins?.plugins) {
+            appWithPlugins.plugins.plugins['obsidian-gridexplorer'] = this;
+        }
 
         // Override new tab behavior (for useQuickAccessAsNewTabMode setting)
         const { workspace } = this.app;
