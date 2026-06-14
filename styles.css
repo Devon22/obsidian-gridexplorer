@@ -1207,28 +1207,26 @@ span.ge-mode-title {
 /* 上層資料夾連結樣式 Parent Folder Link */
 .ge-parent-folder-link {
     text-decoration: none;
-    padding: 3px 8px;
+    padding: 2px 6px;
     white-space: nowrap;
     overflow: hidden;
     max-width: 200px;
     flex-shrink: 0;
-    border-radius: 6px;
-    border: 1px solid var(--background-modifier-hover);
-    color: var(--text-normal);
+    border-radius: 4px;
+    border: 1px solid transparent;
+    color: var(--text-muted);
     font-size: var(--font-ui-small);
     display: inline-flex;
     align-items: center;
     cursor: pointer;
-    margin-right: 6px;
-    background: var(--background-primary);
-    gap: 6px;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    background: transparent;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .ge-parent-folder-link:hover {
     text-decoration: none;
+    color: var(--text-normal);
     background-color: var(--background-modifier-hover);
-    border-color: var(--background-modifier-border);
 }
 
 .ge-parent-folder-link.ge-dragover {
@@ -1236,33 +1234,45 @@ span.ge-mode-title {
     background-color: var(--background-modifier-hover);
 }
 
+/* 麵包屑導航分隔符樣式 */
+.ge-breadcrumb-separator {
+    color: var(--text-faint);
+    font-size: 1.2em;
+    margin: 0 4px;
+    user-select: none;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 /* 當前資料夾樣式 */
 .ge-current-folder {
     font-size: var(--font-ui-small);
-    padding: 4px 9px 4px 0px;
+    padding: 2px 6px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     flex-shrink: 0;
     color: var(--text-normal);
-    border-radius: 4px;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
+    border-radius: 4px;
 }
 
 a.ge-current-folder {
     text-decoration: none;
-    padding: 3px 8px;
-    border: 1px solid var(--background-modifier-hover);
-    border-radius: 6px;
-    background: var(--background-primary);
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 a.ge-current-folder:hover {
     text-decoration: none;
+    color: var(--text-accent);
     background-color: var(--background-modifier-hover);
-    border-color: var(--background-modifier-border);
 }
 
 /* --------------------------------------------------------------------------- */

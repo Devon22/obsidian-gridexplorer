@@ -215,6 +215,14 @@ export function renderModePath(gridView: GridView) {
             const el = pathElements[i];
             pathContainer.appendChild(el);
 
+            // 如果不是最後一個元素，添加分隔符
+            if (i < pathElements.length - 1) {
+                pathContainer.createEl('span', {
+                    text: '›',
+                    cls: 'ge-breadcrumb-separator'
+                });
+            }
+
             // 為路徑元素添加點擊事件
             if (el.className === 'ge-parent-folder-link') {
                 const pathIndex = i; // 直接使用索引，因為不再有分隔符
