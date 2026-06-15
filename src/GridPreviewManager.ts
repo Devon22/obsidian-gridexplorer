@@ -97,27 +97,36 @@ export class GridPreviewManager {
         // 在移動端添加滾動監聽，根據滾動方向控制導航欄顯示/隱藏
         if (Platform.isPhone) {
             let lastScrollTop = 0;
+            let accumulateScroll = 0;
             const handleScroll = () => {
                 const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
                 if (!mobileNavbar) return;
 
                 const currentScrollTop = scrollContainer.scrollTop;
+                const delta = currentScrollTop - lastScrollTop;
 
-                // 往上捲（滾動位置增加）時隱藏導航欄
-                if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
-                    if (!activeDocument.body.classList.contains('is-floating-nav')) {
-                        mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
-                    } else {
-                        mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
+                if (delta > 0) {
+                    // 往上捲（滾動位置增加）
+                    if (accumulateScroll < 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll > 50 && currentScrollTop > 50) {
+                        if (!activeDocument.body.classList.contains('is-floating-nav')) {
+                            mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
+                        } else {
+                            mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
+                        }
+                        mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
                     }
-                    mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
-                }
-                // 往下捲（滾動位置減少）時顯示導航欄
-                else if (currentScrollTop < lastScrollTop) {
-                    mobileNavbar.setCssProps({
-                        transform: 'translateY(0)',
-                        transition: 'transform 0.3s ease-in',
-                    });
+                } else if (delta < 0) {
+                    // 往下捲（滾動位置減少）
+                    if (accumulateScroll > 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll < -50 || currentScrollTop <= 0) {
+                        mobileNavbar.setCssProps({
+                            transform: 'translateY(0)',
+                            transition: 'transform 0.3s ease-in',
+                        });
+                    }
                 }
 
                 lastScrollTop = currentScrollTop;
@@ -563,24 +572,34 @@ export class GridPreviewManager {
         // 在移動端添加滾動監聽，控制導航欄
         if (Platform.isPhone) {
             let lastScrollTop = 0;
+            let accumulateScroll = 0;
             const handleScroll = () => {
                 const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
                 if (!mobileNavbar) return;
 
                 const currentScrollTop = scrollContainer.scrollTop;
+                const delta = currentScrollTop - lastScrollTop;
 
-                if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
-                    if (!activeDocument.body.classList.contains('is-floating-nav')) {
-                        mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
-                    } else {
-                        mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
+                if (delta > 0) {
+                    if (accumulateScroll < 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll > 50 && currentScrollTop > 50) {
+                        if (!activeDocument.body.classList.contains('is-floating-nav')) {
+                            mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
+                        } else {
+                            mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
+                        }
+                        mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
                     }
-                    mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
-                } else if (currentScrollTop < lastScrollTop) {
-                    mobileNavbar.setCssProps({
-                        transform: 'translateY(0)',
-                        transition: 'transform 0.3s ease-in',
-                    });
+                } else if (delta < 0) {
+                    if (accumulateScroll > 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll < -50 || currentScrollTop <= 0) {
+                        mobileNavbar.setCssProps({
+                            transform: 'translateY(0)',
+                            transition: 'transform 0.3s ease-in',
+                        });
+                    }
                 }
                 lastScrollTop = currentScrollTop;
             };

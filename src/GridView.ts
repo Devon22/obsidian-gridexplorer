@@ -261,6 +261,24 @@ export class GridView extends ItemView {
                 }
             })
         );
+
+        // 在行動端監聽分頁切換事件，當離開當前視圖時恢復導航欄
+        if (Platform.isPhone) {
+            this.registerEvent(
+                this.app.workspace.on('active-leaf-change', () => {
+                    const activeView = this.app.workspace.getActiveViewOfType(GridView);
+                    if (activeView !== this) {
+                        const navbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
+                        if (navbar) {
+                            navbar.setCssProps({
+                                transform: 'translateY(0)',
+                                transition: 'transform 0.3s ease-in',
+                            });
+                        }
+                    }
+                })
+            );
+        }
     }
 
     getViewType() {
@@ -727,6 +745,52 @@ export class GridView extends ItemView {
                 this.hasKeyboardFocus = false;
             }
         });
+
+        // 在移動端添加滾動監聽，根據滾動方向控制導航欄顯示/隱藏
+        if (Platform.isPhone) {
+            let lastScrollTop = 0;
+            let accumulateScroll = 0;
+            const handleScroll = () => {
+                const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
+                if (!mobileNavbar) return;
+
+                const currentScrollTop = container.scrollTop;
+                const delta = currentScrollTop - lastScrollTop;
+
+                if (delta > 0) {
+                    // 往上捲（滾動位置增加）
+                    if (accumulateScroll < 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll > 50 && currentScrollTop > 50) {
+                        if (!activeDocument.body.classList.contains('is-floating-nav')) {
+                            mobileNavbar.setCssProps({ transform: 'translateY(100%)' });
+                        } else {
+                            mobileNavbar.setCssProps({ transform: 'translateY(200%)' });
+                        }
+                        mobileNavbar.setCssProps({ transition: 'transform 0.3s ease-out' });
+                    }
+                } else if (delta < 0) {
+                    // 往下捲（滾動位置減少）
+                    if (accumulateScroll > 0) accumulateScroll = 0;
+                    accumulateScroll += delta;
+                    if (accumulateScroll < -50 || currentScrollTop <= 0) {
+                        mobileNavbar.setCssProps({
+                            transform: 'translateY(0)',
+                            transition: 'transform 0.3s ease-in',
+                        });
+                    }
+                }
+
+                lastScrollTop = currentScrollTop;
+            };
+
+            container.addEventListener('scroll', handleScroll);
+
+            // 儲存滾動事件清理函數
+            this.eventCleanupFunctions.push(() => {
+                container.removeEventListener('scroll', handleScroll);
+            });
+        }
 
         // 設定網格項目寬度和高度等設定
         const settings = this.plugin.settings;
