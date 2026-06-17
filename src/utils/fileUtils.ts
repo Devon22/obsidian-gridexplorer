@@ -321,7 +321,7 @@ export function ignoredFiles(files: TFile[], gridView: GridView): TFile[] {
 }
 
 // 獲取檔案
-export async function getFiles(gridView: GridView, includeMediaFiles: boolean): Promise<TFile[]> {
+export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 'media-only'): Promise<TFile[]> {
     const app = gridView.app;
     const settings = gridView.plugin.settings;
     const sourceMode = gridView.sourceMode;
@@ -579,6 +579,9 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
     } else if (sourceMode === 'all-files') {
         // 所有筆記模式
         const allVaultFiles = app.vault.getFiles().filter(file => {
+            if (includeMediaFiles === 'media-only') {
+                return settings.showMediaFiles && isMediaFile(file);
+            }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
                 (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {
@@ -590,6 +593,9 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
     } else if (sourceMode === 'recent-files') {
         // 最近檔案模式
         const recentFiles = app.vault.getFiles().filter(file => {
+            if (includeMediaFiles === 'media-only') {
+                return settings.showMediaFiles && isMediaFile(file);
+            }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
                 (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {
@@ -602,6 +608,9 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean): 
     } else if (sourceMode === 'random-note') {
         // 隨機筆記模式，從所有筆記中隨機選取
         const randomFiles = app.vault.getFiles().filter(file => {
+            if (includeMediaFiles === 'media-only') {
+                return settings.showMediaFiles && isMediaFile(file);
+            }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
                 (settings.showMediaFiles && includeMediaFiles && isMediaFile(file))) {

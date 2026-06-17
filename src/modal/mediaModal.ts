@@ -78,6 +78,16 @@ export class MediaModal extends Modal {
     }
 
     onOpen() {
+        const appWithPlugins = this.app as {
+            plugins?: {
+                plugins?: Record<string, { activeMediaModal?: unknown }>;
+            };
+        };
+        const plugin = appWithPlugins.plugins?.plugins?.['obsidian-gridexplorer'];
+        if (plugin) {
+            plugin.activeMediaModal = this;
+        }
+
         const { contentEl } = this;
 
         // 設置 modal 樣式為全螢幕
@@ -183,6 +193,16 @@ export class MediaModal extends Modal {
     }
 
     onClose() {
+        const appWithPlugins = this.app as {
+            plugins?: {
+                plugins?: Record<string, { activeMediaModal?: unknown }>;
+            };
+        };
+        const plugin = appWithPlugins.plugins?.plugins?.['obsidian-gridexplorer'];
+        if (plugin && plugin.activeMediaModal === this) {
+            plugin.activeMediaModal = null;
+        }
+
         const { contentEl } = this;
         contentEl.empty();
 
@@ -266,13 +286,179 @@ export class MediaModal extends Modal {
 
             mediaContainer.appendChild(img);
 
-            // 圖片點擊事件（放大/縮小）
-            if (Platform.isMobile) {
-                img.addEventListener('dblclick', (event) => {
-                    event.stopPropagation();
-                    this.toggleImageZoom(img, event);
-                });
-            } else {
+            // 取得與更新圖片初始大小並綁定手勢事件
+            let initialWidth = 0;
+            let initialHeight = 0;
+            let currentScale = 1;
+            let isPinching = false;
+            let pinchStartDistance = 0;
+            let pinchStartScale = 1;
+            let pinchStartCenterX = 0;
+            let pinchStartCenterY = 0;
+            let pinchStartScrollLeft = 0;
+            let pinchStartScrollTop = 0;
+            let lastTapTime = 0;
+
+            let pinchRatioX = 0.5;
+            let pinchRatioY = 0.5;
+
+            const initImageDimensions = () => {
+                initialWidth = img.offsetWidth || img.clientWidth;
+                initialHeight = img.offsetHeight || img.clientHeight;
+                currentScale = 1;
+            };
+
+            img.onload = () => {
+                // 移除舊 of 媒體元素
+                if (this.currentMediaElement) {
+                    this.currentMediaElement.remove();
+                }
+                this.currentMediaElement = img;
+                // 設置圖片樣式，預設滿屏顯示
+                this.resetImageStyles(img);
+                // 顯示新圖片
+                img.removeClass('ge-hidden');
+                initImageDimensions();
+            };
+
+            if (img.complete) {
+                initImageDimensions();
+            }
+
+            // 行動裝置手勢支援 (Double Tap & Pinch Zoom)
+            img.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    // 行動裝置雙擊 (Double Tap) 偵測
+                    const now = Date.now();
+                    if (now - lastTapTime < 300) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.toggleImageZoom(img);
+                        lastTapTime = 0;
+                        return;
+                    }
+                    lastTapTime = now;
+                } else if (e.touches.length === 2) {
+                    // 雙指捏合縮放 (Pinch Zoom) 開始
+                    e.preventDefault();
+                    isPinching = true;
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    pinchStartDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                    pinchStartCenterX = (t1.clientX + t2.clientX) / 2;
+                    pinchStartCenterY = (t1.clientY + t2.clientY) / 2;
+                    
+                    if (initialWidth > 0) {
+                        pinchStartScale = img.offsetWidth / initialWidth;
+                    } else {
+                        pinchStartScale = 1;
+                    }
+
+                    const mediaView = this.contentEl.querySelector<HTMLElement>('.ge-media-view');
+                    if (mediaView) {
+                        pinchStartScrollLeft = mediaView.scrollLeft;
+                        pinchStartScrollTop = mediaView.scrollTop;
+
+                        const viewRect = mediaView.getBoundingClientRect();
+                        const relativeCenterX = pinchStartCenterX - viewRect.left;
+                        const relativeCenterY = pinchStartCenterY - viewRect.top;
+
+                        const startWidth = img.offsetWidth || initialWidth;
+                        const startHeight = img.offsetHeight || initialHeight;
+
+                        const imgRect = img.getBoundingClientRect();
+                        const imgLeftInView = imgRect.left - viewRect.left + pinchStartScrollLeft;
+                        const imgTopInView = imgRect.top - viewRect.top + pinchStartScrollTop;
+
+                        pinchRatioX = startWidth > 0 ? (pinchStartScrollLeft + relativeCenterX - imgLeftInView) / startWidth : 0.5;
+                        pinchRatioY = startHeight > 0 ? (pinchStartScrollTop + relativeCenterY - imgTopInView) / startHeight : 0.5;
+                    }
+                }
+            }, { passive: false });
+
+            img.addEventListener('touchmove', (e) => {
+                if (isPinching && e.touches.length === 2) {
+                    e.preventDefault();
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                    if (pinchStartDistance === 0) return;
+                    
+                    const centerScale = dist / pinchStartDistance;
+                    let newScale = pinchStartScale * centerScale;
+
+                    // 最大放大至原始尺寸의 4 倍
+                    if (newScale > 4) newScale = 4;
+
+                    currentScale = newScale;
+
+                    const mediaView = this.contentEl.querySelector<HTMLElement>('.ge-media-view');
+                    if (mediaView && initialWidth > 0 && initialHeight > 0) {
+                        if (newScale > 1) {
+                            this.isZoomed = true;
+                            this.contentEl.addClass('is-zoomed');
+
+                            mediaView.setCssStyles({
+                                overflowX: 'scroll',
+                                overflowY: 'scroll',
+                            });
+
+                            const newWidth = initialWidth * newScale;
+                            const newHeight = initialHeight * newScale;
+
+                            img.setCssStyles({
+                                width: `${newWidth}px`,
+                                height: `${newHeight}px`,
+                                maxWidth: 'none',
+                                maxHeight: 'none',
+                                position: 'relative',
+                                left: '0',
+                                top: '0',
+                                margin: 'auto',
+                                transform: 'none',
+                                cursor: 'zoom-out',
+                            });
+
+                            // 以雙指位置為中心縮放與拖曳
+                            const viewRect = mediaView.getBoundingClientRect();
+                            const currentCenterX = (t1.clientX + t2.clientX) / 2;
+                            const currentCenterY = (t1.clientY + t2.clientY) / 2;
+                            
+                            const relativeCurrentCenterX = currentCenterX - viewRect.left;
+                            const relativeCurrentCenterY = currentCenterY - viewRect.top;
+
+                            const imgLeftInView = newWidth < viewRect.width ? (viewRect.width - newWidth) / 2 : 0;
+                            const imgTopInView = newHeight < viewRect.height ? (viewRect.height - newHeight) / 2 : 0;
+
+                            mediaView.scrollLeft = (pinchRatioX * newWidth) - relativeCurrentCenterX + imgLeftInView;
+                            mediaView.scrollTop = (pinchRatioY * newHeight) - relativeCurrentCenterY + imgTopInView;
+                        } else {
+                            // 自動復原：縮小至小於或等於初始大小，自動重置為預設填滿模式
+                            this.resetImageStyles(img);
+                            this.isZoomed = false;
+                            this.contentEl.removeClass('is-zoomed');
+                            currentScale = 1;
+                        }
+                    }
+                }
+            }, { passive: false });
+
+            img.addEventListener('touchend', (e) => {
+                if (isPinching) {
+                    if (e.touches.length < 2) {
+                        isPinching = false;
+                        if (currentScale <= 1) {
+                            this.resetImageStyles(img);
+                            this.isZoomed = false;
+                            this.contentEl.removeClass('is-zoomed');
+                            currentScale = 1;
+                        }
+                    }
+                }
+            });
+
+            // 桌面端點擊事件（放大/縮小）
+            if (!Platform.isMobile) {
                 img.addEventListener('click', (event) => {
                     event.stopPropagation();
                     this.toggleImageZoom(img, event);
@@ -468,13 +654,21 @@ export class MediaModal extends Modal {
 
     // 處理媒體右鍵選單
     private onMediaContextMenu(event: MouseEvent, file: MediaFile) {
-        if ('isVirtual' in file && file.isVirtual) {
-            return;
-        }
         event.preventDefault();
         const menu = new Menu();
         if (file instanceof TFile) {
-            this.app.workspace.trigger('file-menu', menu, file, 'media-viewer');
+            try {
+                this.app.workspace.trigger('file-menu', menu, file, 'media-viewer');
+            } catch (err) {
+                console.error('Error triggering file-menu event:', err);
+            }
+        } else if ('isVirtual' in file && file.isVirtual) {
+            // 觸發自定義事件，讓其他外掛專案可以針對虛擬檔案（如 zip 中的圖片）自定義右鍵選單
+            try {
+                this.app.workspace.trigger('gridexplorer:virtual-file-menu', menu, file, 'media-viewer');
+            } catch (err) {
+                console.error('Error triggering gridexplorer:virtual-file-menu event:', err);
+            }
         }
         menu.showAtMouseEvent(event);
     }
@@ -559,5 +753,9 @@ export class MediaModal extends Modal {
             // 重置拖曳狀態
             this.isDragging = false;
         }, { passive: true });
+    }
+
+    public getActiveFile(): MediaFile {
+        return this.mediaFiles[this.currentIndex];
     }
 }

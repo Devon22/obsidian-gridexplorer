@@ -175,6 +175,7 @@ export default {
     'random_note_count': 'ランダムノートモード表示筆数',
     'random_note_notes_only': 'ノートのみ',
     'random_note_include_media_files': 'メディアファイルを含む',
+    'random_note_media_only': 'メディアファイルのみ',
     'show_tasks_mode': 'タスクモードを表示',
     'task_filter': 'タスクフィルタ',
     'uncompleted': '未完了',

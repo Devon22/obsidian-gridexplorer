@@ -176,6 +176,7 @@ export default {
     'random_note_count': '랜덤 노트 개수',
     'random_note_notes_only': '노트만',
     'random_note_include_media_files': '미디어 파일 포함',
+    'random_note_media_only': '미디어 파일만',
     'show_tasks_mode': '작업 모드 표시',
     'task_filter': '작업 필터',
     'uncompleted': '미완료',

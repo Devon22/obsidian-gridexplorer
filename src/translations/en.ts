@@ -176,6 +176,7 @@ export default {
     'random_note_count': 'Random note count',
     'random_note_notes_only': 'Notes Only',
     'random_note_include_media_files': 'Include Media Files',
+    'random_note_media_only': 'Media Only',
     'show_tasks_mode': 'Show tasks mode',
     'task_filter': 'Task filter',
     'uncompleted': 'Uncompleted',

@@ -176,6 +176,7 @@ export default {
     'random_note_count': '隨機筆記模式顯示筆數',
     'random_note_notes_only': '僅筆記',
     'random_note_include_media_files': '包含媒體檔案',
+    'random_note_media_only': '僅媒體檔案',
     'show_tasks_mode': '顯示任務模式',
     'task_filter': '任務分類',
     'uncompleted': '未完成',

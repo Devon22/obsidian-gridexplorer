@@ -95,7 +95,7 @@ interface GridViewStateData {
     searchFilesNameOnly?: boolean;
     searchMediaFiles?: boolean;
     fileNameFilterQuery?: string;
-    includeMedia?: boolean;
+    includeMedia?: boolean | 'media-only';
     minMode?: boolean;
     showIgnoredItems?: boolean;
     baseCardLayout?: 'horizontal' | 'vertical';
@@ -155,7 +155,7 @@ export class GridView extends ItemView {
     searchFilesNameOnly: boolean = false; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean = false; // 是否搜尋媒體檔案
     fileNameFilterQuery: string = ''; // 目前列表的檔名篩選關鍵字
-    includeMedia: boolean = false; // 是否包含媒體檔案
+    includeMedia: boolean | 'media-only' = false; // 是否包含媒體檔案
     selectedItemIndex: number = -1; // 當前選中的項目索引
     selectedItems: Set<number> = new Set(); // 存儲多選的項目索引
     gridItems: HTMLElement[] = []; // 存儲所有網格項目的引用

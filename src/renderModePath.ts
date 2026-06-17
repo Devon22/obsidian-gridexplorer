@@ -822,14 +822,21 @@ export function renderModePath(gridView: GridView) {
             case 'all-files': {
                 if (gridView.plugin.settings.showMediaFiles && gridView.searchQuery === '') {
                     // "顯示類型"選項
-                    const showTypeName = gridView.includeMedia ? t('random_note_include_media_files') : t('random_note_notes_only');
+                    let showTypeName = '';
+                    if (gridView.includeMedia === 'media-only') {
+                        showTypeName = t('random_note_media_only');
+                    } else if (gridView.includeMedia === true) {
+                        showTypeName = t('random_note_include_media_files');
+                    } else {
+                        showTypeName = t('random_note_notes_only');
+                    }
                     const showTypeSpan = modenameContainer.createEl('a', { text: showTypeName, cls: 'ge-sub-option' });
                     showTypeSpan.addEventListener('click', (evt) => {
                         const menu = new Menu();
                         menu.addItem((item) => {
                             item.setTitle(t('random_note_notes_only'))
                                 .setIcon('file-text')
-                                .setChecked(!gridView.includeMedia)
+                                .setChecked(gridView.includeMedia === false)
                                 .onClick(() => {
                                     gridView.includeMedia = false;
                                     void gridView.render();
@@ -838,9 +845,18 @@ export function renderModePath(gridView: GridView) {
                         menu.addItem((item) => {
                             item.setTitle(t('random_note_include_media_files'))
                                 .setIcon('file-image')
-                                .setChecked(gridView.includeMedia)
+                                .setChecked(gridView.includeMedia === true)
                                 .onClick(() => {
                                     gridView.includeMedia = true;
+                                    void gridView.render();
+                                });
+                        });
+                        menu.addItem((item) => {
+                            item.setTitle(t('random_note_media_only'))
+                                .setIcon('image')
+                                .setChecked(gridView.includeMedia === 'media-only')
+                                .onClick(() => {
+                                    gridView.includeMedia = 'media-only';
                                     void gridView.render();
                                 });
                         });

@@ -175,6 +175,7 @@ export default {
     'random_note_count': '随机笔记模式显示笔数',
     'random_note_notes_only': '仅笔记',
     'random_note_include_media_files': '包含媒体文件',
+    'random_note_media_only': '仅媒体文件',
     'show_tasks_mode': '显示任务模式',
     'task_filter': '任务分类',
     'uncompleted': '未完成',

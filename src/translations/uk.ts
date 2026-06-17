@@ -175,6 +175,7 @@ export default {
     'random_note_count': 'Кількість випадкових нотаток',
     'random_note_notes_only': 'Тільки нотатки',
     'random_note_include_media_files': 'Включити медіафайли',
+    'random_note_media_only': 'Тільки медіафайли',
     'show_tasks_mode': 'Показувати режим завдань',
     'task_filter': 'Фільтр завдань',
     'uncompleted': 'Незавершені',
