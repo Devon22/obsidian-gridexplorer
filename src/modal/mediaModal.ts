@@ -65,6 +65,8 @@ export class MediaModal extends Modal {
     private isDragging = false;
     private minSwipeDistance = 50; // 最小滑動距離
     private maxSwipeTime = 300; // 最大滑動時間（毫秒）
+    private longPressTimeout: number | null = null;
+    private isLongPress = false;
 
     constructor(app: App, file: MediaFile, mediaFiles: MediaFile[], gridView?: GridViewFocusTarget) {
         super(app);
@@ -182,9 +184,14 @@ export class MediaModal extends Modal {
 
         // 註冊右鍵選單事件
         this.contentEl.addEventListener('contextmenu', (e) => {
-            const currentFile = this.mediaFiles[this.currentIndex];
-            if (currentFile) {
-                this.onMediaContextMenu(e, currentFile);
+            e.preventDefault();
+            e.stopPropagation();
+            // 行動裝置改由觸控手勢偵測長按觸發，避免原生 contextmenu 與自訂 Menu 衝突
+            if (!Platform.isMobile) {
+                const currentFile = this.mediaFiles[this.currentIndex];
+                if (currentFile) {
+                    this.onMediaContextMenu(e, currentFile);
+                }
             }
         });
 
@@ -261,6 +268,8 @@ export class MediaModal extends Modal {
             // 創建圖片元素
             const img = activeDocument.createElement('img');
             img.className = 'ge-fullscreen-image';
+            img.draggable = false;
+            img.addEventListener('dragstart', (e) => e.preventDefault());
             img.addClass('ge-hidden'); // 先隱藏新圖片
 
             // 等待新圖片載入完成
@@ -653,8 +662,10 @@ export class MediaModal extends Modal {
     }
 
     // 處理媒體右鍵選單
-    private onMediaContextMenu(event: MouseEvent, file: MediaFile) {
-        event.preventDefault();
+    private onMediaContextMenu(event: MouseEvent | { clientX: number, clientY: number }, file: MediaFile) {
+        if (event instanceof MouseEvent) {
+            event.preventDefault();
+        }
         const menu = new Menu();
         if (file instanceof TFile) {
             try {
@@ -670,7 +681,14 @@ export class MediaModal extends Modal {
                 console.error('Error triggering gridexplorer:virtual-file-menu event:', err);
             }
         }
-        menu.showAtMouseEvent(event);
+        if (event instanceof MouseEvent) {
+            menu.showAtMouseEvent(event);
+        } else {
+            menu.showAtPosition({
+                x: event.clientX,
+                y: event.clientY
+            });
+        }
     }
 
     // 註冊觸控事件處理器（行動裝置拖曳翻頁）
@@ -686,14 +704,50 @@ export class MediaModal extends Modal {
                 return;
             }
 
+            // 行動裝置手動偵測長按的計時器管理
+            if (Platform.isMobile) {
+                if (this.longPressTimeout) {
+                    window.clearTimeout(this.longPressTimeout);
+                    this.longPressTimeout = null;
+                }
+                
+                // 如果是多指觸碰（例如準備雙指縮放），絕對不觸發長按右鍵選單
+                if (e.touches.length > 1) {
+                    this.isLongPress = false;
+                    return;
+                }
+            }
+
             const touch = e.touches[0];
             this.touchStartX = touch.clientX;
             this.touchStartY = touch.clientY;
             this.touchStartTime = Date.now();
             this.isDragging = false;
+            this.isLongPress = false;
+
+            // 行動裝置手動偵測長按（僅限單指觸控）
+            if (Platform.isMobile && e.touches.length === 1) {
+                this.longPressTimeout = window.setTimeout(() => {
+                    this.isLongPress = true;
+                    this.isDragging = false;
+                    const currentFile = this.mediaFiles[this.currentIndex];
+                    if (currentFile) {
+                        this.onMediaContextMenu({ clientX: touch.clientX, clientY: touch.clientY }, currentFile);
+                    }
+                    this.longPressTimeout = null;
+                }, 600); // 600 毫秒判定為長按
+            }
         }, { passive: true });
 
         element.addEventListener('touchmove', (e) => {
+            // 雙指以上滑動時，立即取消長按選單
+            if (e.touches.length > 1) {
+                if (this.longPressTimeout) {
+                    window.clearTimeout(this.longPressTimeout);
+                    this.longPressTimeout = null;
+                }
+            }
+
             // 只有在非縮放狀態下且非忽略目標時才處理觸控事件
             if (this.isZoomed || this.touchStartX === -1) return;
 
@@ -701,9 +755,23 @@ export class MediaModal extends Modal {
             const deltaX = Math.abs(touch.clientX - this.touchStartX);
             const deltaY = Math.abs(touch.clientY - this.touchStartY);
 
+            // 有明顯移動時取消長按計時器
+            if (deltaX > 10 || deltaY > 10) {
+                if (this.longPressTimeout) {
+                    window.clearTimeout(this.longPressTimeout);
+                    this.longPressTimeout = null;
+                }
+            }
+
             // 如果水平移動距離大於垂直移動距離，則認為是水平拖曳
             // 如果垂直移動距離大於水平移動距離，則認為是垂直拖曳
             if ((deltaX > deltaY && deltaX > 10) || (deltaY > deltaX && deltaY > 10)) {
+                // 如果已經觸發長按選單，阻止滑動與拖曳翻頁
+                if (this.isLongPress) {
+                    e.preventDefault();
+                    return;
+                }
+
                 this.isDragging = true;
 
                 // 如果是在影片/音訊上，只有在明顯滑動時才阻止預設行為（避免干擾控制條點擊）
@@ -719,8 +787,21 @@ export class MediaModal extends Modal {
         }, { passive: false });
 
         element.addEventListener('touchend', (e) => {
+            if (this.longPressTimeout) {
+                window.clearTimeout(this.longPressTimeout);
+                this.longPressTimeout = null;
+            }
+
             // 只有在非縮放狀態下且非忽略目標時才處理觸控事件
             if (this.isZoomed || this.touchStartX === -1) return;
+
+            // 如果已經觸發長按選單，則在此時攔截，防止後續觸發 click/tap 事件
+            if (this.isLongPress) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.isLongPress = false;
+                return;
+            }
 
             if (!this.isDragging) return;
 
@@ -751,6 +832,15 @@ export class MediaModal extends Modal {
             }
 
             // 重置拖曳狀態
+            this.isDragging = false;
+        }, { passive: false });
+
+        element.addEventListener('touchcancel', () => {
+            if (this.longPressTimeout) {
+                window.clearTimeout(this.longPressTimeout);
+                this.longPressTimeout = null;
+            }
+            this.isLongPress = false;
             this.isDragging = false;
         }, { passive: true });
     }

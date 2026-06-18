@@ -1723,6 +1723,9 @@ a.ge-current-folder:hover {
     position: relative;
     width: 100%;
     height: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /* Media View */
@@ -1747,6 +1750,9 @@ a.ge-current-folder:hover {
     max-width: 100vw;
     max-height: 100vh;
     object-fit: contain;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .ge-fullscreen-video {
