@@ -6,6 +6,7 @@ export default {
     'sorting': '排序方式',
     'refresh': '刷新',
     'reselect': '重新选择位置',
+    'backlinks': '反向链接',
     'no_backlinks': '没有反向链接',
     'back': '返回',
     'search': '搜索',
@@ -38,6 +39,7 @@ export default {
     'save': '保存',
     'option': '选项',
     'add_option': '添加选项',
+    'make_a_copy': '创建副本',
 
     // 视图标题
     'grid_view_title': '网格视图',
@@ -184,6 +186,8 @@ export default {
     'foldernote_display_settings_desc': '设置文件夹笔记的显示方式',
     'all': '全部',
     'default': '默认',
+    'enable': '启用',
+    'disable': '禁用',
     'hidden': '隐藏',
     'all_bookmarks': '全部书签',
     'ungrouped_bookmarks': '无群组书签',

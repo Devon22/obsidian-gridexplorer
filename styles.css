@@ -129,39 +129,9 @@
     color: var(--text-muted);
 }
 
-/* 圖片圖示 Image Icon */
-.ge-icon-container.ge-img {
-    color: var(--color-blue);
-}
-
-/* 影片圖示 Video Icon */
-.ge-icon-container.ge-video {
-    color: var(--color-red);
-}
-
-/* 音樂圖示 Audio Icon */
-.ge-icon-container.ge-audio {
-    color: var(--color-purple);
-}
-
-/* PDF圖示 PDF Icon */
-.ge-icon-container.ge-pdf {
-    color: var(--color-orange);
-}
-
-/* Canvas圖示 Canvas Icon */
-.ge-icon-container.ge-canvas {
-    color: var(--color-green);
-}
-
-/* 基礎圖示 Base Icon */
-.ge-icon-container.ge-base {
-    color: var(--color-cyan);
-}
-
 /* 標題 Title */
 .ge-title {
-    margin: 0 0 0 3px;
+    margin: 0;
     font-size: var(--title-font-size);
     color: var(--text-normal);
     overflow: hidden;
@@ -176,22 +146,11 @@
     align-items: flex-start;
 }
 
-.ge-title-container.has-multiline-title .ge-icon-container {
-    width: 16px;
-    height: 16px;
-    margin-top: 2px;
-}
-
-.ge-title-container.has-multiline-title .ge-icon-container svg {
-    width: 14px;
-    height: 14px;
-}
-
 .ge-title.ge-multiline-title {
     white-space: normal;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     line-height: 1.3;
     overflow: hidden;
@@ -224,6 +183,53 @@
     overflow: visible;
     height: auto;
 }
+
+/* 非文件檔預覽樣式 */
+.ge-content-area p.ge-non-doc-preview {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: auto;
+}
+
+.ge-non-doc-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+}
+
+.ge-non-doc-icon.ge-img {
+    color: var(--color-blue);
+}
+
+.ge-non-doc-icon.ge-video {
+    color: var(--color-red);
+}
+
+.ge-non-doc-icon.ge-audio {
+    color: var(--color-purple);
+}
+
+.ge-non-doc-icon.ge-pdf {
+    color: var(--color-orange);
+}
+
+.ge-non-doc-icon.ge-canvas {
+    color: var(--color-green);
+}
+
+.ge-non-doc-icon.ge-base {
+    color: var(--color-cyan);
+}
+
+.ge-non-doc-icon.ge-zip {
+    color: var(--color-folder); /* obsidian color or fallback */
+}
+
 
 /* 圖片區域 Image Area */
 .ge-image-area {
@@ -1058,6 +1064,7 @@ span.ge-mode-title {
     gap: 8px;
     flex-grow: 1;
     min-width: 0;
+    cursor: pointer;
 }
 
 .ge-custom-mode-icon {
@@ -1151,6 +1158,7 @@ span.ge-mode-title {
     gap: 8px;
     flex-grow: 1;
     min-width: 0;
+    cursor: pointer;
 }
 
 .ge-display-mode-icon {
@@ -2296,10 +2304,9 @@ a.ge-current-folder:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-left: 20px;
-    flex: 1;
-    min-width: 0;
+    padding-left: 15px;
 }
+
 
 .ge-note-top-right {
     display: flex;
@@ -2330,48 +2337,45 @@ a.ge-current-folder:hover {
 .ge-note-info-button {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background-color: var(--interactive-normal);
-    border-radius: var(--button-radius);
-    color: var(--text-normal);
-    font-size: 14px;
+    justify-content: center;
+    padding: 6px;
+    background-color: transparent;
+    border-radius: var(--clickable-icon-radius, 4px);
+    color: var(--icon-color);
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.is-tablet .ge-note-close-button:not(.clickable-icon),
-.is-tablet .ge-note-edit-button:not(.clickable-icon),
-.is-tablet .ge-note-info-button:not(.clickable-icon) {
-    padding: 6px 12px;
+    transition: background-color 0.2s;
+    border: none;
+    box-shadow: none;
+    outline: none;
 }
 
 .ge-note-close-button:hover,
 .ge-note-edit-button:hover,
 .ge-note-info-button:hover {
-    background-color: var(--interactive-hover);
-    transform: translateY(-1px);
-    opacity: 1;
+    background-color: var(--background-modifier-hover);
+    color: var(--icon-color-focused);
 }
 
 .ge-note-close-button:active,
 .ge-note-edit-button:active,
 .ge-note-info-button:active {
-    transform: translateY(0);
+    background-color: var(--background-modifier-active);
 }
 
 .is-mobile .ge-note-info-button:focus,
 .is-mobile .ge-note-info-button:focus-visible {
     outline: none;
-    background-color: var(--interactive-normal);
-    transform: none;
+    background-color: transparent;
 }
 
 .ge-note-content-container {
-    max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: var(--file-margins);
     min-height: 100%;
+}
+
+.is-mobile .ge-note-content-container {
+    padding-top: 15px;
 }
 
 .ge-note-title {
@@ -3295,9 +3299,7 @@ a.ge-current-folder:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-left: 20px;
-    flex: 1;
-    min-width: 0;
+    padding-left: 15px;
 }
 
 .ge-zip-top-right {
@@ -3308,33 +3310,37 @@ a.ge-current-folder:hover {
 }
 
 .ge-zip-title {
-    font-size: 1em;
-    font-weight: bold;
-    color: var(--text-normal);
+    flex: 1;
+    text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
+    font-size: 0.95em;
+    color: var(--text-muted);
+    min-width: 0;
 }
 
 .ge-zip-close-button,
 .ge-zip-open-button {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background-color: var(--interactive-normal);
-    border-radius: var(--button-radius);
-    color: var(--text-normal);
-    font-size: 14px;
+    justify-content: center;
+    padding: 6px;
+    background-color: transparent;
+    border-radius: var(--clickable-icon-radius, 4px);
+    color: var(--icon-color);
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: background-color 0.2s;
     border: none;
+    box-shadow: none;
+    outline: none;
 }
 
 .ge-zip-close-button:hover,
 .ge-zip-open-button:hover {
-    background-color: var(--interactive-hover);
-    transform: translateY(-1px);
+    background-color: var(--background-modifier-hover);
+    color: var(--icon-color-focused);
 }
 
 .ge-zip-scroll-container {
@@ -3422,7 +3428,7 @@ a.ge-current-folder:hover {
 
 @media (hover: hover) {
     .ge-folder-button:hover {
-        background-color: var(--background-modifier-hover);
+        background-color: var(--text-selection);
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
@@ -3502,4 +3508,106 @@ a.ge-current-folder:hover {
 .ge-folder-button.ge-folder-color-custom {
     background-color: var(--ge-folder-color-bg);
     border-color: var(--ge-folder-color-border);
+}
+
+/* 筆記預覽內部關聯連結區塊 */
+.ge-note-links-section {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--background-modifier-border);
+    margin-bottom: 40px;
+}
+
+.ge-note-links-header {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.ge-note-links-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ge-note-link-item {
+    font-size: 0.85em;
+    padding: 4px 10px;
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 12px;
+    color: var(--text-normal);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.ge-note-link-item:hover {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* 歷史導航按鈕 */
+.ge-note-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background-color: transparent;
+    border-radius: var(--clickable-icon-radius, 4px);
+    color: var(--icon-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.ge-note-nav-button:hover:not(:disabled) {
+    background-color: var(--background-modifier-hover);
+    color: var(--icon-color-focused);
+}
+
+.ge-note-nav-button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.ge-note-nav-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+
+/* 頂部列與標題置中 */
+.ge-note-title {
+    flex: 1;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    font-size: 0.95em;
+    color: var(--text-muted);
+    min-width: 0;
+}
+
+/* 筆記內第一行標題 (預設顯示) */
+.ge-note-internal-title {
+    margin-top: 0px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 12px;
+    font-size: var(--inline-title-size);
+    font-weight: var(--inline-title-weight);
+    line-height: var(--inline-title-line-height);
+    font-style: var(--inline-title-style);
+    font-variant: var(--inline-title-variant);
+    font-family: var(--inline-title-font);
+    letter-spacing: -0.015em;
 }

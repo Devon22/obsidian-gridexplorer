@@ -77,6 +77,18 @@ export class FileWatcher {
                 if (file instanceof TFile) {
                     // 如果有 GridView 實例
                     if (this.gridView) {
+                        // 如果刪除的檔案剛好是目前正在預覽的檔案，應隱藏預覽
+                        if (this.gridView.isShowingNote || this.gridView.isShowingZip) {
+                            const currentFile = this.gridView.previewManager.getCurrentFile();
+                            if (currentFile && file.path === currentFile.path) {
+                                if (this.gridView.isShowingNote) {
+                                    this.gridView.hideNoteInGrid();
+                                } else {
+                                    this.gridView.hideZipInGrid();
+                                }
+                            }
+                        }
+
                         // 找到當前檔案在 GridView 中的索引
                         const gridItemIndex = this.gridView.gridItems.findIndex((item: HTMLElement) => 
                             item.dataset.filePath === file.path
@@ -98,6 +110,28 @@ export class FileWatcher {
         this.plugin.registerEvent(
             this.app.vault.on('rename', (file, oldPath) => {
                 if (file instanceof TFile) {
+                    // 如果重命名的檔案是目前正在預覽的檔案，需要更新預覽標題與內容
+                    if (this.gridView.isShowingNote || this.gridView.isShowingZip) {
+                        const currentFile = this.gridView.previewManager.getCurrentFile();
+                        if (currentFile && (file === currentFile || currentFile.path === oldPath || currentFile.path === file.path)) {
+                            if (this.gridView.isShowingNote) {
+                                // 更新頂部標題文字
+                                const titleEl = this.gridView.noteViewContainer?.querySelector('.ge-note-title');
+                                if (titleEl) {
+                                    titleEl.textContent = file.basename;
+                                }
+                                // 更新預覽內容（這會重新讀取並渲染，順便更新內部的第一行標題與 backlinks）
+                                void this.gridView.previewManager.updateCurrentPreview();
+                            } else if (this.gridView.isShowingZip) {
+                                // ZIP 預覽：更新頂部標題文字
+                                const titleEl = this.gridView.zipViewContainer?.querySelector('.ge-zip-title');
+                                if (titleEl) {
+                                    titleEl.textContent = file.basename;
+                                }
+                            }
+                        }
+                    }
+
                     const fileDirPath = file.path.split('/').slice(0, -1).join('/') || '/';
                     const oldDirPath = oldPath.split('/').slice(0, -1).join('/') || '/';
                     // 來源與目標路徑不同，表示移動檔案

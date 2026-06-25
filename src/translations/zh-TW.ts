@@ -6,6 +6,7 @@ export default {
     'sorting': '排序方式',
     'refresh': '重新整理',
     'reselect': '重新選擇位置',
+    'backlinks': '反向連結',
     'no_backlinks': '沒有反向連結',
     'back': '返回',
     'search': '搜尋',
@@ -39,6 +40,7 @@ export default {
     'save': '儲存',
     'option': '選項',
     'add_option': '新增選項',
+    'make_a_copy': "建立副本",
 
     // 視圖標題
     'grid_view_title': '網格視圖',
@@ -185,6 +187,8 @@ export default {
     'foldernote_display_settings_desc': '設定資料夾筆記的顯示方式',
     'all': '全部',
     'default': '預設',
+    'enable': '啟用',
+    'disable': '停用',
     'hidden': '隱藏',
     'all_bookmarks': '全部書籤',
     'ungrouped_bookmarks': '無群組書籤',

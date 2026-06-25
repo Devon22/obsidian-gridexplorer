@@ -566,7 +566,8 @@ export function renderHeaderButton(gridView: GridView) {
             .setIcon('minimize-2')
             .setChecked(gridView.minMode)
             .onClick(() => {
-                gridView.minMode = !gridView.minMode;
+                gridView.baseMinMode = !gridView.minMode;
+                gridView.minMode = gridView.baseMinMode;
                 gridView.app.workspace.requestSaveLayout();
                 void gridView.render();
             });
@@ -579,7 +580,8 @@ export function renderHeaderButton(gridView: GridView) {
                 .setIcon('calendar')
                 .setChecked(gridView.showDateDividers)
                 .onClick(() => {
-                    gridView.showDateDividers = !gridView.showDateDividers;
+                    gridView.baseShowDateDividers = !gridView.showDateDividers;
+                    gridView.showDateDividers = gridView.baseShowDateDividers;
                     gridView.app.workspace.requestSaveLayout();
                     void gridView.render();
                 });

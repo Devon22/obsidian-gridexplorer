@@ -6,6 +6,7 @@ export default {
     'sorting': 'Sort by',
     'refresh': 'Refresh',
     'reselect': 'Reselect',
+    'backlinks': 'Backlinks',
     'no_backlinks': 'No backlinks',
     'back': 'Back',
     'search': 'Search',
@@ -39,6 +40,7 @@ export default {
     'save': 'Save',
     'option': 'Option',
     'add_option': 'Add option',
+    'make_a_copy': 'Make a copy',
 
     // View Titles
     'grid_view_title': 'Grid view',
@@ -185,6 +187,8 @@ export default {
     'foldernote_display_settings_desc': 'Set the display mode of folder notes',
     'all': 'All',
     'default': 'Default',
+    'enable': 'Enable',
+    'disable': 'Disable',
     'hidden': 'Hidden',
     'all_bookmarks': 'All Bookmarks',
     'ungrouped_bookmarks': 'Ungrouped Bookmarks',

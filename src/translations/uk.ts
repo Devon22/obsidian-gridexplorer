@@ -6,6 +6,7 @@ export default {
     'sorting': 'Сортувати за',
     'refresh': 'Оновити',
     'reselect': 'Перевибрати',
+    'backlinks': 'Зворотні посилання',
     'no_backlinks': 'Немає зворотних посилань',
     'back': 'Назад',
     'search': 'Пошук',
@@ -38,6 +39,7 @@ export default {
     'save': 'Зберегти',
     'option': 'Опція',
     'add_option': 'Додати опцію',
+    'make_a_copy': 'Створити копію',
 
     // View Titles
     'grid_view_title': 'Сітковий вигляд',
@@ -184,6 +186,8 @@ export default {
     'foldernote_display_settings_desc': 'Встановіть режим відображення нотаток папок',
     'all': 'Усі',
     'default': 'За замовчуванням',
+    'enable': 'Увімкнути',
+    'disable': 'Вимкнути',
     'hidden': 'Приховані',
     'all_bookmarks': 'Усі закладки',
     'ungrouped_bookmarks': 'Без групи',

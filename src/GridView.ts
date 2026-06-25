@@ -96,12 +96,14 @@ interface GridViewStateData {
     searchMediaFiles?: boolean;
     fileNameFilterQuery?: string;
     includeMedia?: boolean | 'media-only';
+    baseMinMode?: boolean;
     minMode?: boolean;
     showIgnoredItems?: boolean;
     baseCardLayout?: 'horizontal' | 'vertical';
     cardLayout?: 'horizontal' | 'vertical';
     hideHeaderElements?: boolean;
     showFileNameFilter?: boolean;
+    baseShowDateDividers?: boolean;
     showDateDividers?: boolean;
     showNoteTags?: boolean;
     recentSources?: string[];
@@ -163,9 +165,11 @@ export class GridView extends ItemView {
     fileWatcher: FileWatcher | null = null; // 檔案監聽器
     recentSources: string[] = []; // 歷史記錄
     futureSources: string[] = []; // 未來紀錄（前進堆疊）
-    minMode: boolean = false; // 最小模式
+    baseMinMode: boolean = false; // 基礎最小模式（不受資料夾臨時覆蓋影響）
+    minMode: boolean = false; // 目前實際使用的最小模式（可能被資料夾 metadata 臨時覆蓋）
     showIgnoredItems: boolean = false; // 顯示忽略的資料夾及檔案
-    showDateDividers: boolean = false; // 顯示日期分隔器
+    baseShowDateDividers: boolean = false; // 基礎顯示日期分隔器狀態（不受資料夾臨時覆蓋影響）
+    showDateDividers: boolean = false; // 目前實際使用的顯示日期分隔器狀態（可能被資料夾 metadata 臨時覆蓋）
     showNoteTags: boolean = false; // 顯示筆記標籤
     showFileNameFilter: boolean = true; // 顯示檔名篩選輸入框
     pinnedList: string[] = []; // 置頂清單
@@ -198,7 +202,10 @@ export class GridView extends ItemView {
         this.sortType = this.baseSortType;
         this.baseCardLayout = this.plugin.settings.cardLayout;
         this.cardLayout = this.baseCardLayout;
-        this.showDateDividers = this.plugin.settings.dateDividerMode !== 'none';
+        this.baseMinMode = false;
+        this.minMode = this.baseMinMode;
+        this.baseShowDateDividers = this.plugin.settings.dateDividerMode !== 'none';
+        this.showDateDividers = this.baseShowDateDividers;
         this.showNoteTags = this.plugin.settings.showNoteTags;
         this.showFileNameFilter = this.plugin.settings.showFileNameFilter;
         this.searchCurrentLocationOnly = this.plugin.settings.searchCurrentLocationOnly;
@@ -401,6 +408,14 @@ export class GridView extends ItemView {
             return;
         }
 
+        // 當切換來源路徑或模式時，應先隱藏當前筆記/ZIP預覽，並清空預覽歷史記錄
+        if (this.isShowingNote) {
+            this.hideNoteInGrid();
+        }
+        if (this.isShowingZip) {
+            this.hideZipInGrid();
+        }
+
         // 記錄之前的狀態到歷史記錄中（如果有）
         if (this.sourceMode && recordHistory) {
             this.pushHistory(
@@ -433,14 +448,30 @@ export class GridView extends ItemView {
             const mdFile = this.app.vault.getAbstractFileByPath(mdFilePath);
             let tempLayout: 'horizontal' | 'vertical' = this.baseCardLayout;
             let folderSort: string | undefined;
+            let tempMinMode: boolean = this.baseMinMode;
+            let tempShowDateDividers: boolean = this.baseShowDateDividers;
+
             if (mdFile instanceof TFile) {
                 const metadata = this.app.metadataCache.getFileCache(mdFile)?.frontmatter;
                 folderSort = typeof metadata?.sort === 'string' ? metadata.sort : undefined;
                 if (metadata?.cardLayout === 'horizontal' || metadata?.cardLayout === 'vertical') {
                     tempLayout = metadata.cardLayout as 'horizontal' | 'vertical';
                 }
+                if (metadata?.minMode === true || metadata?.minMode === 'true') {
+                    tempMinMode = true;
+                } else if (metadata?.minMode === false || metadata?.minMode === 'false') {
+                    tempMinMode = false;
+                }
+                if (metadata?.showDateDividers === true || metadata?.showDateDividers === 'true') {
+                    tempShowDateDividers = true;
+                } else if (metadata?.showDateDividers === false || metadata?.showDateDividers === 'false') {
+                    tempShowDateDividers = false;
+                }
             }
             this.cardLayout = tempLayout;
+            this.minMode = tempMinMode;
+            this.showDateDividers = tempShowDateDividers;
+
             // 根據資料夾 frontmatter 的 sort 覆蓋實際排序，否則使用 baseSortType
             this.sortType = folderSort && typeof folderSort === 'string' && folderSort.trim() !== ''
                 ? folderSort
@@ -448,6 +479,8 @@ export class GridView extends ItemView {
         } else {
             // 非資料夾模式時
             this.cardLayout = this.baseCardLayout; // 回復基礎卡片排列
+            this.minMode = this.baseMinMode; // 回復基礎最小化模式
+            this.showDateDividers = this.baseShowDateDividers; // 回復基礎日期分隔器模式
             this.sourcePath = '/'; // 強制設定路徑為根目錄 (創建筆記用)
 
             // 切換到自訂模式時：重設選項索引，並將排序設為 'none'
@@ -1136,7 +1169,34 @@ export class GridView extends ItemView {
                         } else {
                             // 其他檔案顯示副檔名
                             if (!this.minMode) {
-                                contentArea.createEl('p', { text: file.extension.toUpperCase() });
+                                const extension = file.extension.toLowerCase();
+                                const pEl = contentArea.createEl('p', { cls: 'ge-non-doc-preview' });
+                                const iconSpan = pEl.createSpan({ cls: 'ge-non-doc-icon' });
+                                let iconName = 'file';
+                                if (isImageFile(file)) {
+                                    iconName = 'image';
+                                    iconSpan.addClass('ge-img');
+                                } else if (isVideoFile(file)) {
+                                    iconName = 'play-circle';
+                                    iconSpan.addClass('ge-video');
+                                } else if (isAudioFile(file)) {
+                                    iconName = 'music';
+                                    iconSpan.addClass('ge-audio');
+                                } else if (extension === 'pdf') {
+                                    iconName = 'paperclip';
+                                    iconSpan.addClass('ge-pdf');
+                                } else if (extension === 'canvas') {
+                                    iconName = 'layout-dashboard';
+                                    iconSpan.addClass('ge-canvas');
+                                } else if (extension === 'base') {
+                                    iconName = 'layout-list';
+                                    iconSpan.addClass('ge-base');
+                                } else if (extension === 'zip') {
+                                    iconName = 'folder-archive';
+                                    iconSpan.addClass('ge-zip');
+                                }
+                                setIcon(iconSpan, iconName);
+                                pEl.createSpan({ text: file.extension.toUpperCase() });
                             }
 
                             setTooltip(fileEl, `${file.name}`, { delay: 2000 })
@@ -1565,36 +1625,6 @@ export class GridView extends ItemView {
             fileEl.addClass('ge-media-card');
         }
 
-        // 添加檔案類型圖示
-        if (isImageFile(file)) {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-img');
-            setIcon(iconContainer, 'image');
-        } else if (isVideoFile(file)) {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-video');
-            setIcon(iconContainer, 'play-circle');
-        } else if (isAudioFile(file)) {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-audio');
-            setIcon(iconContainer, 'music');
-        } else if (extension === 'pdf') {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-pdf');
-            setIcon(iconContainer, 'paperclip');
-        } else if (extension === 'canvas') {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-canvas');
-            setIcon(iconContainer, 'layout-dashboard');
-        } else if (extension === 'base') {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-base');
-            setIcon(iconContainer, 'layout-list');
-        } else if (extension === 'zip') {
-            const iconContainer = titleContainer.createDiv('ge-icon-container ge-zip');
-            setIcon(iconContainer, 'folder-archive');
-        } else if (extension === 'md' || extension === 'txt') {
-            const iconContainer = titleContainer.createDiv('ge-icon-container');
-            setIcon(iconContainer, 'file-text');
-        } else {
-            const iconContainer = titleContainer.createDiv('ge-icon-container');
-            setIcon(iconContainer, 'file');
-        }
-
         // 創建標題（立即載入）
         const shouldShowExtension = this.minMode && extension !== 'md';
         const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
@@ -2006,6 +2036,41 @@ export class GridView extends ItemView {
                 });
             }
 
+            // 複製選項
+            menu.addItem((item) => {
+                item
+                    .setTitle(t("make_a_copy"))
+                    .setIcon("copy")
+                    .setSection?.("action")
+                    .onClick(async () => {
+                        for (const f of selectedFiles) {
+                            const parentPath = f.parent ? f.parent.path : "";
+                            let copyPath = "";
+                            if (parentPath && parentPath !== "/") {
+                                copyPath = `${parentPath}/${f.basename} 1.${f.extension}`;
+                            } else {
+                                copyPath = `${f.basename} 1.${f.extension}`;
+                            }
+                            
+                            let counter = 1;
+                            while (this.app.vault.getAbstractFileByPath(copyPath)) {
+                                counter++;
+                                if (parentPath && parentPath !== "/") {
+                                    copyPath = `${parentPath}/${f.basename} ${counter}.${f.extension}`;
+                                } else {
+                                    copyPath = `${f.basename} ${counter}.${f.extension}`;
+                                }
+                            }
+                            
+                            try {
+                                await this.app.vault.copy(f, copyPath);
+                            } catch (err) {
+                                console.error("Failed to copy file:", err);
+                            }
+                        }
+                    });
+            });
+
             // 刪除選項
             menu.addItem((item) => {
                 (item as MenuItemWithWarning).setWarning(true);
@@ -2390,12 +2455,14 @@ export class GridView extends ItemView {
                 searchMediaFiles: this.searchMediaFiles,
                 fileNameFilterQuery: this.fileNameFilterQuery,
                 includeMedia: this.includeMedia,
+                baseMinMode: this.baseMinMode,
                 minMode: this.minMode,
                 showIgnoredItems: this.showIgnoredItems,
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
                 hideHeaderElements: this.hideHeaderElements,
                 showFileNameFilter: this.showFileNameFilter,
+                baseShowDateDividers: this.baseShowDateDividers,
                 showDateDividers: this.showDateDividers,
                 showNoteTags: this.showNoteTags,
                 recentSources: this.recentSources,
@@ -2418,13 +2485,15 @@ export class GridView extends ItemView {
             this.searchMediaFiles = state.state.searchMediaFiles ?? false;
             this.fileNameFilterQuery = state.state.fileNameFilterQuery ?? '';
             this.includeMedia = state.state.includeMedia ?? false;
-            this.minMode = state.state.minMode ?? false;
+            this.baseMinMode = state.state.baseMinMode ?? state.state.minMode ?? false;
+            this.minMode = state.state.minMode ?? this.baseMinMode;
             this.showIgnoredItems = state.state.showIgnoredItems ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout;
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;
             this.showFileNameFilter = state.state.showFileNameFilter ?? this.plugin.settings.showFileNameFilter;
-            this.showDateDividers = state.state.showDateDividers ?? this.plugin.settings.dateDividerMode !== 'none';
+            this.baseShowDateDividers = state.state.baseShowDateDividers ?? state.state.showDateDividers ?? (this.plugin.settings.dateDividerMode !== 'none');
+            this.showDateDividers = state.state.showDateDividers ?? this.baseShowDateDividers;
             this.showNoteTags = state.state.showNoteTags ?? this.plugin.settings.showNoteTags;
             this.recentSources = state.state.recentSources ?? [];
             this.futureSources = state.state.futureSources ?? [];

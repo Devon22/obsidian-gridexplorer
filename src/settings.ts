@@ -110,7 +110,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     verticalImageAreaHeight: 180, // 直向卡片 - 圖片區域高度
     verticalCardImagePosition: 'top', // 直向卡片圖片位置
     titleFontSize: 1.0, // 筆記標題的字型大小，預設 1.0
-    multiLineTitle: false,
+    multiLineTitle: true, // 標題允許兩行顯示
     summaryLength: 100, // 筆記摘要的字數，預設 100
     enableFileWatcher: true, // 預設啟用檔案監控
     folderDisplayStyle: 'show', // 預設直接顯示資料夾
@@ -155,7 +155,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     quickAccessCommandPath: '', // Path used by "Open quick access folder" command
     useQuickAccessAsNewTabMode: 'default',
     quickAccessModeType: 'all-files', // Default quick access view type
-    showNoteInGrid: false, // 預設不在 grid container 中顯示筆記
+    showNoteInGrid: Platform.isMobile ? true : false, // 行動裝置: 預設在網格中顯示筆記，非行動裝置預設不在網格中顯示筆記
     closeGridViewOnOpenNote: false, // 預設開啟筆記檔案時不關閉目前的網格視圖
     openNoteLayout: 'default', // 預設開啟筆記的方式
     searchCurrentLocationOnly: false, // 預設搜尋所有筆記
@@ -307,6 +307,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             const infoEl = itemEl.createDiv({ cls: 'ge-custom-mode-info' });
             infoEl.createSpan({ text: mode.icon || '🧩', cls: 'ge-custom-mode-icon' });
             infoEl.createSpan({ text: mode.displayName, cls: 'ge-custom-mode-name' });
+            infoEl.addEventListener('click', () => {
+                checkbox.click();
+            });
 
             // 操作按鈕
             const actionsEl = itemEl.createDiv({ cls: 'ge-custom-mode-actions' });
@@ -523,6 +526,9 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             const infoEl = itemEl.createDiv({ cls: 'ge-display-mode-info' });
             infoEl.createSpan({ text: icon, cls: 'ge-display-mode-icon' });
             infoEl.createSpan({ text: title, cls: 'ge-display-mode-name' });
+            infoEl.addEventListener('click', () => {
+                checkbox.click();
+            });
 
             if (extraRenderer) {
                 const extraEl = itemEl.createDiv({ cls: 'ge-display-mode-extra' });

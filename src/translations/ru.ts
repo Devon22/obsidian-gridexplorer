@@ -6,6 +6,7 @@ export default {
     'sorting': 'Сортировать по',
     'refresh': 'Обновить',
     'reselect': 'Перевыбрать',
+    'backlinks': 'Обратные ссылки',
     'no_backlinks': 'Нет обратных ссылок',
     'back': 'Назад',
     'search': 'Поиск',
@@ -38,6 +39,7 @@ export default {
     'save': 'Сохранить',
     'option': 'Опция',
     'add_option': 'Добавить опцию',
+    'make_a_copy': 'Создать копию',
 
     // View Titles
     'grid_view_title': 'Сеточный вид',
@@ -184,6 +186,8 @@ export default {
     'foldernote_display_settings_desc': 'Установить режим отображения заметок папок',
     'all': 'Все',
     'default': 'По умолчанию',
+    'enable': 'Включить',
+    'disable': 'Выключить',
     'hidden': 'Скрытые',
     'all_bookmarks': 'Все закладки',
     'ungrouped_bookmarks': 'Без группы',

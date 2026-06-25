@@ -227,17 +227,6 @@ export class ExplorerView extends ItemView {
             if (newMode !== this.lastMode || newPath !== this.lastPath) {
                 this.lastMode = newMode;
                 this.lastPath = newPath;
-                
-                // 當模式切換時，清理搜尋狀態以避免資料夾被強制展開
-                if (this.searchQuery.trim()) {
-                    this.searchQuery = '';
-                    if (this.searchInputEl) {
-                        this.searchInputEl.value = '';
-                    }
-                    // 同步搜尋輸入框狀態
-                    this.syncSearchInput();
-                }
-                
                 schedule();
             }
         });
@@ -1031,7 +1020,7 @@ export class ExplorerView extends ItemView {
         const name = header.createSpan({ cls: 'ge-explorer-folder-name' });
         name.textContent = folder.name || '/';
 
-        this.setupFolderIcon(folder, name, toggle, expanded);
+        this.setupFolderIcon(folder, name, toggle, expanded, icon);
         this.highlightActiveFolder(folder, header);
         this.attachDropTarget(header, folder.path);
 
@@ -1044,7 +1033,7 @@ export class ExplorerView extends ItemView {
     }
 
     // 設置資料夾圖示
-    private setupFolderIcon(folder: TFolder, name: HTMLElement, toggle: HTMLElement, expanded: boolean) {
+    private setupFolderIcon(folder: TFolder, name: HTMLElement, toggle: HTMLElement, expanded: boolean, iconEl: HTMLElement) {
         // 根據同名筆記設置背景色與圖示
         const iconFromFrontmatter = this.getFolderIconFromFrontmatter(folder, name);
 
@@ -1053,7 +1042,16 @@ export class ExplorerView extends ItemView {
             const customFolderIcon = this.plugin.settings?.customFolderIcon ?? '';
             if (customFolderIcon && name) {
                 name.textContent = `${customFolderIcon} ${folder.name || '/'}`.trim();
+                if (customFolderIcon.trim()) {
+                    iconEl.setCssProps({ display: 'none' });
+                } else {
+                    iconEl.setCssProps({ display: '' });
+                }
+            } else {
+                iconEl.setCssProps({ display: '' });
             }
+        } else {
+            iconEl.setCssProps({ display: 'none' });
         }
 
         // 設置切換圖示

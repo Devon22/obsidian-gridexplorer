@@ -9,6 +9,8 @@ export interface FolderNoteSettings {
     icon: string;
     isPinned: boolean;
     cardLayout: '' | 'horizontal' | 'vertical';
+    minMode: '' | 'true' | 'false';
+    showDateDividers: '' | 'true' | 'false';
 }
 
 interface FolderNoteFrontmatter {
@@ -17,6 +19,8 @@ interface FolderNoteFrontmatter {
     icon?: unknown;
     cardLayout?: unknown;
     pinned?: unknown;
+    minMode?: unknown;
+    showDateDividers?: unknown;
 }
 
 function getStringValue(value: unknown, fallback = ''): string {
@@ -43,7 +47,9 @@ export class FolderNoteSettingsModal extends Modal {
         color: '',
         icon: '📁',
         isPinned: false,
-        cardLayout: ''
+        cardLayout: '',
+        minMode: '',
+        showDateDividers: ''
     };
     existingFile: TFile | null = null;
     
@@ -180,6 +186,34 @@ export class FolderNoteSettingsModal extends Modal {
                 });
             });
 
+        // 最小化模式選項
+        new Setting(contentEl)
+            .setName(t('min_mode'))
+            .setDesc(t('display_minimized_desc'))
+            .addDropdown(drop => {
+                drop.addOption('', t('default'));
+                drop.addOption('true', t('enable'));
+                drop.addOption('false', t('disable'));
+                drop.setValue(this.settings.minMode);
+                drop.onChange(async (value) => {
+                    this.settings.minMode = value as '' | 'true' | 'false';
+                });
+            });
+
+        // 顯示日期分隔器選項
+        new Setting(contentEl)
+            .setName(t('show_date_dividers'))
+            .setDesc(t('show_date_dividers_desc'))
+            .addDropdown(drop => {
+                drop.addOption('', t('default'));
+                drop.addOption('true', t('enable'));
+                drop.addOption('false', t('disable'));
+                drop.setValue(this.settings.showDateDividers);
+                drop.onChange(async (value) => {
+                    this.settings.showDateDividers = value as '' | 'true' | 'false';
+                });
+            });
+
         // 置頂勾選框
         new Setting(contentEl)
             .setName(t('foldernote_pinned'))
@@ -225,6 +259,24 @@ export class FolderNoteSettingsModal extends Modal {
                 const cardLayout = getStringValue(frontmatter.cardLayout);
                 this.settings.cardLayout =
                     cardLayout === 'horizontal' || cardLayout === 'vertical' ? cardLayout : '';
+
+                const minMode = frontmatter.minMode;
+                if (minMode === true || minMode === 'true') {
+                    this.settings.minMode = 'true';
+                } else if (minMode === false || minMode === 'false') {
+                    this.settings.minMode = 'false';
+                } else {
+                    this.settings.minMode = '';
+                }
+
+                const showDateDividers = frontmatter.showDateDividers;
+                if (showDateDividers === true || showDateDividers === 'true') {
+                    this.settings.showDateDividers = 'true';
+                } else if (showDateDividers === false || showDateDividers === 'false') {
+                    this.settings.showDateDividers = 'false';
+                } else {
+                    this.settings.showDateDividers = '';
+                }
 
                 if (Array.isArray(frontmatter.pinned)) {
                     this.settings.isPinned = frontmatter.pinned.some((item: unknown) => {
@@ -283,6 +335,22 @@ export class FolderNoteSettingsModal extends Modal {
                     frontmatter.cardLayout = this.settings.cardLayout;
                 } else {
                     delete frontmatter.cardLayout;
+                }
+
+                if (this.settings.minMode === 'true') {
+                    frontmatter.minMode = true;
+                } else if (this.settings.minMode === 'false') {
+                    frontmatter.minMode = false;
+                } else {
+                    delete frontmatter.minMode;
+                }
+
+                if (this.settings.showDateDividers === 'true') {
+                    frontmatter.showDateDividers = true;
+                } else if (this.settings.showDateDividers === 'false') {
+                    frontmatter.showDateDividers = false;
+                } else {
+                    delete frontmatter.showDateDividers;
                 }
                 
                 const folderName = `${this.folder.name}.md`;

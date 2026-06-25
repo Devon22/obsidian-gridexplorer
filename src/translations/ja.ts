@@ -6,6 +6,7 @@ export default {
     'sorting': '並び替え',
     'refresh': '更新',
     'reselect': '再選択',
+    'backlinks': 'バックリンク',
     'no_backlinks': 'バックリンクなし',
     'back': '戻る',
     'search': '検索',
@@ -38,6 +39,7 @@ export default {
     'save': '保存',
     'option': '選択肢',
     'add_option': '選択肢を追加',
+    'make_a_copy': '複製を作成',
 
     // ビュータイトル
     'grid_view_title': 'グリッドビュー',
@@ -184,6 +186,8 @@ export default {
     'foldernote_display_settings_desc': 'フォルダノートの表示方法を設定します',
     'all': 'すべて',
     'default': 'デフォルト',
+    'enable': '有効',
+    'disable': '無効',
     'hidden': '隠す',
     'all_bookmarks': 'すべてのブックマーク',
     'ungrouped_bookmarks': 'グループなし',

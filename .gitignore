@@ -33,3 +33,6 @@ Changelog.md
 
 # Exclude snippets directory
 /snippets
+
+# Exclude docs directory
+/docs

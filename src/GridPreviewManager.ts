@@ -25,20 +25,52 @@ interface AppWithInternalPlugins {
 
 export class GridPreviewManager {
     private view: GridView;
+    private previewHistory: TFile[] = [];
+    private previewHistoryIndex: number = -1;
 
     constructor(view: GridView) {
         this.view = view;
+
+        // 監聽檔案修改事件以即時更新預覽
+        this.view.registerEvent(
+            this.view.app.vault.on('modify', (file) => {
+                if (file instanceof TFile && this.view.isShowingNote) {
+                    const currentFile = this.getCurrentFile();
+                    if (currentFile && file.path === currentFile.path) {
+                        void this.updateCurrentPreview();
+                    }
+                }
+            })
+        );
     }
 
+
+
     // 在網格視圖中直接顯示筆記
-    async showNoteInGrid(file: TFile) {
+    async showNoteInGrid(file: TFile, isHistoryNavigation = false) {
+        if (file.extension === 'zip') {
+            return this.showZipInGrid(file, isHistoryNavigation);
+        }
+
+        // 更新歷史紀錄
+        if (!this.view.isShowingNote) {
+            // 從外部全新開啟
+            this.previewHistory = [file];
+            this.previewHistoryIndex = 0;
+        } else if (!isHistoryNavigation) {
+            // 在內部點擊連結跳轉
+            this.previewHistory = this.previewHistory.slice(0, this.previewHistoryIndex + 1);
+            this.previewHistory.push(file);
+            this.previewHistoryIndex = this.previewHistory.length - 1;
+        }
+
         // 關閉之前的筆記顯示
         if (this.view.isShowingNote) {
-            this.hideNoteInGrid();
+            this.hideNoteInGrid(false); // 傳入 false 避免清空我們剛更新的歷史
         }
         // 關閉之前的 ZIP 顯示
         if (this.view.isShowingZip) {
-            this.hideZipInGrid();
+            this.hideZipInGrid(false);
         }
 
         const gridContainer = this.view.containerEl.querySelector('.ge-grid-container');
@@ -51,28 +83,55 @@ export class GridPreviewManager {
         // 頂部列 (左右區塊)
         const topBar = noteViewContainer.createDiv('ge-note-top-bar');
         const leftBar = topBar.createDiv('ge-note-top-left');
-        const rightBar = topBar.createDiv('ge-note-top-right');
 
-        // 筆記標題
-        const noteTitle = leftBar.createDiv('ge-note-title');
+        // 返回與前進按鈕
+        const backButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-back-button' });
+        setIcon(backButton, 'arrow-left');
+        backButton.disabled = this.previewHistoryIndex <= 0;
+        backButton.addEventListener('click', () => {
+            if (this.previewHistoryIndex > 0) {
+                this.previewHistoryIndex--;
+                const prevFile = this.previewHistory[this.previewHistoryIndex];
+                void this.showNoteInGrid(prevFile, true);
+            }
+        });
+
+        const forwardButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-forward-button' });
+        setIcon(forwardButton, 'arrow-right');
+        forwardButton.disabled = this.previewHistoryIndex >= this.previewHistory.length - 1;
+        forwardButton.addEventListener('click', () => {
+            if (this.previewHistoryIndex < this.previewHistory.length - 1) {
+                this.previewHistoryIndex++;
+                const nextFile = this.previewHistory[this.previewHistoryIndex];
+                void this.showNoteInGrid(nextFile, true);
+            }
+        });
+
+        // 筆記標題 (置中)
+        const noteTitle = topBar.createDiv('ge-note-title');
         noteTitle.textContent = file.basename;
         if (Platform.isDesktop) {
             setTooltip(noteTitle, file.basename);
         }
 
+
+
+        const rightBar = topBar.createDiv('ge-note-top-right');
+
         // 編輯按鈕
-        const editButton = rightBar.createEl('button', { cls: 'ge-note-edit-button' });
+        const editButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-edit-button' });
         setIcon(editButton, 'pencil');
         editButton.addEventListener('click', () => {
             void this.view.getLeafByMode(file).openFile(file);
         });
 
+
         // Metadata 切換按鈕
-        const infoButton = rightBar.createEl('button', { cls: 'ge-note-info-button' });
+        const infoButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-info-button' });
         setIcon(infoButton, 'info');
 
         // 關閉按鈕
-        const closeButton = rightBar.createEl('button', { cls: 'ge-note-close-button' });
+        const closeButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-close-button' });
         setIcon(closeButton, 'x');
         closeButton.addEventListener('click', () => {
             this.hideNoteInGrid();
@@ -213,7 +272,11 @@ export class GridPreviewManager {
                                     e.preventDefault();
                                     const linkedFile = this.view.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
                                     if (linkedFile) {
-                                        void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
+                                        if (e.ctrlKey || e.metaKey) {
+                                            void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
+                                        } else {
+                                            void this.showNoteInGrid(linkedFile);
+                                        }
                                     }
                                 });
                                 lastIndex = wikilinkRegex.lastIndex;
@@ -291,6 +354,18 @@ export class GridPreviewManager {
         // 創建筆記內容區域
         const noteContentArea = noteContent.createDiv('ge-note-content');
 
+        // 建立筆記內第一行標題
+        const vaultWithConfig = this.view.app.vault as unknown as { config?: { showInlineTitle?: boolean } };
+        const showInlineTitle = vaultWithConfig.config?.showInlineTitle ?? true;
+        if (showInlineTitle) {
+            noteContentArea.createEl('h1', {
+                cls: 'ge-note-internal-title',
+                text: file.basename
+            });
+        }
+
+
+
         try {
             // 讀取筆記內容
             const content = await this.view.app.vault.read(file);
@@ -322,7 +397,11 @@ export class GridPreviewManager {
                         const linkText = link.getAttribute('data-href') || href;
                         const linkedFile = this.view.app.metadataCache.getFirstLinkpathDest(linkText, file.path);
                         if (linkedFile) {
-                            void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
+                            if (e.ctrlKey || e.metaKey) {
+                                void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
+                            } else {
+                                void this.showNoteInGrid(linkedFile);
+                            }
                         }
                     }
                 }
@@ -334,6 +413,10 @@ export class GridPreviewManager {
             noteContentArea.textContent = '無法載入筆記內容';
             console.error('Error loading note content:', error);
         }
+
+        // 渲染反向連結與出站連結區塊
+        await this.renderLinksSection(file, noteContent);
+
 
         // 行動裝置下拉或上拉關閉筆記
         if (Platform.isMobile && noteViewContainer) {
@@ -456,23 +539,10 @@ export class GridPreviewManager {
 
         // 設定狀態
         this.view.isShowingNote = true;
-
-        // 註冊鍵盤事件監聽器
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                this.hideNoteInGrid();
-                e.preventDefault();
-            }
-        };
-
-        activeDocument.addEventListener('keydown', handleKeyDown);
-
-        // 儲存事件監聽器以便後續移除
-        (noteViewContainer as NoteViewContainerWithKeydownHandler).keydownHandler = handleKeyDown;
     }
 
     // 隱藏筆記顯示
-    hideNoteInGrid() {
+    hideNoteInGrid(clearHistory = true) {
         if (!this.view.isShowingNote) return;
 
         // 顯示移動端導航欄 (僅在行動裝置上)
@@ -487,28 +557,40 @@ export class GridPreviewManager {
         }
 
         if (this.view.noteViewContainer) {
-            // 移除鍵盤事件監聽器
-            const keydownHandler = (this.view.noteViewContainer as NoteViewContainerWithKeydownHandler).keydownHandler;
-            if (keydownHandler) {
-                activeDocument.removeEventListener('keydown', keydownHandler);
-            }
-
             this.view.noteViewContainer.remove();
             this.view.noteViewContainer = null;
         }
 
         this.view.isShowingNote = false;
+
+        if (clearHistory) {
+            this.previewHistory = [];
+            this.previewHistoryIndex = -1;
+        }
     }
 
+
     // 在網格視圖中直接顯示 ZIP 圖片網格
-    async showZipInGrid(file: TFile) {
+    async showZipInGrid(file: TFile, isHistoryNavigation = false) {
+        // 更新歷史紀錄
+        if (!this.view.isShowingNote && !this.view.isShowingZip) {
+            // 從外部全新開啟
+            this.previewHistory = [file];
+            this.previewHistoryIndex = 0;
+        } else if (!isHistoryNavigation) {
+            // 在內部點擊連結跳轉
+            this.previewHistory = this.previewHistory.slice(0, this.previewHistoryIndex + 1);
+            this.previewHistory.push(file);
+            this.previewHistoryIndex = this.previewHistory.length - 1;
+        }
+
         // 關閉之前的 ZIP 顯示
         if (this.view.isShowingZip) {
-            this.hideZipInGrid();
+            this.hideZipInGrid(false);
         }
         // 關閉之前的筆記顯示
         if (this.view.isShowingNote) {
-            this.hideNoteInGrid();
+            this.hideNoteInGrid(false);
         }
 
         const gridContainer = this.view.containerEl.querySelector('.ge-grid-container');
@@ -521,17 +603,41 @@ export class GridPreviewManager {
         // 頂部列 (左右區塊)
         const topBar = zipViewContainer.createDiv('ge-zip-top-bar');
         const leftBar = topBar.createDiv('ge-zip-top-left');
-        const rightBar = topBar.createDiv('ge-zip-top-right');
+
+        // 返回與前進按鈕
+        const backButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-back-button' });
+        setIcon(backButton, 'arrow-left');
+        backButton.disabled = this.previewHistoryIndex <= 0;
+        backButton.addEventListener('click', () => {
+            if (this.previewHistoryIndex > 0) {
+                this.previewHistoryIndex--;
+                const prevFile = this.previewHistory[this.previewHistoryIndex];
+                void this.showNoteInGrid(prevFile, true);
+            }
+        });
+
+        const forwardButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-forward-button' });
+        setIcon(forwardButton, 'arrow-right');
+        forwardButton.disabled = this.previewHistoryIndex >= this.previewHistory.length - 1;
+        forwardButton.addEventListener('click', () => {
+            if (this.previewHistoryIndex < this.previewHistory.length - 1) {
+                this.previewHistoryIndex++;
+                const nextFile = this.previewHistory[this.previewHistoryIndex];
+                void this.showNoteInGrid(nextFile, true);
+            }
+        });
 
         // ZIP 標題
-        const zipTitle = leftBar.createDiv('ge-zip-title');
+        const zipTitle = topBar.createDiv('ge-zip-title');
         zipTitle.textContent = file.basename;
         if (Platform.isDesktop) {
             setTooltip(zipTitle, file.basename);
         }
 
+        const rightBar = topBar.createDiv('ge-zip-top-right');
+
         // 開啟按鈕 (在分頁中開啟 ZIP 檔案)
-        const openButton = rightBar.createEl('button', { cls: 'ge-zip-open-button' });
+        const openButton = rightBar.createEl('button', { cls: 'clickable-icon ge-zip-open-button' });
         setIcon(openButton, 'folder-archive');
         openButton.setAttribute('aria-label', t('zip_open_file'));
         if (Platform.isDesktop) {
@@ -542,7 +648,7 @@ export class GridPreviewManager {
         });
 
         // 關閉按鈕
-        const closeButton = rightBar.createEl('button', { cls: 'ge-zip-close-button' });
+        const closeButton = rightBar.createEl('button', { cls: 'clickable-icon ge-zip-close-button' });
         setIcon(closeButton, 'x');
         closeButton.setAttribute('aria-label', t('zip_close_view'));
         if (Platform.isDesktop) {
@@ -1036,7 +1142,7 @@ export class GridPreviewManager {
     }
 
     // 隱藏 ZIP 顯示
-    hideZipInGrid() {
+    hideZipInGrid(clearHistory = true) {
         if (!this.view.isShowingZip) return;
 
         // 顯示移動端導航欄 (僅在行動裝置上)
@@ -1074,6 +1180,11 @@ export class GridPreviewManager {
         }
 
         this.view.isShowingZip = false;
+
+        if (clearHistory) {
+            this.previewHistory = [];
+            this.previewHistoryIndex = -1;
+        }
     }
 
     selectZipItem(idx: number, gridEl: HTMLElement) {
@@ -1089,4 +1200,106 @@ export class GridPreviewManager {
             }
         });
     }
+
+    private async renderLinksSection(file: TFile, parentEl: HTMLElement) {
+        const app = this.view.app;
+        const resolvedLinks = app.metadataCache.resolvedLinks;
+
+        // 1. 獲取反向連結 (Backlinks)
+        const backlinks = new Set<TFile>();
+        for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
+            if (Object.keys(links).includes(file.path)) {
+                const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+                if (sourceFile instanceof TFile) {
+                    backlinks.add(sourceFile);
+                }
+            }
+        }
+
+        // 如果沒有反向連結，就不需要渲染此區塊
+        if (backlinks.size === 0) {
+            return;
+        }
+
+        const linksContainer = parentEl.createDiv('ge-note-links-section');
+
+        // 渲染反向連結
+        if (backlinks.size > 0) {
+            const backlinkHeader = linksContainer.createDiv('ge-note-links-header');
+            backlinkHeader.createEl('span', { text: `🔗 ${t('backlinks')} (${backlinks.size})` });
+            const backlinkList = linksContainer.createDiv('ge-note-links-list');
+
+            Array.from(backlinks).forEach((linkFile) => {
+                const item = backlinkList.createEl('a', {
+                    cls: 'ge-note-link-item',
+                    text: linkFile.basename,
+                });
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                        void this.showNoteInGrid(linkFile);
+                });
+            });
+        }
+    }
+
+    public getCurrentFile(): TFile | null {
+        if (this.previewHistoryIndex >= 0 && this.previewHistoryIndex < this.previewHistory.length) {
+            return this.previewHistory[this.previewHistoryIndex];
+        }
+        return null;
+    }
+
+    public async updateCurrentPreview() {
+        const file = this.getCurrentFile();
+        if (!file || !this.view.noteViewContainer) return;
+
+        const scrollContainer = this.view.noteViewContainer.querySelector('.ge-note-scroll-container');
+        const noteContent = this.view.noteViewContainer.querySelector('.ge-note-content-container');
+        const noteContentArea = this.view.noteViewContainer.querySelector('.ge-note-content');
+
+        if (!scrollContainer || !noteContent || !noteContentArea) return;
+
+        const savedScrollTop = scrollContainer.scrollTop;
+
+        try {
+            // 1. 清空舊的內容區域
+            noteContentArea.empty();
+
+            // 2. 重新建立筆記內第一行標題
+            noteContentArea.createEl('h1', {
+                cls: 'ge-note-internal-title',
+                text: file.basename
+            });
+
+            // 3. 讀取與渲染
+            const content = await this.view.app.vault.read(file);
+            await MarkdownRenderer.render(
+                this.view.app,
+                content,
+                noteContentArea as HTMLElement,
+                file.path,
+                this.view
+            );
+
+            // 4. 加上圖片的 data-source-path
+            noteContentArea
+                .querySelectorAll<HTMLImageElement>('img')
+                .forEach((img) => (img.dataset.sourcePath = file.path));
+
+            // 5. 重新渲染 backlinks
+            const oldLinks = noteContent.querySelector('.ge-note-links-section');
+            if (oldLinks) {
+                oldLinks.remove();
+            }
+            await this.renderLinksSection(file, noteContent as HTMLElement);
+
+            // 6. 還原滾動位置
+            scrollContainer.scrollTop = savedScrollTop;
+        } catch (error) {
+            console.error('Error updating current preview note:', error);
+        }
+    }
 }
+
+
+

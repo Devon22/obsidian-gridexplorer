@@ -12,6 +12,16 @@ interface MenuItemWithSubmenu extends MenuItem {
     setSubmenu(): Menu;
 }
 
+interface CustomWorkspace {
+    on(name: 'grid-explorer:preview-file', callback: (fileOrPath: string | TFile) => void): EventRef;
+}
+
+declare global {
+    interface Window {
+        GridExplorer?: GridExplorerPlugin;
+    }
+}
+
 type WorkspaceEventHandler = (name: string, callback: (...data: unknown[]) => unknown) => EventRef;
 
 interface CanvasPosition {
@@ -548,7 +558,17 @@ export default class GridExplorerPlugin extends Plugin {
             // console.log('GridExplorer: Starting cache warming process.');
             // this.startWarmingCache();
         });
+
+        // 註冊全域事件與掛載 window API 供其他外掛呼叫
+        this.registerEvent(
+            (this.app.workspace as unknown as CustomWorkspace).on('grid-explorer:preview-file', (fileOrPath: string | TFile) => {
+                void this.previewFile(fileOrPath);
+            })
+        );
+        window.GridExplorer = this;
     }
+
+
 
     // startWarmingCache() {
     //     // 1. 取得所有 Markdown 檔案的列表
@@ -844,7 +864,40 @@ export default class GridExplorerPlugin extends Plugin {
             });
         }
     }
+
+    async previewFile(fileOrPath: TFile | string) {
+        let file: TFile | null = null;
+        if (typeof fileOrPath === 'string') {
+            const abstractFile = this.app.vault.getAbstractFileByPath(fileOrPath);
+            if (abstractFile instanceof TFile) {
+                file = abstractFile;
+            }
+        } else if (fileOrPath instanceof TFile) {
+            file = fileOrPath;
+        }
+
+        if (!file) {
+            console.warn('Grid Explorer: Invalid file or path provided for preview.', fileOrPath);
+            return;
+        }
+
+        // 取得或啟用 GridView
+        const activeView = this.app.workspace.getActiveViewOfType(GridView);
+        const view = activeView ?? await this.activateView();
+        if (view instanceof GridView) {
+            await view.showNoteInGrid(file);
+        }
+    }
+
+    onunload() {
+        if (window.GridExplorer === this) {
+            delete window.GridExplorer;
+        }
+        super.onunload();
+    }
+
 }
+
 
 function migrateDataviewCodeToQuery(settings: GallerySettings): void {
     if (!settings.customModes) return;

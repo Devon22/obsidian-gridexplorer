@@ -6,6 +6,7 @@ export default {
     'sorting': '정렬 기준',
     'refresh': '새로고침',
     'reselect': '다시 선택',
+    'backlinks': '백링크',
     'no_backlinks': '백링크 없음',
     'back': '뒤로',
     'search': '검색',
@@ -39,6 +40,7 @@ export default {
     'save': '저장',
     'option': '옵션',
     'add_option': '옵션 추가',
+    'make_a_copy': '복사본 만들기',
 
     // View Titles
     'grid_view_title': '그리드 뷰',
@@ -185,6 +187,8 @@ export default {
     'foldernote_display_settings_desc': '폴더 노트의 표시 모드 설정',
     'all': '전체',
     'default': '기본값',
+    'enable': '활성화',
+    'disable': '비활성화',
     'hidden': '숨김',
     'all_bookmarks': '모든 북마크',
     'ungrouped_bookmarks': '그룹 해제됨',
