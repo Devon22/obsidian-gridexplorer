@@ -85,6 +85,15 @@ interface WorkspaceSplitWithChildren {
     children?: unknown[];
 }
 
+interface SourceInfo {
+    mode: string;
+    path?: string;
+    searchQuery?: string;
+    searchCurrentLocationOnly?: boolean;
+    searchFilesNameOnly?: boolean;
+    searchMediaFiles?: boolean;
+}
+
 interface GridViewStateData {
     sourceMode?: string;
     sourcePath?: string;
@@ -218,36 +227,66 @@ export class GridView extends ItemView {
             this.fileWatcher.registerFileWatcher();
         }
 
-        // 在 window 層級以捕獲階段攔截 Alt+ArrowLeft，優先阻擋 Obsidian 內建快捷鍵
+        // 在 window 層級以捕獲階段攔截快捷鍵，優先阻擋 Obsidian 內建快捷鍵並處理歷史前後退與關閉預覽
         this.registerDomEvent(window, 'keydown', (event: KeyboardEvent) => {
+            // 如果焦點在輸入框或可編輯區域，不處理
+            const target = event.target as HTMLElement | null;
+            if (target && (
+                target.isContentEditable ||
+                target.closest('input, textarea, select, [contenteditable="true"]')
+            )) {
+                return;
+            }
+
             if (event.key === 'ArrowLeft' && event.altKey) {
                 // 僅在本視圖為活動視圖時才處理
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
-                // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
-                if (this.isShowingNote) return;
+                // 有 modal 時不處理
                 if (activeDocument.querySelector('.modal-container')) return;
-                // 僅在資料夾模式且不是根目錄時才後退
-                if (this.sourceMode === 'folder' && this.sourcePath && this.sourcePath !== '/') {
-                    // 阻止內建快捷鍵與其他監聽器
-                    event.preventDefault();
-                    // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
-                    event.stopImmediatePropagation();
-                    const parentPath = this.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    void this.setSource('folder', parentPath);
+                
+                // 阻止內建快捷鍵與其他監聽器
+                event.preventDefault();
+                // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
+                event.stopImmediatePropagation();
+                
+                if (this.isShowingNote || this.isShowingZip) {
+                    void this.previewManager.navigatePreviewBack();
+                } else {
+                    void this.navigateBack();
                     this.clearSelection();
                 }
             } else if (event.key === 'ArrowRight' && event.altKey) {
-                // Alt + 右鍵：若有選中項目則模擬點擊（例如開啟/預覽）
                 // 僅在本視圖為活動視圖時才處理
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
-                // 與一般鍵盤邏輯相同的防護：顯示筆記中或有 modal 時不處理
-                if (this.isShowingNote) return;
+                // 有 modal 時不處理
                 if (activeDocument.querySelector('.modal-container')) return;
-                if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this.gridItems.length) {
-                    // 阻止可能的其他快捷鍵或後續處理，避免重複觸發
+                
+                // 阻止內建快捷鍵與其他監聽器
+                event.preventDefault();
+                // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
+                event.stopImmediatePropagation();
+                
+                if (this.isShowingNote || this.isShowingZip) {
+                    void this.previewManager.navigatePreviewForward();
+                } else {
+                    void this.navigateForward();
+                    this.clearSelection();
+                }
+            } else if ((event.key === 'ArrowUp' && event.altKey) || event.key === 'Backspace') {
+                // 僅在本視圖為活動視圖時才處理
+                if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
+                // 有 modal 時不處理
+                if (activeDocument.querySelector('.modal-container')) return;
+                
+                // 若正在顯示預覽，則關閉預覽
+                if (this.isShowingNote || this.isShowingZip) {
                     event.preventDefault();
                     event.stopImmediatePropagation();
-                    this.gridItems[this.selectedItemIndex].click();
+                    if (this.isShowingZip) {
+                        this.previewManager.hideZipInGrid();
+                    } else {
+                        this.previewManager.hideNoteInGrid();
+                    }
                 }
             }
         }, true);
@@ -382,6 +421,78 @@ export class GridView extends ItemView {
         const limit = 10;
         if (this.recentSources.length > limit) {
             this.recentSources.length = limit;
+        }
+    }
+
+    private parseSourceInfo(sourceInfoStr: string): SourceInfo | null {
+        try {
+            return JSON.parse(sourceInfoStr) as SourceInfo;
+        } catch {
+            return null;
+        }
+    }
+
+    // 歷史記錄後退
+    async navigateBack() {
+        if (this.recentSources.length > 0) {
+            const currentKey = JSON.stringify({
+                mode: this.sourceMode,
+                path: this.sourcePath,
+                searchQuery: this.searchQuery,
+                searchCurrentLocationOnly: this.searchCurrentLocationOnly,
+                searchFilesNameOnly: this.searchFilesNameOnly,
+                searchMediaFiles: this.searchMediaFiles,
+            });
+            this.futureSources.unshift(currentKey);
+            if (this.futureSources.length > 10) {
+                this.futureSources.length = 10;
+            }
+
+            const lastSource = this.parseSourceInfo(this.recentSources[0]);
+            if (!lastSource) return;
+            this.recentSources.shift(); // 從歷史記錄中移除
+
+            await this.setSource(
+                lastSource.mode,
+                lastSource.path || '',
+                false, // 不記錄到歷史
+                lastSource.searchQuery || '',
+                lastSource.searchCurrentLocationOnly ?? false,
+                lastSource.searchFilesNameOnly ?? false,
+                lastSource.searchMediaFiles ?? false
+            );
+        }
+    }
+
+    // 歷史記錄前進
+    async navigateForward() {
+        if (this.futureSources.length > 0) {
+            const currentKey = JSON.stringify({
+                mode: this.sourceMode,
+                path: this.sourcePath,
+                searchQuery: this.searchQuery,
+                searchCurrentLocationOnly: this.searchCurrentLocationOnly,
+                searchFilesNameOnly: this.searchFilesNameOnly,
+                searchMediaFiles: this.searchMediaFiles,
+            });
+            this.recentSources.unshift(currentKey);
+            if (this.recentSources.length > 10) {
+                this.recentSources.length = 10;
+            }
+
+            const nextSource = this.parseSourceInfo(this.futureSources[0]);
+            if (!nextSource) return;
+            this.futureSources.shift(); // 從未來紀錄中移除
+
+            await this.setSource(
+                nextSource.mode,
+                nextSource.path || '',
+                false, // 不記錄到歷史
+                nextSource.searchQuery || '',
+                nextSource.searchCurrentLocationOnly ?? false,
+                nextSource.searchFilesNameOnly ?? false,
+                nextSource.searchMediaFiles ?? false
+            );
         }
     }
 

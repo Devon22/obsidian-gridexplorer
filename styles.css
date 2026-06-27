@@ -53,6 +53,7 @@
         transform: translateY(-2px);
         background-color: var(--text-selection);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-color: var(--interactive-accent) !important;
     }
 
     .ge-grid-item:hover p {
@@ -3431,6 +3432,7 @@ a.ge-current-folder:hover {
         background-color: var(--text-selection);
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-color: var(--interactive-accent) !important;
     }
 }
 

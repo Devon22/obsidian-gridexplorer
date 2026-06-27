@@ -44,6 +44,30 @@ export class GridPreviewManager {
         );
     }
 
+    // 預覽歷史記錄後退
+    async navigatePreviewBack() {
+        if (this.previewHistoryIndex > 0) {
+            this.previewHistoryIndex--;
+            const prevFile = this.previewHistory[this.previewHistoryIndex];
+            await this.showNoteInGrid(prevFile, true);
+        } else {
+            if (this.view.isShowingZip) {
+                this.hideZipInGrid();
+            } else {
+                this.hideNoteInGrid();
+            }
+        }
+    }
+
+    // 預覽歷史記錄前進
+    async navigatePreviewForward() {
+        if (this.previewHistoryIndex < this.previewHistory.length - 1) {
+            this.previewHistoryIndex++;
+            const nextFile = this.previewHistory[this.previewHistoryIndex];
+            await this.showNoteInGrid(nextFile, true);
+        }
+    }
+
 
 
     // 在網格視圖中直接顯示筆記
@@ -87,12 +111,14 @@ export class GridPreviewManager {
         // 返回與前進按鈕
         const backButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-back-button' });
         setIcon(backButton, 'arrow-left');
-        backButton.disabled = this.previewHistoryIndex <= 0;
+        backButton.disabled = false;
         backButton.addEventListener('click', () => {
             if (this.previewHistoryIndex > 0) {
                 this.previewHistoryIndex--;
                 const prevFile = this.previewHistory[this.previewHistoryIndex];
                 void this.showNoteInGrid(prevFile, true);
+            } else {
+                this.hideNoteInGrid();
             }
         });
 
@@ -607,12 +633,14 @@ export class GridPreviewManager {
         // 返回與前進按鈕
         const backButton = leftBar.createEl('button', { cls: 'clickable-icon ge-note-nav-button ge-note-back-button' });
         setIcon(backButton, 'arrow-left');
-        backButton.disabled = this.previewHistoryIndex <= 0;
+        backButton.disabled = false;
         backButton.addEventListener('click', () => {
             if (this.previewHistoryIndex > 0) {
                 this.previewHistoryIndex--;
                 const prevFile = this.previewHistory[this.previewHistoryIndex];
                 void this.showNoteInGrid(prevFile, true);
+            } else {
+                this.hideZipInGrid();
             }
         });
 

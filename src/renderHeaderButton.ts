@@ -70,44 +70,8 @@ export function renderHeaderButton(gridView: GridView) {
         void (async () => {
             event.preventDefault();
             event.stopPropagation();
-
-            // 如果有歷史記錄
-            if (gridView.recentSources.length > 0) {
-                // 將當前狀態推入 futureSources 以便前進
-                const currentKey = JSON.stringify({
-                    mode: gridView.sourceMode,
-                    path: gridView.sourcePath,
-                    searchQuery: gridView.searchQuery,
-                    searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
-                    searchFilesNameOnly: gridView.searchFilesNameOnly,
-                    searchMediaFiles: gridView.searchMediaFiles,
-                });
-                gridView.futureSources.unshift(currentKey);
-                if (gridView.futureSources.length > 10) {
-                    gridView.futureSources.length = 10;
-                }
-
-                // 取得最近一筆歷史記錄
-                const lastSource = parseSourceInfo(gridView.recentSources[0]);
-                if (!lastSource) return;
-                gridView.recentSources.shift(); // 從歷史記錄中移除
-
-                // 設定來源及搜尋狀態（不記錄到歷史）
-                await gridView.setSource(
-                    lastSource.mode,
-                    lastSource.path || '',
-                    false, // 不記錄到歷史
-                    lastSource.searchQuery || '',
-                    lastSource.searchCurrentLocationOnly ?? false,
-                    lastSource.searchFilesNameOnly ?? false,
-                    lastSource.searchMediaFiles ?? false
-                );
-
-                // 更新按鈕狀態
-                updateNavButtons();
-                } else {
-                    // 如果沒有歷史記錄，點擊按鈕無效
-                }
+            await gridView.navigateBack();
+            updateNavButtons();
         })();
     });
 
@@ -118,42 +82,8 @@ export function renderHeaderButton(gridView: GridView) {
         void (async () => {
             event.preventDefault();
             event.stopPropagation();
-
-            // 如果有未來紀錄
-            if (gridView.futureSources.length > 0) {
-                // 將當前狀態推入 recentSources 以便返回
-                const currentKey = JSON.stringify({
-                    mode: gridView.sourceMode,
-                    path: gridView.sourcePath,
-                    searchQuery: gridView.searchQuery,
-                    searchCurrentLocationOnly: gridView.searchCurrentLocationOnly,
-                    searchFilesNameOnly: gridView.searchFilesNameOnly,
-                    searchMediaFiles: gridView.searchMediaFiles,
-                });
-                gridView.recentSources.unshift(currentKey);
-                if (gridView.recentSources.length > 10) {
-                    gridView.recentSources.length = 10;
-                }
-
-                // 取得下一筆未來紀錄
-                const nextSource = parseSourceInfo(gridView.futureSources[0]);
-                if (!nextSource) return;
-                gridView.futureSources.shift(); // 從未來紀錄中移除
-
-                // 設定來源及搜尋狀態（不記錄到歷史）
-                await gridView.setSource(
-                    nextSource.mode,
-                    nextSource.path || '',
-                    false, // 不記錄到歷史
-                    nextSource.searchQuery || '',
-                    nextSource.searchCurrentLocationOnly ?? false,
-                    nextSource.searchFilesNameOnly ?? false,
-                    nextSource.searchMediaFiles ?? false
-                );
-
-                // 更新按鈕狀態
-                updateNavButtons();
-            }
+            await gridView.navigateForward();
+            updateNavButtons();
         })();
     });
 

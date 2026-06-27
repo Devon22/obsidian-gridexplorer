@@ -29,10 +29,10 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
     switch (event.key) {
         case 'ArrowRight':
             if (event.altKey) {
-                // 如果有選中的項目，模擬點擊
-                if (gridView.selectedItemIndex >= 0 && gridView.selectedItemIndex < gridView.gridItems.length) {
-                    gridView.gridItems[gridView.selectedItemIndex].click();
-                }
+                void gridView.navigateForward();
+                gridView.clearSelection();
+                event.preventDefault();
+                break;
             }  
             newIndex = Math.min(gridView.gridItems.length - 1, gridView.selectedItemIndex + 1);
             gridView.hasKeyboardFocus = true;
@@ -40,14 +40,9 @@ export function handleKeyDown(gridView: GridView, event: KeyboardEvent) {
             break;
         case 'ArrowLeft':
             if (event.altKey) {
-                // 如果按下 Alt + 左鍵，且是資料夾模式且不是根目錄
-                if (gridView.sourceMode === 'folder' && gridView.sourcePath && gridView.sourcePath !== '/') {
-                    // 獲取上一層資料夾路徑
-                    const parentPath = gridView.sourcePath.split('/').slice(0, -1).join('/') || '/';
-                    void gridView.setSource('folder', parentPath);
-                    gridView.clearSelection();
-                    event.preventDefault();
-                }
+                void gridView.navigateBack();
+                gridView.clearSelection();
+                event.preventDefault();
                 break;
             }
             newIndex = Math.max(0, gridView.selectedItemIndex - 1);
