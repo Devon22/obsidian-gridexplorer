@@ -331,4 +331,5 @@ export default {
     'save_stash_as_markdown': 'Зберегти сховище як Markdown',
     'add_to_stash': 'Додати до сховища',
     'added_to_stash': 'Додано до сховища',
+    'import_fail_notice': 'Помилка імпорту',
 };

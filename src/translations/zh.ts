@@ -331,4 +331,5 @@ export default {
     'save_stash_as_markdown': '将暂存区保存为 Markdown',
     'add_to_stash': '加入暂存区',
     'added_to_stash': '已添加到暂存区',
+    'import_fail_notice': '导入失败',
 };

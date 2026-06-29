@@ -68,7 +68,190 @@ export class GridPreviewManager {
         }
     }
 
+    // 註冊預覽視窗的行動裝置滑動手勢（包含上下拖曳關閉與左右滑動切換歷史記錄）
+    private registerPreviewTouchEvents(
+        container: HTMLElement,
+        scrollContainer: HTMLElement,
+        onClose: () => void
+    ) {
+        if (!Platform.isMobile) return;
 
+        container.setCssProps({ touchAction: 'pan-y' });
+
+        let startY = 0;
+        let startX = 0;
+        let currentY = 0;
+        let currentX = 0;
+        let isPullingUp = false;
+        let isDragging = false;
+        let isHorizontalDragging = false;
+        let initialScrollTop = 0;
+        let isAtTop = false;
+        let isAtBottom = false;
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length > 1) return;
+
+            const target = e.target as HTMLElement;
+            if (target.closest('input') || target.closest('textarea')) {
+                return;
+            }
+
+            initialScrollTop = scrollContainer.scrollTop;
+            isAtTop = initialScrollTop <= 0;
+            isAtBottom = initialScrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1;
+
+            startY = e.touches[0].clientY;
+            currentY = startY;
+            startX = e.touches[0].clientX;
+            currentX = startX;
+
+            isDragging = false;
+            isPullingUp = false;
+            isHorizontalDragging = false;
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (e.touches.length > 1) return;
+
+            currentY = e.touches[0].clientY;
+            currentX = e.touches[0].clientX;
+            const deltaY = currentY - startY;
+            const deltaX = currentX - startX;
+
+            // 決定滑動方向
+            if (!isDragging && !isHorizontalDragging) {
+                const threshold = 10;
+                if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        // 左右滑動
+                        const hasForwardHistory = this.previewHistoryIndex < this.previewHistory.length - 1;
+                        if (deltaX < 0 && !hasForwardHistory) {
+                            // 禁用該方向，不設為 dragging
+                        } else {
+                            isHorizontalDragging = true;
+                            container.setCssProps({ transition: 'none' });
+                        }
+                    } else {
+                        // 上下滑動 (原有拉動關閉功能)
+                        if (isAtTop || isAtBottom) {
+                            const pullDownStartThreshold = 24;
+                            const pullUpStartThreshold = 36;
+                            const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
+                            const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
+
+                            if (canPullDown || canPullUp) {
+                                isDragging = true;
+                                isPullingUp = canPullUp && deltaY < 0;
+                                container.setCssProps({ transition: 'none' });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 只有在進入我們自己定義的拖曳狀態時，才攔截事件與阻止預設行為
+            if (isHorizontalDragging || isDragging) {
+                e.stopPropagation();
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+
+            // 處理左右滑動視覺反饋
+            if (isHorizontalDragging) {
+                const hasForwardHistory = this.previewHistoryIndex < this.previewHistory.length - 1;
+                let translateX = deltaX * 0.6;
+                if (!hasForwardHistory && translateX < 0) {
+                    translateX = 0;
+                }
+
+                if (translateX !== 0) {
+                    container.setCssProps({ transform: `translateX(${translateX}px)` });
+                }
+            }
+
+            // 處理上下滑動視覺反饋
+            if (isDragging) {
+                const resistance = 0.5;
+                const translateY = deltaY * resistance;
+                container.setCssProps({ transform: `translateY(${translateY}px)` });
+            }
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            if (isHorizontalDragging || isDragging) {
+                e.stopPropagation();
+            }
+
+            const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
+
+            if (isHorizontalDragging) {
+                isHorizontalDragging = false;
+                const swipeThreshold = 80;
+
+                const hasForwardHistory = this.previewHistoryIndex < this.previewHistory.length - 1;
+                const isValidSwipe = !(deltaX < 0 && !hasForwardHistory);
+
+                if (isValidSwipe && Math.abs(deltaX) > swipeThreshold) {
+                    if (deltaX > 0) {
+                        void this.navigatePreviewBack();
+                    } else {
+                        void this.navigatePreviewForward();
+                    }
+                    container.setCssProps({
+                        transform: '',
+                        transition: '',
+                    });
+                } else {
+                    container.setCssProps({
+                        transition: 'transform 0.3s ease-out',
+                        transform: 'translateX(0)',
+                    });
+                    window.setTimeout(() => {
+                        container.setCssProps({
+                            transform: '',
+                            transition: '',
+                        });
+                    }, 300);
+                }
+            } else if (isDragging) {
+                isDragging = false;
+
+                const closeThreshold = isPullingUp ? 170 : 110;
+                if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
+                    const targetY = isPullingUp ? '-100vh' : '100vh';
+                    container.setCssProps({
+                        transition: 'transform 0.2s ease-out',
+                        transform: `translateY(${targetY})`,
+                    });
+                    window.setTimeout(() => {
+                        onClose();
+                        container.setCssProps({
+                            transform: '',
+                            transition: '',
+                        });
+                    }, 200);
+                } else {
+                    container.setCssProps({
+                        transition: 'transform 0.3s ease-out',
+                        transform: 'translateY(0)',
+                    });
+                    window.setTimeout(() => {
+                        container.setCssProps({
+                            transform: '',
+                            transition: '',
+                        });
+                    }, 300);
+                }
+            }
+        };
+
+        container.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+        container.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+        container.addEventListener('touchend', handleTouchEnd, { capture: true });
+    }
 
     // 在網格視圖中直接顯示筆記
     async showNoteInGrid(file: TFile, isHistoryNavigation = false) {
@@ -444,124 +627,8 @@ export class GridPreviewManager {
         await this.renderLinksSection(file, noteContent);
 
 
-        // 行動裝置下拉或上拉關閉筆記
-        if (Platform.isMobile && noteViewContainer) {
-            let startY = 0;
-            let startX = 0;
-            let currentY = 0;
-            let isPulling = false;
-            let isPullingUp = false;
-            let isDragging = false;
-            let initialScrollTop = 0;
-            let isAtTop = false;
-            let isAtBottom = false;
-
-            const handleTouchStart = (e: TouchEvent) => {
-                const target = e.target as HTMLElement;
-                if (target.closest('button') || target.closest('a') || target.closest('input') || target.closest('textarea')) {
-                    return;
-                }
-
-                initialScrollTop = scrollContainer.scrollTop;
-                isAtTop = initialScrollTop <= 0;
-                isAtBottom = initialScrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1;
-
-                if (isAtTop || isAtBottom) {
-                    startY = e.touches[0].clientY;
-                    currentY = startY;
-                    startX = e.touches[0].clientX;
-                    isPulling = true;
-                    isDragging = false;
-                    isPullingUp = false;
-                }
-            };
-
-            const handleTouchMove = (e: TouchEvent) => {
-                if (!isPulling || !noteViewContainer) return;
-
-                currentY = e.touches[0].clientY;
-                const currentX = e.touches[0].clientX;
-                const deltaY = currentY - startY;
-                const deltaX = currentX - startX;
-
-                if (!isDragging) {
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        isPulling = false;
-                        return;
-                    }
-
-                    const pullDownStartThreshold = 24;
-                    const pullUpStartThreshold = 36;
-                    const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
-                    const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
-
-                    if (canPullDown || canPullUp) {
-                        isDragging = true;
-                        isPullingUp = canPullUp && deltaY < 0;
-                        if (noteViewContainer) {
-                            noteViewContainer.setCssProps({ transition: 'none' });
-                        }
-                    } else if ((isAtTop && !isAtBottom && deltaY < 0) || (isAtBottom && !isAtTop && deltaY > 0)) {
-                        isPulling = false;
-                        return;
-                    }
-                }
-
-                if (isDragging) {
-                    if (e.cancelable) {
-                        e.preventDefault();
-                    }
-                    const resistance = 0.5;
-                    const translateY = deltaY * resistance;
-                    noteViewContainer.setCssProps({ transform: `translateY(${translateY}px)` });
-                }
-            };
-
-            const handleTouchEnd = () => {
-                if (!isPulling || !noteViewContainer) return;
-                isPulling = false;
-
-                if (!isDragging) return;
-                isDragging = false;
-
-                const deltaY = currentY - startY;
-
-                const closeThreshold = isPullingUp ? 170 : 110;
-                if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
-                    const targetY = isPullingUp ? '-100vh' : '100vh';
-                    noteViewContainer.setCssProps({
-                        transition: 'transform 0.2s ease-out',
-                        transform: `translateY(${targetY})`,
-                    });
-                    window.setTimeout(() => {
-                        this.hideNoteInGrid();
-                        if (noteViewContainer) {
-                            noteViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 200);
-                } else {
-                    noteViewContainer.setCssProps({
-                        transition: 'transform 0.3s ease-out',
-                        transform: 'translateY(0)',
-                    });
-                    window.setTimeout(() => {
-                        if (noteViewContainer) {
-                            noteViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 300);
-                }
-            };
-
-            noteViewContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            noteViewContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            noteViewContainer.addEventListener('touchend', handleTouchEnd);
-        }
+        // 註冊行動裝置滑動手勢
+        this.registerPreviewTouchEvents(noteViewContainer, scrollContainer, () => this.hideNoteInGrid());
 
         // 設定狀態
         this.view.isShowingNote = true;
@@ -866,124 +933,8 @@ export class GridPreviewManager {
             console.error('Error loading ZIP content in grid:', error);
         }
 
-        // 行動裝置下拉關閉
-        if (Platform.isMobile && zipViewContainer) {
-            let startY = 0;
-            let startX = 0;
-            let currentY = 0;
-            let isPulling = false;
-            let isPullingUp = false;
-            let isDragging = false;
-            let initialScrollTop = 0;
-            let isAtTop = false;
-            let isAtBottom = false;
-
-            const handleTouchStart = (e: TouchEvent) => {
-                const target = e.target as HTMLElement;
-                if (target.closest('button') || target.closest('a') || target.closest('input') || target.closest('textarea')) {
-                    return;
-                }
-
-                initialScrollTop = scrollContainer.scrollTop;
-                isAtTop = initialScrollTop <= 0;
-                isAtBottom = initialScrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1;
-
-                if (isAtTop || isAtBottom) {
-                    startY = e.touches[0].clientY;
-                    currentY = startY;
-                    startX = e.touches[0].clientX;
-                    isPulling = true;
-                    isDragging = false;
-                    isPullingUp = false;
-                }
-            };
-
-            const handleTouchMove = (e: TouchEvent) => {
-                if (!isPulling || !zipViewContainer) return;
-
-                currentY = e.touches[0].clientY;
-                const currentX = e.touches[0].clientX;
-                const deltaY = currentY - startY;
-                const deltaX = currentX - startX;
-
-                if (!isDragging) {
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        isPulling = false;
-                        return;
-                    }
-
-                    const pullDownStartThreshold = 24;
-                    const pullUpStartThreshold = 36;
-                    const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
-                    const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
-
-                    if (canPullDown || canPullUp) {
-                        isDragging = true;
-                        isPullingUp = canPullUp && deltaY < 0;
-                        if (zipViewContainer) {
-                            zipViewContainer.setCssProps({ transition: 'none' });
-                        }
-                    } else if ((isAtTop && !isAtBottom && deltaY < 0) || (isAtBottom && !isAtTop && deltaY > 0)) {
-                        isPulling = false;
-                        return;
-                    }
-                }
-
-                if (isDragging) {
-                    if (e.cancelable) {
-                        e.preventDefault();
-                    }
-                    const resistance = 0.5;
-                    const translateY = deltaY * resistance;
-                    zipViewContainer.setCssProps({ transform: `translateY(${translateY}px)` });
-                }
-            };
-
-            const handleTouchEnd = () => {
-                if (!isPulling || !zipViewContainer) return;
-                isPulling = false;
-
-                if (!isDragging) return;
-                isDragging = false;
-
-                const deltaY = currentY - startY;
-
-                const closeThreshold = isPullingUp ? 170 : 110;
-                if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
-                    const targetY = isPullingUp ? '-100vh' : '100vh';
-                    zipViewContainer.setCssProps({
-                        transition: 'transform 0.2s ease-out',
-                        transform: `translateY(${targetY})`,
-                    });
-                    window.setTimeout(() => {
-                        this.hideZipInGrid();
-                        if (zipViewContainer) {
-                            zipViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 200);
-                } else {
-                    zipViewContainer.setCssProps({
-                        transition: 'transform 0.3s ease-out',
-                        transform: 'translateY(0)',
-                    });
-                    window.setTimeout(() => {
-                        if (zipViewContainer) {
-                            zipViewContainer.setCssProps({
-                                transform: '',
-                                transition: '',
-                            });
-                        }
-                    }, 300);
-                }
-            };
-
-            zipViewContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            zipViewContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            zipViewContainer.addEventListener('touchend', handleTouchEnd);
-        }
+        // 註冊行動裝置滑動手勢
+        this.registerPreviewTouchEvents(zipViewContainer, scrollContainer, () => this.hideZipInGrid());
 
         // 設定狀態
         this.view.isShowingZip = true;

@@ -243,12 +243,12 @@ export class GridView extends ItemView {
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
                 // 有 modal 時不處理
                 if (activeDocument.querySelector('.modal-container')) return;
-                
+
                 // 阻止內建快捷鍵與其他監聽器
                 event.preventDefault();
                 // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
                 event.stopImmediatePropagation();
-                
+
                 if (this.isShowingNote || this.isShowingZip) {
                     void this.previewManager.navigatePreviewBack();
                 } else {
@@ -260,12 +260,12 @@ export class GridView extends ItemView {
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
                 // 有 modal 時不處理
                 if (activeDocument.querySelector('.modal-container')) return;
-                
+
                 // 阻止內建快捷鍵與其他監聽器
                 event.preventDefault();
                 // 停止後續所有監聽器（包含 Obsidian 內建 hotkey）
                 event.stopImmediatePropagation();
-                
+
                 if (this.isShowingNote || this.isShowingZip) {
                     void this.previewManager.navigatePreviewForward();
                 } else {
@@ -277,7 +277,7 @@ export class GridView extends ItemView {
                 if (this.app.workspace.getActiveViewOfType(GridView) !== this) return;
                 // 有 modal 時不處理
                 if (activeDocument.querySelector('.modal-container')) return;
-                
+
                 // 若正在顯示預覽，則關閉預覽
                 if (this.isShowingNote || this.isShowingZip) {
                     event.preventDefault();
@@ -325,6 +325,80 @@ export class GridView extends ItemView {
                 })
             );
         }
+
+        // 監聽外部檔案拖曳進來並複製到目前資料夾
+        this.registerDomEvent(this.containerEl, 'dragover', (event: DragEvent) => {
+            if (this.sourceMode === 'folder') {
+                const types = event.dataTransfer?.types || [];
+                // 確保為外部系統檔案拖曳，排除內部元素拖曳 (內部拖曳通常含有 text/html 或 text/plain)
+                const isExternalFile = types.includes('Files') && !types.includes('text/html') && !types.includes('text/plain');
+                if (isExternalFile) {
+                    event.preventDefault();
+                    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+                    this.containerEl.addClass('ge-dragover');
+                }
+            }
+        });
+
+        this.registerDomEvent(this.containerEl, 'dragleave', () => {
+            this.containerEl.removeClass('ge-dragover');
+        });
+
+        this.registerDomEvent(this.containerEl, 'drop', async (event: DragEvent) => {
+            if (this.sourceMode !== 'folder') return;
+            this.containerEl.removeClass('ge-dragover');
+
+            if (!event.dataTransfer) return;
+
+            const types = event.dataTransfer.types || [];
+            const isExternalFile = types.includes('Files') && !types.includes('text/html') && !types.includes('text/plain');
+            
+            // 如果不是外部檔案，直接返回（交給其他已經寫好搬移邏輯的處理器處理，不攔截）
+            if (!isExternalFile) return;
+
+            // 處理外部檔案的複製匯入 (Copy/Import)
+            event.preventDefault();
+            event.stopPropagation();
+
+            const files = event.dataTransfer.files;
+            if (!files || files.length === 0) return;
+
+            let importedCount = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+
+                    // 處理檔名重複
+                    let baseName = file.name;
+                    let extension = '';
+                    const lastDotIndex = file.name.lastIndexOf('.');
+                    if (lastDotIndex !== -1) {
+                        baseName = file.name.substring(0, lastDotIndex);
+                        extension = file.name.substring(lastDotIndex);
+                    }
+
+                    let targetPath = normalizePath(`${this.sourcePath}/${file.name}`);
+                    let counter = 1;
+                    while (this.app.vault.getAbstractFileByPath(targetPath)) {
+                        targetPath = normalizePath(`${this.sourcePath}/${baseName}_${counter}${extension}`);
+                        counter++;
+                    }
+
+                    await this.app.vault.createBinary(targetPath, arrayBuffer);
+                    importedCount++;
+                } catch (err) {
+                    console.error(`GridExplorer: Failed to import file ${file.name}`, err);
+                    new Notice(t('import_fail_notice'));
+                }
+            }
+
+            if (importedCount > 0) {
+                if (!this.fileWatcher) {
+                    await this.render();
+                }
+            }
+        });
     }
 
     getViewType() {
@@ -2162,7 +2236,7 @@ export class GridView extends ItemView {
                             } else {
                                 copyPath = `${f.basename} 1.${f.extension}`;
                             }
-                            
+
                             let counter = 1;
                             while (this.app.vault.getAbstractFileByPath(copyPath)) {
                                 counter++;
@@ -2172,7 +2246,7 @@ export class GridView extends ItemView {
                                     copyPath = `${f.basename} ${counter}.${f.extension}`;
                                 }
                             }
-                            
+
                             try {
                                 await this.app.vault.copy(f, copyPath);
                             } catch (err) {

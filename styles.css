@@ -49,11 +49,11 @@
 }
 
 @media (hover: hover) {
-    .ge-grid-view-container .ge-grid-container .ge-grid-item:hover {
+    body .ge-grid-view-container .ge-grid-container .ge-grid-item:hover {
         transform: translateY(-2px);
         background-color: var(--text-selection);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-color: var(--interactive-accent) !important;
+        border-color: var(--interactive-accent);
     }
 
     .ge-grid-item:hover p {
@@ -3428,11 +3428,11 @@ a.ge-current-folder:hover {
 }
 
 @media (hover: hover) {
-    .ge-folder-button:hover {
+    body .ge-folder-button:hover {
         background-color: var(--text-selection);
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-color: var(--interactive-accent) !important;
+        border-color: var(--interactive-accent);
     }
 }
 

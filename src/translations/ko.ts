@@ -332,4 +332,5 @@ export default {
     'save_stash_as_markdown': '보관함을 Markdown으로 저장',
     'add_to_stash': '보관함에 추가',
     'added_to_stash': '보관함에 추가됨',
+    'import_fail_notice': '가져오기 실패',
 };

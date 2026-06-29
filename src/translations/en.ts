@@ -332,4 +332,5 @@ export default {
     'save_stash_as_markdown': 'Save stash as Markdown',
     'add_to_stash': 'Add to stash',
     'added_to_stash': 'Added to stash',
+    'import_fail_notice': 'Import failed',
 };

@@ -331,4 +331,5 @@ export default {
     'save_stash_as_markdown': '一時保存をMarkdownとして保存',
     'add_to_stash': '一時保存に追加',
     'added_to_stash': '一時保存に追加されました',
+    'import_fail_notice': 'インポートに失敗しました',
 };
