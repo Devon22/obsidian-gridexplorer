@@ -182,12 +182,17 @@ export class FileWatcher {
         // 監聽當前開啟的檔案變更，讀取反向連結
         this.plugin.registerEvent(
             this.app.workspace.on('file-open', (file) => {
-                if (file instanceof TFile && this.gridView.searchQuery === '') {
-                    const sourceMode = this.gridView.sourceMode;
+                if (this.gridView.searchQuery !== '') return;
+                const sourceMode = this.gridView.sourceMode;
 
+                if (file instanceof TFile) {
                     // 處理反向連結和出向連結
                     if (sourceMode === 'backlinks' || sourceMode === 'outgoinglinks') {
-                        this.scheduleRender();
+                        // 若分頁已釘選，維持鎖定的目標檔案，不跟著切換（與內建反向連結行為一致）
+                        if (!this.gridView.isPinned() && this.gridView.sourcePath !== file.path) {
+                            this.gridView.sourcePath = file.path;
+                            this.scheduleRender();
+                        }
                         return;
                     }
 
@@ -202,6 +207,73 @@ export class FileWatcher {
                             }
                         }
                     }
+                } else if (file === null) {
+                    // 當 file 為 null，代表切換到非檔案檢視，交由 active-leaf-change 處理
+                }
+            })
+        );
+
+        // 監聽 active-leaf-change 來處理切回 GridView 或其他檢視的狀況
+        this.plugin.registerEvent(
+            this.app.workspace.on('active-leaf-change', (leaf) => {
+                if (!leaf || !leaf.view) return;
+                const view = leaf.view;
+                // 忽略自己被設為活動的事件，避免自我循環與自我清空
+                if (view === this.gridView) return;
+
+                // 忽略側邊欄的活動分頁變更，避免切換側邊欄頁籤或點擊側邊欄時，反向連結被清空
+                const isSidebarLeaf = leaf.getRoot() === this.app.workspace.leftSplit ||
+                    leaf.getRoot() === this.app.workspace.rightSplit;
+                if (isSidebarLeaf) return;
+
+                if (this.gridView.searchQuery !== '') return;
+
+                const sourceMode = this.gridView.sourceMode;
+                if (sourceMode === 'backlinks' || sourceMode === 'outgoinglinks') {
+                    if (this.gridView.isPinned()) return;
+
+                    let newSourcePath = '';
+                    if (view.getViewType() === 'grid-view') {
+                        const activeGridView = view as unknown as Record<string, unknown>;
+                        const previewedFile = activeGridView.previewedFile;
+                        if (activeGridView.isShowingNote === true && previewedFile instanceof TFile) {
+                            newSourcePath = previewedFile.path;
+                        }
+                    } else if ('file' in view && view.file instanceof TFile) {
+                        newSourcePath = view.file.path;
+                    }
+
+                    // 如果 sourcePath 有改變，就更新並重新渲染
+                    if (this.gridView.sourcePath !== newSourcePath) {
+                        this.gridView.sourcePath = newSourcePath;
+                        this.scheduleRender();
+                    }
+                }
+            })
+        );
+
+        // 監聽其他 GridView 在網格內預覽筆記的事件（GridPreviewManager.showNoteInGrid/hideNoteInGrid）
+        // 讓側邊欄的反向連結/外部連結模式能跟著預覽的筆記更新，行為與內建反向連結面板一致
+        this.plugin.registerEvent(
+            (this.app.workspace as unknown as {
+                on(name: 'ge-preview-file-change', callback: (file: TFile | null, sourceView: unknown) => void): import('obsidian').EventRef
+            }).on('ge-preview-file-change', (file, sourceView) => {
+                // 忽略自己觸發的事件，避免自我循環
+                if (sourceView === this.gridView) return;
+                if (this.gridView.searchQuery !== '') return;
+
+                const sourceMode = this.gridView.sourceMode;
+                if (sourceMode !== 'backlinks' && sourceMode !== 'outgoinglinks') return;
+
+                // 若分頁已釘選，維持鎖定的目標檔案，不跟著切換
+                if (this.gridView.isPinned()) return;
+
+                if (file instanceof TFile) {
+                    this.gridView.sourcePath = file.path;
+                    this.scheduleRender();
+                } else if (file === null) {
+                    this.gridView.sourcePath = '';
+                    this.scheduleRender();
                 }
             })
         );

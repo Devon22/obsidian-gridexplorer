@@ -191,6 +191,7 @@ export class GridView extends ItemView {
     renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
     isShowingNote: boolean = false; // 是否正在顯示筆記
     noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
+    previewedFile: TFile | null = null; // 目前在網格內預覽顯示的筆記檔案（供其他 GridView 的反向連結/外部連結模式跟蹤）
     isShowingZip: boolean = false; // 是否正在顯示 ZIP 預覽
     zipViewContainer: HTMLElement | null = null; // ZIP 檢視容器
     zipThumbnailUrls: Map<number, string> = new Map(); // 暫存縮圖 Blob URL
@@ -1071,8 +1072,8 @@ export class GridView extends ItemView {
             return;
         }
 
-        // 如果是反向連結模式，但沒有活動中的檔案
-        if (this.sourceMode === 'backlinks' && !this.app.workspace.getActiveFile()) {
+        // 如果是反向連結模式，但沒有有效的目標檔案
+        if (this.sourceMode === 'backlinks' && !(this.app.vault.getAbstractFileByPath(this.sourcePath) instanceof TFile)) {
             const noFilesDiv = container.createDiv('ge-no-files');
             noFilesDiv.setText(t('no_backlinks'));
             if (this.plugin.statusBarItem) {

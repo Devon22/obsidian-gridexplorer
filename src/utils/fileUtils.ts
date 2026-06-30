@@ -365,17 +365,20 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         return [];
     } else if (sourceMode === 'backlinks') {
         // 反向連結模式：找出所有引用當前筆記的檔案
-        const activeFile = app.workspace.getActiveFile();
-        if (!activeFile) {
+        // 注意：不可使用 app.workspace.getActiveFile()，因為當 GridView 本身成為
+        // active leaf 時，getActiveFile() 可能回傳 null 或不可靠的結果。
+        // 目標檔案應在切換到此模式時記錄於 gridView.sourcePath。
+        const targetFile = app.vault.getAbstractFileByPath(gridView.sourcePath);
+        if (!(targetFile instanceof TFile)) {
             return [];
         }
 
         const backlinks = new Set();
         // 使用 resolvedLinks 來找出反向連結
         const resolvedLinks = app.metadataCache.resolvedLinks;
-        for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
-            if (Object.keys(links).includes(activeFile.path)) {
-                const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+        for (const [resolvedSourcePath, links] of Object.entries(resolvedLinks)) {
+            if (Object.keys(links).includes(targetFile.path)) {
+                const sourceFile = app.vault.getAbstractFileByPath(resolvedSourcePath);
                 if (sourceFile instanceof TFile) {
                     backlinks.add(sourceFile);
                 }
@@ -385,22 +388,23 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         return sortFiles(Array.from(backlinks) as TFile[], gridView);
     } else if (sourceMode === 'outgoinglinks') {
         // 外部連結模式：找出當前筆記所引用的檔案，並包含所有媒體連結
-        const activeFile = app.workspace.getActiveFile();
-        if (!activeFile) {
+        // 同樣改用 gridView.sourcePath，理由同上
+        const targetFile = app.vault.getAbstractFileByPath(gridView.sourcePath);
+        if (!(targetFile instanceof TFile)) {
             return [];
         }
 
         const outgoingLinks = new Set<TFile>();
         // 使用 resolvedLinks 來找出外部連結
         const resolvedLinks = app.metadataCache.resolvedLinks;
-        const fileLinks = resolvedLinks[activeFile.path];
+        const fileLinks = resolvedLinks[targetFile.path];
 
         if (fileLinks) {
             for (const targetPath of Object.keys(fileLinks)) {
-                const targetFile = app.vault.getAbstractFileByPath(targetPath);
-                if (targetFile instanceof TFile && (isDocumentFile(targetFile) ||
-                    (settings.showMediaFiles && isMediaFile(targetFile)))) {
-                    outgoingLinks.add(targetFile);
+                const linkedFile = app.vault.getAbstractFileByPath(targetPath);
+                if (linkedFile instanceof TFile && (isDocumentFile(linkedFile) ||
+                    (settings.showMediaFiles && isMediaFile(linkedFile)))) {
+                    outgoingLinks.add(linkedFile);
                 }
             }
         }
@@ -408,7 +412,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         // 讀取目前筆記內容，找出所有媒體連結
         if (settings.showMediaFiles) {
             try {
-                const content = await app.vault.cachedRead(activeFile);
+                const content = await app.vault.cachedRead(targetFile);
                 // 去除 frontmatter
                 const frontMatterInfo = getFrontMatterInfo(content);
                 const contentWithoutFrontmatter = content.substring(frontMatterInfo.contentStart);
@@ -422,7 +426,7 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
                         // 處理內部連結路徑（去除 | 之後的部分）
                         mediaPath = mediaPath.split('|')[0].trim();
                         // 取得對應的 TFile
-                        const mediaFile = app.metadataCache.getFirstLinkpathDest(mediaPath, activeFile.path);
+                        const mediaFile = app.metadataCache.getFirstLinkpathDest(mediaPath, targetFile.path);
                         if (mediaFile && isMediaFile(mediaFile)) {
                             outgoingLinks.add(mediaFile);
                         }

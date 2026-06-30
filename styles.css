@@ -12,7 +12,7 @@
 .ge-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-width, 300px), 1fr));
-    gap: 10px;
+    gap: 11px;
     align-items: start;
     align-content: start;
     flex: 1;
@@ -20,6 +20,10 @@
 }
 
 .ge-grid-view-container .ge-grid-container {
+    padding: 14px;
+}
+
+:is(.mod-left-split, .mod-right-split) .ge-grid-view-container .ge-grid-container {
     padding: 10px;
 }
 
@@ -150,8 +154,8 @@
 .ge-title.ge-multiline-title {
     white-space: normal;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     line-height: 1.3;
     overflow: hidden;
@@ -169,6 +173,13 @@
     -webkit-line-clamp: 3;
     line-clamp: 3;
     -webkit-box-orient: vertical;
+}
+
+.mod-left-split .ge-grid-container .ge-grid-item .ge-content-area p,
+.mod-right-split .ge-grid-container .ge-grid-item .ge-content-area p,
+.workspace-drawer .ge-grid-container .ge-grid-item .ge-content-area p {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
 }
 
 .ge-content-area p:empty {
@@ -2375,7 +2386,15 @@ a.ge-current-folder:hover {
     min-height: 100%;
 }
 
-.is-mobile .ge-note-content-container {
+:is(.mod-left-split, .mod-right-split) .ge-note-content-container {
+    padding: 20px;
+}
+
+.is-tablet .ge-note-content-container {
+    padding-top: 20px;
+}
+
+.is-phone .ge-note-content-container {
     padding-top: 15px;
 }
 
@@ -3037,13 +3056,20 @@ a.ge-current-folder:hover {
 /* --------------------------------------------------------------------------- */
 /* 手機版頂部邊距適配 (針對 Obsidian 更新後的介面調整) */
 
-.is-phone .ge-grid-view-container,
-.is-phone .ge-note-view-container {
-    /* 讓整個插件容器避開頂部安全區域 (狀態列/瀏海) */
-    /* Obsidian 更新後將此變數用於處理頂部間距 */
+.is-phone .ge-grid-view-container:not(.mod-left-split *, .mod-right-split *, .workspace-drawer *),
+.is-phone .ge-note-view-container:not(.mod-left-split *, .mod-right-split *, .workspace-drawer *) {
+    /* 讓非側邊欄的主工作區插件容器避開頂部安全區域 (狀態列/瀏海) */
     padding-top: var(--safe-area-inset-top);
     padding-left: var(--safe-area-inset-left);
     padding-right: var(--safe-area-inset-right);
+}
+
+/* 平板上的右側邊欄或底部/側邊抽屜加上頂部 5px 邊距 */
+.is-tablet .mod-right-split .ge-grid-view-container,
+.is-tablet .mod-right-split .ge-note-view-container,
+.is-tablet .workspace-drawer .ge-grid-view-container,
+.is-tablet .workspace-drawer .ge-note-view-container {
+    padding-top: 4px;
 }
 
 .is-phone .ge-grid-view-container .ge-grid-container {

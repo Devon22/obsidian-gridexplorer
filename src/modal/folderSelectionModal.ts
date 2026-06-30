@@ -179,11 +179,11 @@ export class FolderSelectionModal extends Modal {
                 backlinksOption.addEventListener('click', () => {
                     void (async () => {
                         if (this.activeView) {
-                            await this.activeView.setSource('backlinks');
+                            await this.activeView.setSource('backlinks', activeFile.path);
                         } else {
                             const view = await this.plugin.activateView();
                             if (view instanceof GridView) {
-                                await view.setSource('backlinks');
+                                await view.setSource('backlinks', activeFile.path);
                             }
                         }
                         this.close();
@@ -206,11 +206,11 @@ export class FolderSelectionModal extends Modal {
                 outgoinglinksOption.addEventListener('click', () => {
                     void (async () => {
                         if (this.activeView) {
-                            await this.activeView.setSource('outgoinglinks');
+                            await this.activeView.setSource('outgoinglinks', activeFile.path);
                         } else {
                             const view = await this.plugin.activateView();
                             if (view instanceof GridView) {
-                                await view.setSource('outgoinglinks');
+                                await view.setSource('outgoinglinks', activeFile.path);
                             }
                         }
                         this.close();

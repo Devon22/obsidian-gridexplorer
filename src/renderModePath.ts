@@ -670,18 +670,18 @@ export function renderModePath(gridView: GridView) {
             case 'backlinks': {
                 modeIcon = '🔗';
                 modeName = t('backlinks_mode');
-                const activeFile = gridView.app.workspace.getActiveFile();
-                if (activeFile) {
-                    modeName += `: ${activeFile.basename}`;
+                const targetFile = gridView.app.vault.getAbstractFileByPath(gridView.sourcePath);
+                if (targetFile instanceof TFile) {
+                    modeName += `: ${targetFile.basename}`;
                 }
                 break;
             }
             case 'outgoinglinks': {
                 modeIcon = '🔗';
                 modeName = t('outgoinglinks_mode');
-                const currentFile = gridView.app.workspace.getActiveFile();
-                if (currentFile) {
-                    modeName += `: ${currentFile.basename}`;
+                const targetFile = gridView.app.vault.getAbstractFileByPath(gridView.sourcePath);
+                if (targetFile instanceof TFile) {
+                    modeName += `: ${targetFile.basename}`;
                 }
                 break;
             }

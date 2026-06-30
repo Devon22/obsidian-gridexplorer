@@ -145,7 +145,7 @@ export default class GridExplorerPlugin extends Plugin {
                 if (activeFile) {
                     const view = await this.activateView();
                     if (view instanceof GridView) {
-                        await view.setSource('backlinks');
+                        await view.setSource('backlinks', activeFile.path);
                     }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
@@ -163,7 +163,7 @@ export default class GridExplorerPlugin extends Plugin {
                 if (activeFile) {
                     const view = await this.activateView();
                     if (view instanceof GridView) {
-                        await view.setSource('outgoinglinks');
+                        await view.setSource('outgoinglinks', activeFile.path);
                     }
                 } else {
                     // 如果沒有當前筆記，則打開根目錄
@@ -282,7 +282,7 @@ export default class GridExplorerPlugin extends Plugin {
                                     await this.app.workspace.getLeaf().openFile(file);
                                     const view = await this.activateView();
                                     if (view instanceof GridView) {
-                                        await view.setSource('backlinks');
+                                        await view.setSource('backlinks', file.path);
                                     }
                                 });
                         });
@@ -294,7 +294,7 @@ export default class GridExplorerPlugin extends Plugin {
                                     await this.app.workspace.getLeaf().openFile(file);
                                     const view = await this.activateView();
                                     if (view instanceof GridView) {
-                                        await view.setSource('outgoinglinks');
+                                        await view.setSource('outgoinglinks', file.path);
                                     }
                                 });
                         });

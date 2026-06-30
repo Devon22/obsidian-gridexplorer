@@ -1,4 +1,4 @@
-import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer } from 'obsidian';
+import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer, Component } from 'obsidian';
 import JSZip from 'jszip';
 import { GridView } from './GridView';
 import { MediaModal, VirtualMediaFile } from './modal/mediaModal';
@@ -27,6 +27,18 @@ export class GridPreviewManager {
     private view: GridView;
     private previewHistory: TFile[] = [];
     private previewHistoryIndex: number = -1;
+    private previewComponent: Component | null = null;
+
+    private preparePreviewComponent() {
+        if (this.previewComponent) {
+            this.previewComponent.unload();
+            this.view.removeChild(this.previewComponent);
+            this.previewComponent = null;
+        }
+        this.previewComponent = new Component();
+        this.view.addChild(this.previewComponent);
+        this.previewComponent.load();
+    }
 
     constructor(view: GridView) {
         this.view = view;
@@ -363,6 +375,8 @@ export class GridPreviewManager {
         }
 
         // 在移動端添加滾動監聽，根據滾動方向控制導航欄顯示/隱藏
+        this.preparePreviewComponent();
+
         if (Platform.isPhone) {
             let lastScrollTop = 0;
             let accumulateScroll = 0;
@@ -400,7 +414,7 @@ export class GridPreviewManager {
                 lastScrollTop = currentScrollTop;
             };
 
-            scrollContainer.addEventListener('scroll', handleScroll);
+            this.previewComponent!.registerDomEvent(scrollContainer, 'scroll', handleScroll);
 
             // 監聽分頁切換事件，當離開當前視圖時恢復導航欄
             const handleActiveLeafChange = () => {
@@ -418,14 +432,9 @@ export class GridPreviewManager {
             };
 
             // 註冊事件監聽器
-            this.view.registerEvent(
+            this.previewComponent!.registerEvent(
                 this.view.app.workspace.on('active-leaf-change', handleActiveLeafChange)
             );
-
-            // 儲存滾動事件清理函數
-            this.view.eventCleanupFunctions.push(() => {
-                scrollContainer.removeEventListener('scroll', handleScroll);
-            });
         }
 
         // 取得 Metadata (Frontmatter)
@@ -585,7 +594,7 @@ export class GridPreviewManager {
                 content,
                 noteContentArea,
                 file.path,
-                this.view
+                this.previewComponent!
             );
 
             // 加上自訂屬性 data-source-path
@@ -617,7 +626,7 @@ export class GridPreviewManager {
             };
 
             // 使用 registerDomEvent 註冊事件
-            this.view.registerDomEvent(noteContentArea, 'click', handleLinkClick);
+            this.previewComponent!.registerDomEvent(noteContentArea, 'click', handleLinkClick);
         } catch (error) {
             noteContentArea.textContent = '無法載入筆記內容';
             console.error('Error loading note content:', error);
@@ -632,6 +641,9 @@ export class GridPreviewManager {
 
         // 設定狀態
         this.view.isShowingNote = true;
+        this.view.previewedFile = file;
+        // 廣播事件，讓其他 GridView（例如側邊欄的反向連結模式）可以跟著更新
+        this.view.app.workspace.trigger('ge-preview-file-change', file, this.view);
     }
 
     // 隱藏筆記顯示
@@ -649,12 +661,20 @@ export class GridPreviewManager {
             }
         }
 
+        if (this.previewComponent) {
+            this.previewComponent.unload();
+            this.view.removeChild(this.previewComponent);
+            this.previewComponent = null;
+        }
+
         if (this.view.noteViewContainer) {
             this.view.noteViewContainer.remove();
             this.view.noteViewContainer = null;
         }
 
         this.view.isShowingNote = false;
+        this.view.previewedFile = null;
+        this.view.app.workspace.trigger('ge-preview-file-change', null, this.view);
 
         if (clearHistory) {
             this.previewHistory = [];
@@ -770,6 +790,8 @@ export class GridPreviewManager {
         }
         const zipGridEl = zipContent.createDiv('zip-viewer-grid');
 
+        this.preparePreviewComponent();
+
         // 在移動端添加滾動監聽，控制導航欄
         if (Platform.isPhone) {
             let lastScrollTop = 0;
@@ -805,7 +827,7 @@ export class GridPreviewManager {
                 lastScrollTop = currentScrollTop;
             };
 
-            scrollContainer.addEventListener('scroll', handleScroll);
+            this.previewComponent!.registerDomEvent(scrollContainer, 'scroll', handleScroll);
 
             const handleActiveLeafChange = () => {
                 const activeView = this.view.app.workspace.getActiveViewOfType(GridView);
@@ -820,13 +842,9 @@ export class GridPreviewManager {
                 }
             };
 
-            this.view.registerEvent(
+            this.previewComponent!.registerEvent(
                 this.view.app.workspace.on('active-leaf-change', handleActiveLeafChange)
             );
-
-            this.view.eventCleanupFunctions.push(() => {
-                scrollContainer.removeEventListener('scroll', handleScroll);
-            });
         }
 
         // 載入與解析 ZIP 檔案
@@ -1124,6 +1142,12 @@ export class GridPreviewManager {
     hideZipInGrid(clearHistory = true) {
         if (!this.view.isShowingZip) return;
 
+        if (this.previewComponent) {
+            this.previewComponent.unload();
+            this.view.removeChild(this.previewComponent);
+            this.previewComponent = null;
+        }
+
         // 顯示移動端導航欄 (僅在行動裝置上)
         if (Platform.isPhone) {
             const mobileNavbar = activeDocument.querySelector('.mobile-navbar') as HTMLElement;
@@ -1250,6 +1274,8 @@ export class GridPreviewManager {
                 text: file.basename
             });
 
+            this.preparePreviewComponent();
+
             // 3. 讀取與渲染
             const content = await this.view.app.vault.read(file);
             await MarkdownRenderer.render(
@@ -1257,7 +1283,7 @@ export class GridPreviewManager {
                 content,
                 noteContentArea as HTMLElement,
                 file.path,
-                this.view
+                this.previewComponent!
             );
 
             // 4. 加上圖片的 data-source-path
