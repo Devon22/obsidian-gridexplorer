@@ -1,4 +1,4 @@
-import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer, Component } from 'obsidian';
+import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer, Component, Menu } from 'obsidian';
 import JSZip from 'jszip';
 import { GridView } from './GridView';
 import { MediaModal, VirtualMediaFile } from './modal/mediaModal';
@@ -6,6 +6,10 @@ import { t } from './translations';
 
 interface NoteViewContainerWithKeydownHandler extends HTMLElement {
     keydownHandler?: (e: KeyboardEvent) => void;
+}
+
+interface MenuItemWithWarning {
+    setWarning(warning: boolean): this;
 }
 
 interface AppWithInternalPlugins {
@@ -351,6 +355,86 @@ export class GridPreviewManager {
         const infoButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-info-button' });
         setIcon(infoButton, 'info');
 
+        // 更多選項按鈕
+        const moreOptionsButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-more-options-button' });
+        setIcon(moreOptionsButton, 'more-vertical');
+        if (Platform.isDesktop) {
+            setTooltip(moreOptionsButton, t('more_options'));
+        }
+        moreOptionsButton.addEventListener('click', (e) => {
+            const menu = new Menu();
+            this.view.app.workspace.trigger('file-menu', menu, file, 'file-explorer');
+            
+            menu.addSeparator();
+
+
+            menu.addItem((item) => {
+                item
+                    .setTitle(t('open_in_new_tab'))
+                    .setIcon("external-link")
+                    .setSection?.("open")
+                    .onClick(() => {
+                        void this.view.app.workspace.getLeaf(true).openFile(file);
+                    });
+            });
+
+            if (Platform.isMobile) {
+                menu.addItem((item) => {
+                    item
+                        .setTitle(t('add_to_stash'))
+                        .setIcon("archive")
+                        .onClick(() => {
+                            (this.view as unknown as { addFilesToStash(files: TFile[]): void }).addFilesToStash([file]);
+                        });
+                });
+            }
+
+            menu.addItem((item) => {
+                item
+                    .setTitle(t("make_a_copy"))
+                    .setIcon("copy")
+                    .setSection?.("action")
+                    .onClick(async () => {
+                        const parentPath = file.parent ? file.parent.path : "";
+                        let copyPath = "";
+                        if (parentPath && parentPath !== "/") {
+                            copyPath = `${parentPath}/${file.basename} 1.${file.extension}`;
+                        } else {
+                            copyPath = `${file.basename} 1.${file.extension}`;
+                        }
+
+                        let counter = 1;
+                        while (this.view.app.vault.getAbstractFileByPath(copyPath)) {
+                            counter++;
+                            if (parentPath && parentPath !== "/") {
+                                copyPath = `${parentPath}/${file.basename} ${counter}.${file.extension}`;
+                            } else {
+                                copyPath = `${file.basename} ${counter}.${file.extension}`;
+                            }
+                        }
+
+                        try {
+                            await this.view.app.vault.copy(file, copyPath);
+                        } catch (err) {
+                            console.error("Failed to copy file:", err);
+                        }
+                    });
+            });
+
+            menu.addItem((item) => {
+                (item as unknown as MenuItemWithWarning).setWarning(true);
+                item
+                    .setTitle(t('delete_note'))
+                    .setIcon('trash')
+                    .onClick(async () => {
+                        await this.view.app.fileManager.trashFile(file);
+                        this.hideNoteInGrid();
+                    });
+            });
+
+            menu.showAtMouseEvent(e);
+        });
+
         // 關閉按鈕
         const closeButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-close-button' });
         setIcon(closeButton, 'x');
@@ -675,6 +759,10 @@ export class GridPreviewManager {
         this.view.isShowingNote = false;
         this.view.previewedFile = null;
         this.view.app.workspace.trigger('ge-preview-file-change', null, this.view);
+
+        if (this.view.fileWatcher) {
+            this.view.fileWatcher.performPendingRender();
+        }
 
         if (clearHistory) {
             this.previewHistory = [];
@@ -1183,6 +1271,10 @@ export class GridPreviewManager {
         }
 
         this.view.isShowingZip = false;
+
+        if (this.view.fileWatcher) {
+            this.view.fileWatcher.performPendingRender();
+        }
 
         if (clearHistory) {
             this.previewHistory = [];

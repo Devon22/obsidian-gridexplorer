@@ -239,7 +239,7 @@
 }
 
 .ge-non-doc-icon.ge-zip {
-    color: var(--color-folder); /* obsidian color or fallback */
+    color: var(--color-yellow);
 }
 
 
@@ -468,52 +468,76 @@
 }
 
 /* 資料夾和筆記顏色 Folder & Note Colors */
-.ge-grid-item.ge-folder-item.ge-folder-color-red,
-.ge-grid-item.ge-note-color-red {
+.ge-grid-item.ge-folder-item.ge-folder-color-red {
     background-color: rgba(var(--color-red-rgb), 0.2);
     border-color: rgba(var(--color-red-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-red {
+    background-color: rgba(var(--color-red-rgb), 0.2);
+    border-color: rgba(var(--color-red-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-orange,
-.ge-grid-item.ge-note-color-orange {
+.ge-grid-item.ge-folder-item.ge-folder-color-orange {
     background-color: rgba(var(--color-orange-rgb), 0.2);
     border-color: rgba(var(--color-orange-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-orange {
+    background-color: rgba(var(--color-orange-rgb), 0.2);
+    border-color: rgba(var(--color-orange-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-yellow,
-.ge-grid-item.ge-note-color-yellow {
+.ge-grid-item.ge-folder-item.ge-folder-color-yellow {
     background-color: rgba(var(--color-yellow-rgb), 0.2);
     border-color: rgba(var(--color-yellow-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-yellow {
+    background-color: rgba(var(--color-yellow-rgb), 0.2);
+    border-color: rgba(var(--color-yellow-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-green,
-.ge-grid-item.ge-note-color-green {
+.ge-grid-item.ge-folder-item.ge-folder-color-green {
     background-color: rgba(var(--color-green-rgb), 0.2);
     border-color: rgba(var(--color-green-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-green {
+    background-color: rgba(var(--color-green-rgb), 0.2);
+    border-color: rgba(var(--color-green-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-cyan,
-.ge-grid-item.ge-note-color-cyan {
+.ge-grid-item.ge-folder-item.ge-folder-color-cyan {
     background-color: rgba(var(--color-cyan-rgb), 0.2);
     border-color: rgba(var(--color-cyan-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-cyan {
+    background-color: rgba(var(--color-cyan-rgb), 0.2);
+    border-color: rgba(var(--color-cyan-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-blue,
-.ge-grid-item.ge-note-color-blue {
+.ge-grid-item.ge-folder-item.ge-folder-color-blue {
     background-color: rgba(var(--color-blue-rgb), 0.2);
     border-color: rgba(var(--color-blue-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-blue {
+    background-color: rgba(var(--color-blue-rgb), 0.2);
+    border-color: rgba(var(--color-blue-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-purple,
-.ge-grid-item.ge-note-color-purple {
+.ge-grid-item.ge-folder-item.ge-folder-color-purple {
     background-color: rgba(var(--color-purple-rgb), 0.2);
     border-color: rgba(var(--color-purple-rgb), 0.5);
 }
+.ge-grid-item.ge-note-color-purple {
+    background-color: rgba(var(--color-purple-rgb), 0.2);
+    border-color: rgba(var(--color-purple-rgb), 0.25);
+}
 
-.ge-grid-item.ge-folder-item.ge-folder-color-pink,
-.ge-grid-item.ge-note-color-pink {
+.ge-grid-item.ge-folder-item.ge-folder-color-pink {
     background-color: rgba(var(--color-pink-rgb), 0.2);
     border-color: rgba(var(--color-pink-rgb), 0.5);
+}
+.ge-grid-item.ge-note-color-pink {
+    background-color: rgba(var(--color-pink-rgb), 0.2);
+    border-color: rgba(var(--color-pink-rgb), 0.25);
 }
 
 /* 筆記文字顏色 Note Text Color */
@@ -3065,10 +3089,10 @@ a.ge-current-folder:hover {
 }
 
 /* 平板上的右側邊欄或底部/側邊抽屜加上頂部 5px 邊距 */
-.is-tablet .mod-right-split .ge-grid-view-container,
-.is-tablet .mod-right-split .ge-note-view-container,
-.is-tablet .workspace-drawer .ge-grid-view-container,
-.is-tablet .workspace-drawer .ge-note-view-container {
+.is-mobile .mod-right-split .ge-grid-view-container,
+.is-mobile .mod-right-split .ge-note-view-container,
+.is-mobile .workspace-drawer .ge-grid-view-container,
+.is-mobile .workspace-drawer .ge-note-view-container {
     padding-top: 4px;
 }
 

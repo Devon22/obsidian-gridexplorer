@@ -279,11 +279,21 @@ export class FileWatcher {
         );
     }
 
+    public renderPending = false;
+
+    public performPendingRender() {
+        if (this.renderPending) {
+            this.renderPending = false;
+            this.scheduleRender();
+        }
+    }
+
     // 以 200ms 去抖動的方式排程 render，避免短時間內大量重繪
     private scheduleRender = (delay: number = 200): void => {
-        // 若分頁被釘選或正在顯示筆記，暫停重新渲染
+        // 若分頁被釘選或正在顯示筆記/ZIP，暫停重新渲染，但標記為待更新
         if ((this.gridView.isPinned() && this.gridView.sourceMode === 'backlinks') || 
-            this.gridView.isShowingNote) {
+            this.gridView.isShowingNote || this.gridView.isShowingZip) {
+            this.renderPending = true;
             return;
         }
         if(this.gridView.sourceMode === 'recent-files' && this.gridView.containerEl.offsetParent === null) {

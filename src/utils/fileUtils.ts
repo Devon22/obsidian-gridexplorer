@@ -584,7 +584,12 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         // 所有筆記模式
         const allVaultFiles = app.vault.getFiles().filter(file => {
             if (includeMediaFiles === 'media-only') {
-                return settings.showMediaFiles && isMediaFile(file);
+                if (settings.showMediaFiles) {
+                    return isMediaFile(file);
+                } else {
+                    // 當不顯示媒體但模式被切換為「只顯示媒體檔案」時，回退顯示筆記檔案
+                    return isDocumentFile(file);
+                }
             }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
@@ -598,7 +603,12 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         // 最近檔案模式
         const recentFiles = app.vault.getFiles().filter(file => {
             if (includeMediaFiles === 'media-only') {
-                return settings.showMediaFiles && isMediaFile(file);
+                if (settings.showMediaFiles) {
+                    return isMediaFile(file);
+                } else {
+                    // 當不顯示媒體但模式被切換為「只顯示媒體檔案」時，回退顯示筆記檔案
+                    return isDocumentFile(file);
+                }
             }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||
@@ -613,7 +623,12 @@ export async function getFiles(gridView: GridView, includeMediaFiles: boolean | 
         // 隨機筆記模式，從所有筆記中隨機選取
         const randomFiles = app.vault.getFiles().filter(file => {
             if (includeMediaFiles === 'media-only') {
-                return settings.showMediaFiles && isMediaFile(file);
+                if (settings.showMediaFiles) {
+                    return isMediaFile(file);
+                } else {
+                    // 當不顯示媒體但模式被切換為「只顯示媒體檔案」時，回退顯示筆記檔案
+                    return isDocumentFile(file);
+                }
             }
             // 根據設定決定是否包含媒體檔案
             if (isDocumentFile(file) ||

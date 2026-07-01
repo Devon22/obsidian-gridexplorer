@@ -110,6 +110,8 @@ interface GridViewStateData {
     showIgnoredItems?: boolean;
     baseCardLayout?: 'horizontal' | 'vertical';
     cardLayout?: 'horizontal' | 'vertical';
+    baseShowNoteInGrid?: boolean;
+    showNoteInGridState?: boolean;
     hideHeaderElements?: boolean;
     showFileNameFilter?: boolean;
     baseShowDateDividers?: boolean;
@@ -188,6 +190,8 @@ export class GridView extends ItemView {
     customOptionIndex: number = -1; // 自訂模式選項索引
     baseCardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 使用者在設定或 UI 中選擇的基礎卡片樣式（不受資料夾臨時覆蓋影響）
     cardLayout: 'horizontal' | 'vertical' = 'horizontal'; // 目前實際使用的卡片樣式（可能被資料夾 metadata 臨時覆蓋）
+    baseShowNoteInGrid: boolean = false; // 基礎在網格中顯示筆記（不受資料夾臨時覆蓋影響）
+    showNoteInGridState: boolean = false; // 目前實際使用的在網格中顯示筆記狀態（可能被資料夾 metadata 臨時覆蓋）
     renderToken: number = 0; // 用於取消尚未完成之批次排程的遞增令牌
     isShowingNote: boolean = false; // 是否正在顯示筆記
     noteViewContainer: HTMLElement | null = null; // 筆記檢視容器
@@ -212,6 +216,8 @@ export class GridView extends ItemView {
         this.sortType = this.baseSortType;
         this.baseCardLayout = this.plugin.settings.cardLayout;
         this.cardLayout = this.baseCardLayout;
+        this.baseShowNoteInGrid = this.plugin.settings.showNoteInGrid;
+        this.showNoteInGridState = this.baseShowNoteInGrid;
         this.baseMinMode = false;
         this.minMode = this.baseMinMode;
         this.baseShowDateDividers = this.plugin.settings.dateDividerMode !== 'none';
@@ -636,6 +642,7 @@ export class GridView extends ItemView {
             let folderSort: string | undefined;
             let tempMinMode: boolean = this.baseMinMode;
             let tempShowDateDividers: boolean = this.baseShowDateDividers;
+            let tempShowNoteInGrid: boolean = this.baseShowNoteInGrid;
 
             if (mdFile instanceof TFile) {
                 const metadata = this.app.metadataCache.getFileCache(mdFile)?.frontmatter;
@@ -653,10 +660,16 @@ export class GridView extends ItemView {
                 } else if (metadata?.showDateDividers === false || metadata?.showDateDividers === 'false') {
                     tempShowDateDividers = false;
                 }
+                if (metadata?.showNoteInGrid === true || metadata?.showNoteInGrid === 'true') {
+                    tempShowNoteInGrid = true;
+                } else if (metadata?.showNoteInGrid === false || metadata?.showNoteInGrid === 'false') {
+                    tempShowNoteInGrid = false;
+                }
             }
             this.cardLayout = tempLayout;
             this.minMode = tempMinMode;
             this.showDateDividers = tempShowDateDividers;
+            this.showNoteInGridState = tempShowNoteInGrid;
 
             // 根據資料夾 frontmatter 的 sort 覆蓋實際排序，否則使用 baseSortType
             this.sortType = folderSort && typeof folderSort === 'string' && folderSort.trim() !== ''
@@ -667,6 +680,7 @@ export class GridView extends ItemView {
             this.cardLayout = this.baseCardLayout; // 回復基礎卡片排列
             this.minMode = this.baseMinMode; // 回復基礎最小化模式
             this.showDateDividers = this.baseShowDateDividers; // 回復基礎日期分隔器模式
+            this.showNoteInGridState = this.baseShowNoteInGrid; // 回復基礎在網格中顯示筆記狀態
             this.sourcePath = '/'; // 強制設定路徑為根目錄 (創建筆記用)
 
             // 切換到自訂模式時：重設選項索引，並將排序設為 'none'
@@ -1852,7 +1866,7 @@ export class GridView extends ItemView {
         }*/
 
         // 滑鼠懸停在項目上時，按 Ctrl 鍵直接顯示筆記或 ZIP 圖片網格
-        if (Platform.isDesktop && (file.extension === 'md' || file.extension === 'zip') && !this.plugin.settings.showNoteInGrid) {
+        if (Platform.isDesktop && (file.extension === 'md' || file.extension === 'zip') && !this.showNoteInGridState) {
             let triggeredInHover = false;
             let isHovering = false;
             let isMouseDown = false; // 追蹤滑鼠按下狀態
@@ -1978,7 +1992,7 @@ export class GridView extends ItemView {
                 this.hasKeyboardFocus = true;
                 event.preventDefault();
                 return;
-            } else if (this.plugin.settings.showNoteInGrid) {
+            } else if (this.showNoteInGridState) {
                 this.selectItem(index);
                 this.hasKeyboardFocus = true;
 
@@ -2646,6 +2660,8 @@ export class GridView extends ItemView {
                 showIgnoredItems: this.showIgnoredItems,
                 baseCardLayout: this.baseCardLayout,
                 cardLayout: this.cardLayout,
+                baseShowNoteInGrid: this.baseShowNoteInGrid,
+                showNoteInGridState: this.showNoteInGridState,
                 hideHeaderElements: this.hideHeaderElements,
                 showFileNameFilter: this.showFileNameFilter,
                 baseShowDateDividers: this.baseShowDateDividers,
@@ -2676,6 +2692,8 @@ export class GridView extends ItemView {
             this.showIgnoredItems = state.state.showIgnoredItems ?? false;
             this.baseCardLayout = state.state.baseCardLayout ?? 'horizontal';
             this.cardLayout = state.state.cardLayout ?? this.baseCardLayout;
+            this.baseShowNoteInGrid = state.state.baseShowNoteInGrid ?? state.state.showNoteInGridState ?? this.plugin.settings.showNoteInGrid;
+            this.showNoteInGridState = state.state.showNoteInGridState ?? this.baseShowNoteInGrid;
             this.hideHeaderElements = state.state.hideHeaderElements ?? false;
             this.showFileNameFilter = state.state.showFileNameFilter ?? this.plugin.settings.showFileNameFilter;
             this.baseShowDateDividers = state.state.baseShowDateDividers ?? state.state.showDateDividers ?? (this.plugin.settings.dateDividerMode !== 'none');

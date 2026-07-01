@@ -529,6 +529,19 @@ export function renderHeaderButton(gridView: GridView) {
                 void gridView.render();
             });
     });
+    // 預設在網格中顯示筆記
+    moreMenu.addItem((item) => {
+        item
+            .setTitle(t('show_note_in_grid'))
+            .setIcon('book-open')
+            .setChecked(gridView.showNoteInGridState)
+            .onClick(() => {
+                gridView.baseShowNoteInGrid = !gridView.showNoteInGridState;
+                gridView.showNoteInGridState = gridView.baseShowNoteInGrid;
+                gridView.app.workspace.requestSaveLayout();
+                void gridView.render();
+            });
+    });
     // 顯示忽略的資料夾及檔案選項
     moreMenu.addItem((item) => {
         item
