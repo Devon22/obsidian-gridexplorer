@@ -1,7 +1,7 @@
 {
 	"name": "gridexplorer",
-	"version": "3.4.13",
-	"description": "Browse note files in a grid view.",
+	"version": "3.4.14",
+	"description": "Browse and organize note files visually in a flexible grid layout.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

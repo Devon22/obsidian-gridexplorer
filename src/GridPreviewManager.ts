@@ -104,6 +104,7 @@ export class GridPreviewManager {
         let initialScrollTop = 0;
         let isAtTop = false;
         let isAtBottom = false;
+        let isFromEdge = false;
 
         const handleTouchStart = (e: TouchEvent) => {
             if (e.touches.length > 1) return;
@@ -125,10 +126,27 @@ export class GridPreviewManager {
             isDragging = false;
             isPullingUp = false;
             isHorizontalDragging = false;
+
+            const edgeThreshold = 24;
+            isFromEdge = startX < edgeThreshold || startX > window.innerWidth - edgeThreshold;
+
+            // Obsidian 自身的 swipe 手勢會在方向判斷完成前就介入，
+            // 所以必須在 touchstart 一開始就 stopPropagation，
+            // 僅保留螢幕邊緣 24px 讓系統返回手勢通過
+            if (!isFromEdge) {
+                e.stopPropagation();
+            }
         };
 
         const handleTouchMove = (e: TouchEvent) => {
             if (e.touches.length > 1) return;
+
+            // 理由同 handleTouchStart，必須盡早攔截以避免 Obsidian 手勢介入
+            if (!isFromEdge) {
+                e.stopPropagation();
+            } else {
+                return;
+            }
 
             currentY = e.touches[0].clientY;
             currentX = e.touches[0].clientX;
@@ -168,7 +186,6 @@ export class GridPreviewManager {
 
             // 只有在進入我們自己定義的拖曳狀態時，才攔截事件與阻止預設行為
             if (isHorizontalDragging || isDragging) {
-                e.stopPropagation();
                 if (e.cancelable) {
                     e.preventDefault();
                 }
@@ -196,7 +213,7 @@ export class GridPreviewManager {
         };
 
         const handleTouchEnd = (e: TouchEvent) => {
-            if (isHorizontalDragging || isDragging) {
+            if (!isFromEdge) {
                 e.stopPropagation();
             }
 

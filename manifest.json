@@ -1,9 +1,9 @@
 {
   "id": "gridexplorer",
   "name": "GridExplorer",
-  "version": "3.4.13",
+  "version": "3.4.14",
   "minAppVersion": "1.8.7",
-  "description": "Browse note files in a grid view.",
+  "description": "Browse and organize note files visually in a flexible grid layout.",
   "author": "Devon22",
   "authorUrl": "https://github.com/Devon22",
   "isDesktopOnly": false
