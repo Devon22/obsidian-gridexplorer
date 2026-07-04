@@ -85,7 +85,7 @@ export class MediaModal extends Modal {
                 plugins?: Record<string, { activeMediaModal?: unknown }>;
             };
         };
-        const plugin = appWithPlugins.plugins?.plugins?.['obsidian-gridexplorer'];
+        const plugin = appWithPlugins.plugins?.plugins?.['gridexplorer'];
         if (plugin) {
             plugin.activeMediaModal = this;
         }
@@ -205,7 +205,7 @@ export class MediaModal extends Modal {
                 plugins?: Record<string, { activeMediaModal?: unknown }>;
             };
         };
-        const plugin = appWithPlugins.plugins?.plugins?.['obsidian-gridexplorer'];
+        const plugin = appWithPlugins.plugins?.plugins?.['gridexplorer'];
         if (plugin && plugin.activeMediaModal === this) {
             plugin.activeMediaModal = null;
         }

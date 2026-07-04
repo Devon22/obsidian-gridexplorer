@@ -61,7 +61,7 @@ export async function getFirstImageFromZip(app: App, file: TFile): Promise<strin
 export async function findFirstImageInNote(app: App, content: string): Promise<string | null> {
     try {
         const pluginAccess = app as unknown as AppPluginAccess;
-        const customDocumentExtensions = pluginAccess.plugins?.plugins?.['obsidian-gridexplorer']?.settings?.customDocumentExtensions;
+        const customDocumentExtensions = pluginAccess.plugins?.plugins?.['gridexplorer']?.settings?.customDocumentExtensions;
         const isZipEnabled = customDocumentExtensions
             ?.split(',')
             .map((ext: string) => ext.trim().toLowerCase())

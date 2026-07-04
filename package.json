@@ -1,6 +1,6 @@
 {
 	"name": "gridexplorer",
-	"version": "3.4.14",
+	"version": "3.4.15",
 	"description": "Browse and organize note files visually in a flexible grid layout.",
 	"main": "main.js",
 	"scripts": {

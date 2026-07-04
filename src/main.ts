@@ -535,7 +535,7 @@ export default class GridExplorerPlugin extends Plugin {
             };
         };
         if (appWithPlugins.plugins?.plugins) {
-            appWithPlugins.plugins.plugins['obsidian-gridexplorer'] = this;
+            appWithPlugins.plugins.plugins['gridexplorer'] = this;
         }
 
         // Override new tab behavior (for useQuickAccessAsNewTabMode setting)
