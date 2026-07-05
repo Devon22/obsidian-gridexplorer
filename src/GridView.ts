@@ -1262,15 +1262,19 @@ export class GridView extends ItemView {
                                     // 刪除註解及連結
                                     contentWithoutMediaLinks = contentWithoutMediaLinks
                                         .replace(/<!--[\s\S]*?-->/g, '')
-                                        .replace(/!?\[([^\]]*)\]\([^)]+\)|!?\[\[([^\]]+)\]\]/g, (_match: string, p1?: string, p2?: string) => {
-                                            const rawLinkText = p1 || p2 || '';
-                                            if (!rawLinkText) return '';
+                                        .replace(/(?:!?\[([^\]]*)\]\(([^)]+)\))|(?:!?\[\[([^\]]+)\]\])/g, (_match: string, p1?: string, p2?: string, p3?: string) => {
+                                            if (p3) {
+                                                // WikiLink
+                                                const wikiLinkParts = p3.split('|');
+                                                const linkTarget = wikiLinkParts[0];
+                                                const linkText = wikiLinkParts.length > 1 ? wikiLinkParts.slice(1).join('|') : p3;
+                                                const extension = linkTarget.split('.').pop()?.toLowerCase() || '';
+                                                return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
+                                            }
 
-                                            const wikiLinkParts = p2 ? rawLinkText.split('|') : [];
-                                            const linkTarget = p2 ? wikiLinkParts[0] : rawLinkText;
-                                            const linkText = p2 && wikiLinkParts.length > 1 ? wikiLinkParts.slice(1).join('|') : rawLinkText;
-
-                                            // 獲取副檔名並檢查是否為圖片或影片
+                                            // Standard Markdown link/image
+                                            const linkText = p1 || '';
+                                            const linkTarget = (p2 || '').split('?')[0];
                                             const extension = linkTarget.split('.').pop()?.toLowerCase() || '';
                                             return (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) ? '' : linkText;
                                         });

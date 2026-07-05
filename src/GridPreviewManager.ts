@@ -320,6 +320,11 @@ export class GridPreviewManager {
         this.view.noteViewContainer = this.view.containerEl.createDiv('ge-note-view-container');
         const noteViewContainer = this.view.noteViewContainer;
 
+        // 立即設定狀態，確保在非同步渲染期間也能正常響應關閉或跳轉
+        this.view.isShowingNote = true;
+        this.view.previewedFile = file;
+        this.view.app.workspace.trigger('ge-preview-file-change', file, this.view);
+
         // 頂部列 (左右區塊)
         const topBar = noteViewContainer.createDiv('ge-note-top-bar');
         const leftBar = topBar.createDiv('ge-note-top-left');
@@ -688,6 +693,7 @@ export class GridPreviewManager {
         try {
             // 讀取筆記內容
             const content = await this.view.app.vault.read(file);
+            if (!this.view.isShowingNote || this.view.previewedFile !== file) return;
 
             // 使用 Obsidian 的 MarkdownRenderer 渲染內容
             await MarkdownRenderer.render(
@@ -697,6 +703,7 @@ export class GridPreviewManager {
                 file.path,
                 this.previewComponent!
             );
+            if (!this.view.isShowingNote || this.view.previewedFile !== file) return;
 
             // 加上自訂屬性 data-source-path
             noteContentArea
@@ -735,16 +742,10 @@ export class GridPreviewManager {
 
         // 渲染反向連結與出站連結區塊
         await this.renderLinksSection(file, noteContent);
-
+        if (!this.view.isShowingNote || this.view.previewedFile !== file) return;
 
         // 註冊行動裝置滑動手勢
         this.registerPreviewTouchEvents(noteViewContainer, scrollContainer, () => this.hideNoteInGrid());
-
-        // 設定狀態
-        this.view.isShowingNote = true;
-        this.view.previewedFile = file;
-        // 廣播事件，讓其他 GridView（例如側邊欄的反向連結模式）可以跟著更新
-        this.view.app.workspace.trigger('ge-preview-file-change', file, this.view);
     }
 
     // 隱藏筆記顯示
@@ -769,6 +770,10 @@ export class GridPreviewManager {
         }
 
         if (this.view.noteViewContainer) {
+            // 中斷所有正在下載的圖片，釋放瀏覽器連線池給下一次載入
+            this.view.noteViewContainer
+                .querySelectorAll<HTMLImageElement>('img')
+                .forEach((img) => { img.removeAttribute('src'); });
             this.view.noteViewContainer.remove();
             this.view.noteViewContainer = null;
         }
