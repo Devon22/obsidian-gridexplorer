@@ -1,4 +1,4 @@
-import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu, parseLinktext } from 'obsidian';
+import { TFolder, TFile, normalizePath, Platform, setIcon, setTooltip, Menu, parseLinktext, Notice } from 'obsidian';
 import { GridView } from './GridView';
 import { isFolderIgnored } from './utils/fileUtils';
 import { extractObsidianPathsFromDT } from './utils/dragUtils';
@@ -93,6 +93,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                                     await gridView.app.fileManager.renameFile(resolved, newPath);
                                                 }
                                             } catch (error) {
+                                                new Notice(`${t('failed_to_move_file')}: ${resolved.name}`);
                                                 console.error(`An error occurred while moving the file ${p}:`, error);
                                             }
                                         } else {
@@ -117,11 +118,11 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                             .filter((v: string): v is string => v.length > 0);
 
                         for (const line of lines) {
+                            let resolvedFile: TFile | null = null;
                             try {
                                 let text = line;
                                 if (text.startsWith('!')) text = text.substring(1);
 
-                                let resolvedFile: TFile | null = null;
                                 if (text.startsWith('[[') && text.endsWith(']]')) {
                                     const inner = text.slice(2, -2);
                                     const parsed = parseLinktext(inner);
@@ -144,6 +145,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                     }
                                 }
                             } catch (error) {
+                                new Notice(`${t('failed_to_move_file')}: ${resolvedFile ? resolvedFile.name : line}`);
                                 console.error('An error occurred while moving one of the files (container):', error);
                                 // 繼續處理其他檔案
                             }
@@ -525,6 +527,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                                             await gridView.app.fileManager.renameFile(resolved, newPath);
                                         }
                                     } catch (error) {
+                                        new Notice(`${t('failed_to_move_file')}: ${resolved.name}`);
                                         console.error(`An error occurred while moving the file ${p}:`, error);
                                     }
                                 } else {
@@ -555,37 +558,38 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     .map((s: string) => s.trim())
                     .filter((v: string): v is string => v.length > 0);
                     for (const line of lines) {
-                    try {
-                        let text = line;
-                        if (text.startsWith('!')) text = text.substring(1); // 去除 '!'
-
                         let resolvedFile: TFile | null = null;
-                        if (text.startsWith('[[') && text.endsWith(']]')) {
-                            const inner = text.slice(2, -2);
-                            const parsed = parseLinktext(inner);
-                            const dest = gridView.app.metadataCache.getFirstLinkpathDest(parsed.path, srcPath);
-                            if (dest instanceof TFile) resolvedFile = dest;
-                        } else {
-                            const direct = gridView.app.vault.getAbstractFileByPath(text);
-                            if (direct instanceof TFile) {
-                                resolvedFile = direct;
-                            } else {
-                                const dest = gridView.app.metadataCache.getFirstLinkpathDest(text, srcPath);
-                                if (dest instanceof TFile) resolvedFile = dest;
-                            }
-                        }
+                        try {
+                            let text = line;
+                            if (text.startsWith('!')) text = text.substring(1); // 去除 '!'
 
-                        if (resolvedFile instanceof TFile) {
-                            const newPath = normalizePath(`${folderPath}/${resolvedFile.name}`);
-                            if (resolvedFile.path !== newPath) {
-                                await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                            if (text.startsWith('[[') && text.endsWith(']]')) {
+                                const inner = text.slice(2, -2);
+                                const parsed = parseLinktext(inner);
+                                const dest = gridView.app.metadataCache.getFirstLinkpathDest(parsed.path, srcPath);
+                                if (dest instanceof TFile) resolvedFile = dest;
+                            } else {
+                                const direct = gridView.app.vault.getAbstractFileByPath(text);
+                                if (direct instanceof TFile) {
+                                    resolvedFile = direct;
+                                } else {
+                                    const dest = gridView.app.metadataCache.getFirstLinkpathDest(text, srcPath);
+                                    if (dest instanceof TFile) resolvedFile = dest;
+                                }
                             }
+
+                            if (resolvedFile instanceof TFile) {
+                                const newPath = normalizePath(`${folderPath}/${resolvedFile.name}`);
+                                if (resolvedFile.path !== newPath) {
+                                    await gridView.app.fileManager.renameFile(resolvedFile, newPath);
+                                }
+                            }
+                        } catch (error) {
+                            new Notice(`${t('failed_to_move_file')}: ${resolvedFile ? resolvedFile.name : line}`);
+                            console.error('An error occurred while moving one of the files:', error);
+                            // 繼續處理其他檔案
                         }
-                    } catch (error) {
-                        console.error('An error occurred while moving one of the files:', error);
-                        // 繼續處理其他檔案
                     }
-                }
                 })();
             });
         });

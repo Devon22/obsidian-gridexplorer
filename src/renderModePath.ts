@@ -1,4 +1,4 @@
-import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip, parseLinktext } from 'obsidian';
+import { TFolder, TFile, Menu, Platform, setIcon, normalizePath, setTooltip, parseLinktext, Notice } from 'obsidian';
 import { GridView } from './GridView';
 import { isFolderIgnored } from './utils/fileUtils';
 import { extractObsidianPathsFromDT } from './utils/dragUtils';
@@ -312,10 +312,9 @@ export function renderModePath(gridView: GridView) {
                                 // 處理 obsidian:// URI 格式（單檔/多檔）
                                 const obsidianPaths = await extractObsidianPathsFromDT(event.dataTransfer);
                                 if (obsidianPaths.length > 0) {
-                                    try {
-                                        for (const filePath of obsidianPaths) {
-                                            let resolved: TFile | null = null;
-
+                                    for (const filePath of obsidianPaths) {
+                                        let resolved: TFile | null = null;
+                                        try {
                                             // 1) 直接以路徑查找
                                             const direct = gridView.app.vault.getAbstractFileByPath(filePath);
                                             if (direct instanceof TFile) {
@@ -341,9 +340,10 @@ export function renderModePath(gridView: GridView) {
                                                     await gridView.app.fileManager.renameFile(resolved, newPath);
                                                 }
                                             }
+                                        } catch (error) {
+                                            new Notice(`${t('failed_to_move_file')}: ${resolved ? resolved.name : filePath}`);
+                                            console.error('An error occurred while moving multiple files to folder:', error);
                                         }
-                                    } catch (error) {
-                                        console.error('An error occurred while moving multiple files to folder:', error);
                                     }
                                     return;
                                 }
@@ -359,11 +359,11 @@ export function renderModePath(gridView: GridView) {
                                     .filter((v: string): v is string => v.length > 0);
 
                                 for (const line of lines) {
+                                    let resolvedFile: TFile | null = null;
                                     try {
                                         let text = line;
                                         if (text.startsWith('!')) text = text.substring(1);
 
-                                        let resolvedFile: TFile | null = null;
                                         if (text.startsWith('[[') && text.endsWith(']]')) {
                                             const inner = text.slice(2, -2);
                                             const parsed = parseLinktext(inner);
@@ -386,6 +386,7 @@ export function renderModePath(gridView: GridView) {
                                             }
                                         }
                                     } catch (error) {
+                                        new Notice(`${t('failed_to_move_file')}: ${resolvedFile ? resolvedFile.name : line}`);
                                         console.error('An error occurred while moving one of the files to folder:', error);
                                         // 繼續處理其他檔案
                                     }

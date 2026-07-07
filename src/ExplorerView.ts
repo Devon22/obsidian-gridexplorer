@@ -1,4 +1,4 @@
-import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, ViewStateResult } from 'obsidian';
+import { TFile, TFolder, WorkspaceLeaf, Menu, setIcon, Platform, normalizePath, ItemView, EventRef, FuzzySuggestModal, parseLinktext, ViewStateResult, Notice } from 'obsidian';
 import GridExplorerPlugin from './main';
 import { GridView } from './GridView';
 import { isFolderIgnored, isImageFile, isVideoFile, isAudioFile, isMediaFile } from './utils/fileUtils';
@@ -2225,11 +2225,11 @@ export class ExplorerView extends ItemView {
 
         let handled = false;
         for (const line of lines) {
+            let resolvedFile: TFile | null = null;
             try {
                 let text = line;
                 if (text.startsWith('!')) text = text.substring(1);
 
-                let resolvedFile: TFile | null = null;
                 if (text.startsWith('[[') && text.endsWith(']]')) {
                     const inner = text.slice(2, -2);
                     const parsed = parseLinktext(inner);
@@ -2253,6 +2253,7 @@ export class ExplorerView extends ItemView {
                     handled = true;
                 }
             } catch (error) {
+                new Notice(`${t('failed_to_move_file')}: ${resolvedFile ? resolvedFile.name : line}`);
                 console.error('An error occurred while moving one of the files (ExplorerView):', error);
                 // 繼續處理其他檔案
             }

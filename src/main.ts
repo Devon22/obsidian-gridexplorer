@@ -398,8 +398,13 @@ export default class GridExplorerPlugin extends Plugin {
 
         // 攔截所有tag點擊事件
         this.registerDomEvent(activeDocument, 'click', async (evt: MouseEvent) => {
-            // 如果未啟用攔截所有tag點擊事件，則跳過
-            if (!this.settings.interceptAllTagClicks) return;
+            // 判斷是否符合攔截條件
+            const tagMode = this.settings.interceptAllTagClicks;
+            if (tagMode === 'disabled') return;
+            if (tagMode === 'alt' && !evt.altKey) return;
+            if (tagMode === 'ctrl' && !(evt.ctrlKey || evt.metaKey)) return;
+            if (tagMode === 'shift' && !evt.shiftKey) return;
+
             // 只處理左鍵
             if (evt.button !== 0) return;
 
@@ -462,11 +467,18 @@ export default class GridExplorerPlugin extends Plugin {
         
         // 攔截Breadcrumb導航點擊事件
         this.registerDomEvent(activeDocument, 'click', async (evt: MouseEvent) => {
-            // 如果未啟用攔截Breadcrumb導航點擊事件，則跳過
-            if (!this.settings.interceptBreadcrumbClicks) return;
-
-            //如果有按著Ctrl鍵，則跳過
-            if (evt.ctrlKey || evt.metaKey) return;
+            // 判斷是否符合攔截條件
+            const crumbMode = this.settings.interceptBreadcrumbClicks;
+            if (crumbMode === 'disabled') return;
+            if (crumbMode === 'enabled') {
+                if (evt.ctrlKey || evt.metaKey) return; // 預設功能，有按 Ctrl 鍵則跳過
+            } else if (crumbMode === 'alt') {
+                if (!evt.altKey) return;
+            } else if (crumbMode === 'ctrl') {
+                if (!(evt.ctrlKey || evt.metaKey)) return;
+            } else if (crumbMode === 'shift') {
+                if (!evt.shiftKey) return;
+            }
 
             const target = evt.target as HTMLElement;
             const breadcrumbEl = target.closest('.view-header-breadcrumb');
@@ -838,6 +850,15 @@ export default class GridExplorerPlugin extends Plugin {
     async loadSettings() {
         const loadedSettings = await this.loadData() as Partial<GallerySettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings ?? {});
+        
+        // 相容舊版 boolean 設定
+        if (typeof this.settings.interceptAllTagClicks === 'boolean') {
+            this.settings.interceptAllTagClicks = this.settings.interceptAllTagClicks ? 'enabled' : 'disabled';
+        }
+        if (typeof this.settings.interceptBreadcrumbClicks === 'boolean') {
+            this.settings.interceptBreadcrumbClicks = this.settings.interceptBreadcrumbClicks ? 'enabled' : 'disabled';
+        }
+
         migrateDataviewCodeToQuery(this.settings);
         updateCustomDocumentExtensions(this.settings);
     }

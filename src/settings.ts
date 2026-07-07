@@ -37,6 +37,8 @@ function isCustomMode(value: unknown): value is CustomMode {
     );
 }
 
+export type InterceptMode = 'enabled' | 'alt' | 'ctrl' | 'shift' | 'disabled';
+
 export interface GallerySettings {
     ignoredFolders: string[]; // 要忽略的資料夾路徑
     ignoredFolderPatterns: string[]; // 要忽略的資料夾模式
@@ -81,8 +83,8 @@ export interface GallerySettings {
     dateDividerMode: string; // 日期分隔器模式：none, year, month, day
     showCodeBlocksInSummary: boolean; // 是否在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: string; // 資料夾筆記設定
-    interceptAllTagClicks: boolean; // 攔截所有tag點擊事件
-    interceptBreadcrumbClicks: boolean; // 攔截Breadcrumb點擊事件
+    interceptAllTagClicks: InterceptMode; // 攔截所有tag點擊事件
+    interceptBreadcrumbClicks: InterceptMode; // 攔截Breadcrumb點擊事件
     customModes: CustomMode[]; // 自訂模式
     quickAccessCommandPath: string; // Path used by "Open quick access folder" command
     quickAccessModeType: string; // View types used by "Open quick access view" command
@@ -141,8 +143,8 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     dateDividerMode: 'none', // 預設不使用日期分隔器
     showCodeBlocksInSummary: false, // 預設不在摘要中顯示程式碼區塊
     folderNoteDisplaySettings: 'default', // 預設不處理資料夾筆記
-    interceptAllTagClicks: true, // 預設攔截所有tag點擊事件
-    interceptBreadcrumbClicks: true, // 預設攔截Breadcrumb點擊事件
+    interceptAllTagClicks: 'enabled', // 預設攔截所有tag點擊事件
+    interceptBreadcrumbClicks: 'enabled', // 預設攔截Breadcrumb點擊事件
     customModes: [
         {
             internalName: 'custom-1750837329297',
@@ -881,26 +883,34 @@ export class GridExplorerSettingTab extends PluginSettingTab {
         new Setting(sectionEl)
             .setName(t('intercept_all_tag_clicks'))
             .setDesc(t('intercept_all_tag_clicks_desc'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.interceptAllTagClicks)
-                    .onChange(async (value) => {
-                        this.plugin.settings.interceptAllTagClicks = value;
-                        await this.plugin.saveSettings();
-                    });
+            .addDropdown(drop => {
+                drop.addOption('enabled', t('intercept_mode_enabled'));
+                drop.addOption('alt', t('intercept_mode_alt'));
+                drop.addOption('ctrl', t('intercept_mode_ctrl'));
+                drop.addOption('shift', t('intercept_mode_shift'));
+                drop.addOption('disabled', t('intercept_mode_disabled'));
+                drop.setValue(this.plugin.settings.interceptAllTagClicks);
+                drop.onChange(async (value) => {
+                    this.plugin.settings.interceptAllTagClicks = value as InterceptMode;
+                    await this.plugin.saveSettings();
+                });
             });
 
         // 攔截Breadcrumb點擊事件
         new Setting(sectionEl)
             .setName(t('intercept_breadcrumb_clicks'))
             .setDesc(t('intercept_breadcrumb_clicks_desc'))
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.plugin.settings.interceptBreadcrumbClicks)
-                    .onChange(async (value) => {
-                        this.plugin.settings.interceptBreadcrumbClicks = value;
-                        await this.plugin.saveSettings();
-                    });
+            .addDropdown(drop => {
+                drop.addOption('enabled', t('intercept_mode_enabled'));
+                drop.addOption('alt', t('intercept_mode_alt'));
+                drop.addOption('ctrl', t('intercept_mode_ctrl'));
+                drop.addOption('shift', t('intercept_mode_shift'));
+                drop.addOption('disabled', t('intercept_mode_disabled'));
+                drop.setValue(this.plugin.settings.interceptBreadcrumbClicks);
+                drop.onChange(async (value) => {
+                    this.plugin.settings.interceptBreadcrumbClicks = value as InterceptMode;
+                    await this.plugin.saveSettings();
+                });
             });
 
 
