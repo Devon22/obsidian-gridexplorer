@@ -1,4 +1,4 @@
-import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer, Component, Menu } from 'obsidian';
+import { TFile, Platform, setIcon, setTooltip, MarkdownRenderer, Component, Menu, getFrontMatterInfo, parseYaml } from 'obsidian';
 import JSZip from 'jszip';
 import { GridView } from './GridView';
 import { MediaModal, VirtualMediaFile } from './modal/mediaModal';
@@ -361,8 +361,6 @@ export class GridPreviewManager {
             setTooltip(noteTitle, file.basename);
         }
 
-
-
         const rightBar = topBar.createDiv('ge-note-top-right');
 
         // 編輯按鈕
@@ -371,7 +369,6 @@ export class GridPreviewManager {
         editButton.addEventListener('click', () => {
             void this.view.getLeafByMode(file).openFile(file);
         });
-
 
         // Metadata 切換按鈕
         const infoButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-info-button' });
@@ -548,131 +545,7 @@ export class GridPreviewManager {
         const frontmatter = fileCache?.frontmatter;
 
         if (frontmatter) {
-            // 檢查是否除了 position 以外還有其他屬性
-            const keys = Object.keys(frontmatter).filter(k => k !== 'position');
-            if (keys.length > 0) {
-                const metadataContainer = noteContent.createDiv('ge-note-metadata-container');
-
-                // 綁定切換事件
-                infoButton.addEventListener('click', () => {
-                    metadataContainer.classList.toggle('is-visible');
-                    scrollContainer.scrollTo(0, 0);
-                });
-
-                const metadataContent = metadataContainer.createDiv('ge-note-metadata-content');
-                for (const key of keys) {
-                    const item = metadataContent.createDiv('ge-note-metadata-item');
-                    item.createSpan({ cls: 'ge-note-metadata-key', text: `${key}: ` });
-                    const value: unknown = frontmatter[key] as unknown;
-                    const valueSpan = item.createSpan({ cls: 'ge-note-metadata-value' });
-
-                    const values = Array.isArray(value) ? value : [value];
-                    values.forEach((val, index) => {
-                        const valStr = String(val);
-                        // 處理內部連結 [[link]] 或 [[link|alias]]
-                        const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-                        // 處理 URL
-                        const urlRegex = /(https?:\/\/[^\s]+)/g;
-                        // 處理 Tag
-                        const tagRegex = /#([^\s#]+)/g;
-
-                        if (wikilinkRegex.test(valStr)) {
-                            wikilinkRegex.lastIndex = 0;
-                            let lastIndex = 0;
-                            let match;
-                            while ((match = wikilinkRegex.exec(valStr)) !== null) {
-                                // 插入匹配前的文字
-                                if (match.index > lastIndex) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                }
-                                const linkPath = match[1];
-                                const linkAlias = match[2] || linkPath;
-                                const linkEl = valueSpan.createEl('a', {
-                                    cls: 'internal-link',
-                                    text: linkAlias,
-                                    attr: { 'data-href': linkPath }
-                                });
-                                linkEl.addEventListener('click', (e) => {
-                                    e.preventDefault();
-                                    const linkedFile = this.view.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
-                                    if (linkedFile) {
-                                        if (e.ctrlKey || e.metaKey) {
-                                            void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
-                                        } else {
-                                            void this.showNoteInGrid(linkedFile);
-                                        }
-                                    }
-                                });
-                                lastIndex = wikilinkRegex.lastIndex;
-                            }
-                            if (lastIndex < valStr.length) {
-                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                            }
-                        } else if (urlRegex.test(valStr)) {
-                            urlRegex.lastIndex = 0;
-                            let lastIndex = 0;
-                            let match;
-                            while ((match = urlRegex.exec(valStr)) !== null) {
-                                if (match.index > lastIndex) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                }
-                                const url = match[1];
-                                valueSpan.createEl('a', {
-                                    cls: 'external-link',
-                                    text: url,
-                                    attr: { 'href': url, 'target': '_blank', 'rel': 'noopener' }
-                                });
-                                lastIndex = urlRegex.lastIndex;
-                            }
-                            if (lastIndex < valStr.length) {
-                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                            }
-                        } else if (key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag' || tagRegex.test(valStr)) {
-                            if ((key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag') && !valStr.startsWith('#')) {
-                                const tagEl = valueSpan.createEl('a', {
-                                    cls: 'tag',
-                                    text: '#' + valStr,
-                                    attr: { 'href': '#' + valStr }
-                                });
-                                tagEl.addEventListener('click', (e) => {
-                                    e.preventDefault();
-                                    (this.view.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + valStr);
-                                });
-                            } else {
-                                tagRegex.lastIndex = 0;
-                                let lastIndex = 0;
-                                let match;
-                                while ((match = tagRegex.exec(valStr)) !== null) {
-                                    if (match.index > lastIndex) {
-                                        valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
-                                    }
-                                    const tagName = match[1];
-                                    const tagEl = valueSpan.createEl('a', {
-                                        cls: 'tag',
-                                        text: '#' + tagName,
-                                        attr: { 'href': '#' + tagName }
-                                    });
-                                    tagEl.addEventListener('click', (e) => {
-                                        e.preventDefault();
-                                        (this.view.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + tagName);
-                                    });
-                                    lastIndex = tagRegex.lastIndex;
-                                }
-                                if (lastIndex < valStr.length) {
-                                    valueSpan.createSpan({ text: valStr.substring(lastIndex) });
-                                }
-                            }
-                        } else {
-                            valueSpan.createSpan({ text: valStr });
-                        }
-
-                        if (index < values.length - 1) {
-                            const isTag = key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag';
-                            valueSpan.createSpan({ text: isTag ? ' ' : ', ' });
-                        }
-                    });
-                }
-            }
+            this.renderMetadata(frontmatter, noteContent, infoButton, scrollContainer, file.path);
         }
 
         // 創建筆記內容區域
@@ -861,6 +734,11 @@ export class GridPreviewManager {
 
         const rightBar = topBar.createDiv('ge-zip-top-right');
 
+                // 建立 info 按鈕 (先建立，預設隱藏，待 zip 載入完後若有同名 md 則顯示)
+        const infoButton = rightBar.createEl('button', { cls: 'clickable-icon ge-note-info-button' });
+        setIcon(infoButton, 'info');
+        infoButton.setCssProps({ display: 'none' });
+
         // 開啟按鈕 (在分頁中開啟 ZIP 檔案)
         const openButton = rightBar.createEl('button', { cls: 'clickable-icon ge-zip-open-button' });
         setIcon(openButton, 'folder-archive');
@@ -875,10 +753,6 @@ export class GridPreviewManager {
         // 關閉按鈕
         const closeButton = rightBar.createEl('button', { cls: 'clickable-icon ge-zip-close-button' });
         setIcon(closeButton, 'x');
-        closeButton.setAttribute('aria-label', t('zip_close_view'));
-        if (Platform.isDesktop) {
-            setTooltip(closeButton, t('zip_close_view'));
-        }
         closeButton.addEventListener('click', () => {
             this.hideZipInGrid();
         });
@@ -964,6 +838,39 @@ export class GridPreviewManager {
             const arrayBuffer = await this.view.app.vault.readBinary(file);
             const zip = await JSZip.loadAsync(arrayBuffer);
             this.view.activeZip = zip;
+
+            // 檢查 zip 內是否有同名 md 檔案
+            const zipMdFilename = Object.keys(zip.files).find(name => {
+                const lower = name.toLowerCase();
+                const basename = file.basename.toLowerCase();
+                return !zip.files[name].dir && 
+                    (lower === `${basename}.md` || lower.endsWith(`/${basename}.md`));
+            });
+
+            if (zipMdFilename) {
+                try {
+                    const mdZipFile = zip.files[zipMdFilename];
+                    const mdContent = await mdZipFile.async("string");
+
+                    // 取得 Frontmatter 資訊並解析
+                    const frontMatterInfo = getFrontMatterInfo(mdContent);
+                    if (frontMatterInfo && frontMatterInfo.exists) {
+                        const frontmatter = parseYaml(frontMatterInfo.frontmatter) as Record<string, unknown>;
+                        if (frontmatter) {
+                            this.renderMetadata(frontmatter, scrollContainer, infoButton, scrollContainer, file.path, true, isInSidebar);
+                            // 因為 metadataContainer 是在非同步加載後才建立，需將它移動至 scrollContainer 的最上方 (即 zipContent 之前)
+                            const metadataEl = scrollContainer.querySelector('.ge-note-metadata-container');
+                            if (metadataEl && scrollContainer.firstChild && metadataEl !== scrollContainer.firstChild) {
+                                scrollContainer.insertBefore(metadataEl, scrollContainer.firstChild);
+                            }
+                            // 顯示切換按鈕
+                            infoButton.setCssProps({ display: '' });
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to read/render companion md inside ZIP:", err);
+                }
+            }
 
             const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'];
             this.view.zipImageFiles = Object.keys(zip.files)
@@ -1416,6 +1323,152 @@ export class GridPreviewManager {
             scrollContainer.scrollTop = savedScrollTop;
         } catch (error) {
             console.error('Error updating current preview note:', error);
+        }
+    }
+
+    private renderMetadata(
+        frontmatter: Record<string, unknown>,
+        parentEl: HTMLElement,
+        infoButton: HTMLButtonElement,
+        scrollContainer: HTMLElement,
+        filePath: string,
+        isZip = false,
+        isInSidebar = false
+    ) {
+        const keys = Object.keys(frontmatter).filter(k => k !== 'position');
+        if (keys.length > 0) {
+            const metadataContainer = parentEl.createDiv('ge-note-metadata-container');
+
+            // 如果是在 zip 中渲染，需要加上 margin 外間距使其跟 showNoteInGrid 左右對齊
+            if (isZip) {
+                metadataContainer.setCssProps({
+                    margin: isInSidebar ? '15px 15px 0 15px' : '20px 20px 0 20px'
+                });
+            }
+
+            // 綁定切換事件
+            infoButton.addEventListener('click', () => {
+                metadataContainer.classList.toggle('is-visible');
+                scrollContainer.scrollTo(0, 0);
+            });
+
+            const metadataContent = metadataContainer.createDiv('ge-note-metadata-content');
+            for (const key of keys) {
+                const item = metadataContent.createDiv('ge-note-metadata-item');
+                item.createSpan({ cls: 'ge-note-metadata-key', text: `${key}: ` });
+                const value = frontmatter[key];
+                const valueSpan = item.createSpan({ cls: 'ge-note-metadata-value' });
+
+                const values = Array.isArray(value) ? value : [value];
+                values.forEach((val, index) => {
+                    let valStr = '';
+                    if (val instanceof Date) {
+                        const yyyy = val.getFullYear();
+                        const mm = String(val.getMonth() + 1).padStart(2, '0');
+                        const dd = String(val.getDate()).padStart(2, '0');
+                        valStr = `${yyyy}-${mm}-${dd}`;
+                    } else {
+                        valStr = String(val);
+                    }
+                    const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+                    const urlRegex = /(https?:\/\/[^\s]+)/g;
+                    const tagRegex = /#([^\s#]+)/g;
+
+                    if (wikilinkRegex.test(valStr)) {
+                        wikilinkRegex.lastIndex = 0;
+                        let lastIndex = 0;
+                        let match;
+                        while ((match = wikilinkRegex.exec(valStr)) !== null) {
+                            if (match.index > lastIndex) {
+                                valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                            }
+                            const linkPath = match[1];
+                            const linkAlias = match[2] || linkPath;
+                            const linkEl = valueSpan.createEl('a', {
+                                cls: 'internal-link',
+                                text: linkAlias,
+                                attr: { 'data-href': linkPath }
+                            });
+                            linkEl.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                const linkedFile = this.view.app.metadataCache.getFirstLinkpathDest(linkPath, filePath);
+                                if (linkedFile) {
+                                    if (e.ctrlKey || e.metaKey) {
+                                        void this.view.getLeafByMode(linkedFile).openFile(linkedFile);
+                                    } else {
+                                        void this.showNoteInGrid(linkedFile);
+                                    }
+                                }
+                            });
+                            lastIndex = wikilinkRegex.lastIndex;
+                        }
+                        if (lastIndex < valStr.length) {
+                            valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                        }
+                    } else if (urlRegex.test(valStr)) {
+                        urlRegex.lastIndex = 0;
+                        let lastIndex = 0;
+                        let match;
+                        while ((match = urlRegex.exec(valStr)) !== null) {
+                            if (match.index > lastIndex) {
+                                valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                            }
+                            const url = match[1];
+                            valueSpan.createEl('a', {
+                                cls: 'external-link',
+                                text: url,
+                                attr: { 'href': url, 'target': '_blank', 'rel': 'noopener' }
+                            });
+                            lastIndex = urlRegex.lastIndex;
+                        }
+                        if (lastIndex < valStr.length) {
+                            valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                        }
+                    } else if (key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag' || tagRegex.test(valStr)) {
+                        if ((key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag') && !valStr.startsWith('#')) {
+                            const tagEl = valueSpan.createEl('a', {
+                                cls: 'tag',
+                                text: '#' + valStr,
+                                attr: { 'href': '#' + valStr }
+                            });
+                            tagEl.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                (this.view.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + valStr);
+                            });
+                        } else {
+                            tagRegex.lastIndex = 0;
+                            let lastIndex = 0;
+                            let match;
+                            while ((match = tagRegex.exec(valStr)) !== null) {
+                                if (match.index > lastIndex) {
+                                    valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+                                }
+                                const tagName = match[1];
+                                const tagEl = valueSpan.createEl('a', {
+                                    cls: 'tag',
+                                    text: '#' + tagName,
+                                    attr: { 'href': '#' + tagName }
+                                });
+                                tagEl.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    (this.view.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + tagName);
+                                });
+                                lastIndex = tagRegex.lastIndex;
+                            }
+                            if (lastIndex < valStr.length) {
+                                valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+                            }
+                        }
+                    } else {
+                        valueSpan.createSpan({ text: valStr });
+                    }
+
+                    if (index < values.length - 1) {
+                        const isTag = key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag';
+                        valueSpan.createSpan({ text: isTag ? ' ' : ', ' });
+                    }
+                });
+            }
         }
     }
 }

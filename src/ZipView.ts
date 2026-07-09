@@ -1,4 +1,4 @@
-import { FileView, WorkspaceLeaf, TFile } from 'obsidian';
+import { FileView, WorkspaceLeaf, TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
 import JSZip from 'jszip';
 import { MediaModal, VirtualMediaFile } from './modal/mediaModal';
 
@@ -122,6 +122,173 @@ export class ZipView extends FileView {
 				if (this.titleEl) this.titleEl.setText("No images found in zip file");
 				this.loading = false;
 				return;
+			}
+
+			// 移除可能殘留的 metadata container
+			const oldMeta = this.containerEl.querySelector('.ge-note-metadata-container');
+			if (oldMeta) oldMeta.remove();
+
+			// 檢查 zip 內是否有同名 md 檔案
+			const zipMdFilename = Object.keys(zip.files).find(name => {
+				const lower = name.toLowerCase();
+				const basename = file.basename.toLowerCase();
+				return !zip.files[name].dir && 
+					(lower === `${basename}.md` || lower.endsWith(`/${basename}.md`));
+			});
+
+			if (zipMdFilename) {
+				try {
+					const mdZipFile = zip.files[zipMdFilename];
+					const mdContent = await mdZipFile.async("string");
+					const frontMatterInfo = getFrontMatterInfo(mdContent);
+
+					if (frontMatterInfo && frontMatterInfo.exists) {
+						const frontmatter = parseYaml(frontMatterInfo.frontmatter) as Record<string, unknown>;
+						if (frontmatter) {
+							const keys = Object.keys(frontmatter).filter(k => k !== 'position');
+							if (keys.length > 0) {
+								const gridContainer = this.gridContainer;
+								if (gridContainer) {
+									const metadataContainer = gridContainer.createDiv('ge-note-metadata-container');
+									metadataContainer.addClass('is-visible');
+									metadataContainer.setCssProps({
+										margin: '0 0 20px 0'
+									});
+									const metadataContent = metadataContainer.createDiv('ge-note-metadata-content');
+									
+									for (const key of keys) {
+										const item = metadataContent.createDiv('ge-note-metadata-item');
+										item.createSpan({ cls: 'ge-note-metadata-key', text: `${key}: ` });
+										const value = frontmatter[key];
+										const valueSpan = item.createSpan({ cls: 'ge-note-metadata-value' });
+
+										const values = Array.isArray(value) ? value : [value];
+										values.forEach((val, idx) => {
+											let valStr = '';
+											if (val instanceof Date) {
+												const yyyy = val.getFullYear();
+												const mm = String(val.getMonth() + 1).padStart(2, '0');
+												const dd = String(val.getDate()).padStart(2, '0');
+												valStr = `${yyyy}-${mm}-${dd}`;
+											} else {
+												valStr = String(val);
+											}
+											const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+											const urlRegex = /(https?:\/\/[^\s]+)/g;
+											const tagRegex = /#([^\s#]+)/g;
+
+											if (wikilinkRegex.test(valStr)) {
+												wikilinkRegex.lastIndex = 0;
+												let lastIndex = 0;
+												let match;
+												while ((match = wikilinkRegex.exec(valStr)) !== null) {
+													if (match.index > lastIndex) {
+														valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+													}
+													const linkPath = match[1];
+													const linkAlias = match[2] || linkPath;
+													const linkEl = valueSpan.createEl('a', {
+														cls: 'internal-link',
+														text: linkAlias,
+														attr: { 'data-href': linkPath }
+													});
+													linkEl.addEventListener('click', (e) => {
+														e.preventDefault();
+														const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+														if (linkedFile) {
+															void this.app.workspace.getLeaf(true).openFile(linkedFile);
+														}
+													});
+													lastIndex = wikilinkRegex.lastIndex;
+												}
+												if (lastIndex < valStr.length) {
+													valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+												}
+											} else if (urlRegex.test(valStr)) {
+												urlRegex.lastIndex = 0;
+												let lastIndex = 0;
+												let match;
+												while ((match = urlRegex.exec(valStr)) !== null) {
+													if (match.index > lastIndex) {
+														valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+													}
+													const url = match[1];
+													valueSpan.createEl('a', {
+														cls: 'external-link',
+														text: url,
+														attr: { 'href': url, 'target': '_blank', 'rel': 'noopener' }
+													});
+													lastIndex = urlRegex.lastIndex;
+												}
+												if (lastIndex < valStr.length) {
+													valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+												}
+											} else if (key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag' || tagRegex.test(valStr)) {
+												interface AppWithInternalPlugins {
+													internalPlugins?: {
+														getPluginById?: (id: string) => {
+															instance?: {
+																openGlobalSearch?: (query: string) => void;
+															};
+														} | undefined;
+													};
+												}
+
+												if ((key.toLowerCase() === 'tags' || key.toLowerCase() === 'tag') && !valStr.startsWith('#')) {
+													const tagEl = valueSpan.createEl('a', {
+														cls: 'tag',
+														text: '#' + valStr,
+														attr: { 'href': '#' + valStr }
+													});
+													tagEl.addEventListener('click', (e) => {
+														e.preventDefault();
+														(this.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + valStr);
+													});
+												} else {
+													tagRegex.lastIndex = 0;
+													let lastIndex = 0;
+													let match;
+													while ((match = tagRegex.exec(valStr)) !== null) {
+														if (match.index > lastIndex) {
+															valueSpan.createSpan({ text: valStr.substring(lastIndex, match.index) });
+														}
+														const tagName = match[1];
+														const tagEl = valueSpan.createEl('a', {
+															cls: 'tag',
+															text: '#' + tagName,
+															attr: { 'href': '#' + tagName }
+														});
+														tagEl.addEventListener('click', (e) => {
+															e.preventDefault();
+															(this.app as AppWithInternalPlugins).internalPlugins?.getPluginById?.('global-search')?.instance?.openGlobalSearch?.('tag:#' + tagName);
+														});
+														lastIndex = tagRegex.lastIndex;
+													}
+													if (lastIndex < valStr.length) {
+														valueSpan.createSpan({ text: valStr.substring(lastIndex) });
+													}
+												}
+											} else {
+												valueSpan.createSpan({ text: valStr });
+											}
+
+											if (idx < values.length - 1) {
+												valueSpan.createSpan({ text: ', ' });
+											}
+										});
+									}
+
+									// 將 metadataContainer 置於 gridContainer 頂部 (滾動區最上方，即 gridEl 之前)
+									if (gridContainer.firstChild && metadataContainer !== gridContainer.firstChild) {
+										gridContainer.insertBefore(metadataContainer, gridContainer.firstChild);
+									}
+								}
+							}
+						}
+					}
+				} catch (err) {
+					console.error("Failed to parse companion metadata inside ZIP:", err);
+				}
 			}
 
 			this.initGrid();
