@@ -1541,6 +1541,7 @@ export class GridView extends ItemView {
                                 // Markdown 檔案尋找內部圖片
                                 if (imageUrl) {
                                     const img = imageArea.createEl('img');
+                                    img.referrerPolicy = 'no-referrer';
                                     img.src = imageUrl;
                                     img.draggable = false;
                                     imageArea.setAttribute('data-loaded', 'true');

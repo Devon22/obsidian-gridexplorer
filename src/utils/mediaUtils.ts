@@ -186,21 +186,24 @@ async function resolveUrl(app: App, url: string): Promise<string | null> {
 }
 
 async function validateRemoteImage(url: string): Promise<string | null> {
+    const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    };
     try {
-        const headResponse = await requestUrl({ url, method: 'HEAD' });
+        const headResponse = await requestUrl({ url, method: 'HEAD', headers });
         if (isSuccessfulStatus(headResponse)) {
             return url;
         }
 
         if (headResponse.status === 405 || headResponse.status === 501) {
-            const getResponse = await requestUrl({ url });
+            const getResponse = await requestUrl({ url, headers });
             if (isSuccessfulStatus(getResponse)) {
                 return url;
             }
         }
     } catch {
         try {
-            const getResponse = await requestUrl({ url });
+            const getResponse = await requestUrl({ url, headers });
             if (isSuccessfulStatus(getResponse)) {
                 return url;
             }
@@ -209,7 +212,8 @@ async function validateRemoteImage(url: string): Promise<string | null> {
         }
     }
 
-    return null;
+    // 即使驗證失敗，只要 URL 格式符合圖片規格，仍傳回原網址讓瀏覽器嘗試載入
+    return url;
 }
 
 function isSuccessfulStatus(response: RequestUrlResponse): boolean {

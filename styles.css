@@ -2323,6 +2323,7 @@ a.ge-current-folder:hover {
     z-index: 100;
     display: flex;
     flex-direction: column;
+    container-type: inline-size;
 }
 
 /* 筆記頂部按鈕列 */
@@ -2354,7 +2355,8 @@ a.ge-current-folder:hover {
 /* 捲動區域 */
 .ge-note-scroll-container {
     flex: 1 1 auto;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     background-color: var(--background-primary);
     font-size: var(--font-text-size);
 }
@@ -2455,6 +2457,21 @@ a.ge-current-folder:hover {
     -moz-user-select: text;
     -ms-user-select: text;
     pointer-events: auto;
+}
+
+/* 讓圖片延展到包含卷軸的介面寬度 (僅限行動裝置，且排除程式碼區塊、表格、清單等特殊容器內的圖片) */
+.is-mobile .ge-note-content img:not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *),
+.is-mobile .ge-note-content .internal-embed:has(img):not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) {
+    width: 100cqw;
+    max-width: 100cqw;
+    margin-left: calc(50% - 50cqw);
+    display: block;
+}
+
+.is-mobile .ge-note-content .internal-embed:has(img):not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) img {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
 }
 
 .ge-note-content h1,
