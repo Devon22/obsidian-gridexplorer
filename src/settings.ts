@@ -434,7 +434,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     // 桌面版：使用傳統的瀏覽器下載方法
                     const blob = new Blob([data], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-                    const a = activeDocument.createElement('a');
+                    const a = activeDocument.body.createEl('a');
                     a.href = url;
                     a.download = 'gridexplorer-custom-modes.json';
                     a.click();
@@ -446,7 +446,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
             .setButtonText(t('import'))
             .setTooltip(t('import'))
             .onClick(() => {
-                const input = activeDocument.createElement('input');
+                const input = activeDocument.body.createEl('input');
                 input.type = 'file';
                 input.accept = '.json';
                 input.onchange = async (e) => {
@@ -1363,7 +1363,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                         // 桌面版：使用傳統的瀏覽器下載方法
                         const blob = new Blob([data], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
-                        const a = activeDocument.createElement('a');
+                        const a = activeDocument.body.createEl('a');
                         a.href = url;
                         a.download = 'gridexplorer-settings.json';
                         a.click();
@@ -1375,7 +1375,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                 .setButtonText(t('import'))
                 .setTooltip(t('import'))
                 .onClick(() => {
-                    const input = activeDocument.createElement('input');
+                    const input = activeDocument.body.createEl('input');
                     input.type = 'file';
                     input.accept = '.json';
                     input.onchange = async (e) => {

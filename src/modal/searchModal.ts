@@ -194,7 +194,7 @@ export class SearchModal extends Modal {
             cls: 'ge-search-scope-checkbox'
         });
         searchScopeCheckbox.checked = this.gridView.searchCurrentLocationOnly;
-        searchScopeContainer.createEl('span', {
+        searchScopeContainer.createSpan({
             text: t('search_current_location_only'),
             cls: 'ge-search-scope-label'
         });
@@ -211,7 +211,7 @@ export class SearchModal extends Modal {
             cls: 'ge-search-name-checkbox'
         });
         searchNameCheckbox.checked = this.gridView.searchFilesNameOnly;
-        searchNameContainer.createEl('span', {
+        searchNameContainer.createSpan({
             text: t('search_files_name_only'),
             cls: 'ge-search-name-label'
         });
@@ -223,7 +223,7 @@ export class SearchModal extends Modal {
             cls: 'ge-search-media-files-checkbox'
         });
         searchMediaFilesCheckbox.checked = this.gridView.searchMediaFiles;
-        searchMediaFilesContainer.createEl('span', {
+        searchMediaFilesContainer.createSpan({
             text: t('search_media_files'),
             cls: 'ge-search-media-files-label'
         });
@@ -407,17 +407,14 @@ export class SearchModal extends Modal {
 
         // 創建單一標籤按鈕
         const createTagButton = (term: string, index: number) => {
-            const tagDiv = activeDocument.createElement('div');
-            tagDiv.className = 'ge-search-tag-button';
+            const tagDiv = inputContainer.createDiv('ge-search-tag-button');
             if (term.startsWith('#')) {
                 tagDiv.classList.add('is-tag');
             }
             tagDiv.textContent = term;
 
-            const deleteButton = activeDocument.createElement('div');
-            deleteButton.className = 'ge-search-tag-delete-button';
+            const deleteButton = tagDiv.createDiv('ge-search-tag-delete-button');
             setIcon(deleteButton, 'x');
-            tagDiv.appendChild(deleteButton);
 
             // 刪除按鈕
             deleteButton.addEventListener('click', (e) => {

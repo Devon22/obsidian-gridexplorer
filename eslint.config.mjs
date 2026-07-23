@@ -22,6 +22,11 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		rules: {
+			"obsidianmd/settings-tab/prefer-setting-definitions": "off",
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",

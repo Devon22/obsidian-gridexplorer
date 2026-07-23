@@ -70,30 +70,23 @@ export class FloatingAudioPlayer {
 
     // --- Private UI 和事件設定方法 ---
     private buildUI(): void {
-        this.containerEl = activeDocument.createElement('div');
-        this.containerEl.className = 'ge-floating-audio-player';
+        this.containerEl = activeDocument.body.createDiv('ge-floating-audio-player');
         this.containerEl.setAttribute('data-file', this.currentFile.path);
 
-        this.audioEl = activeDocument.createElement('audio');
+        this.handleEl = this.containerEl.createDiv('ge-audio-handle');
+
+        this.titleEl = this.containerEl.createDiv({
+            cls: 'ge-audio-title',
+            text: this.currentFile.basename
+        });
+
+        this.audioEl = this.containerEl.createEl('audio');
         this.audioEl.controls = true;
         this.audioEl.src = this.app.vault.getResourcePath(this.currentFile);
 
-        this.titleEl = activeDocument.createElement('div');
-        this.titleEl.className = 'ge-audio-title';
-        this.titleEl.textContent = this.currentFile.basename;
-
-        this.closeButtonEl = activeDocument.createElement('div');
-        this.closeButtonEl.className = 'ge-audio-close-button';
+        this.closeButtonEl = this.containerEl.createDiv('ge-audio-close-button');
         setIcon(this.closeButtonEl, 'x');
         this.closeButtonEl.addEventListener('click', this.boundClose);
-
-        this.handleEl = activeDocument.createElement('div');
-        this.handleEl.className = 'ge-audio-handle';
-
-        this.containerEl.appendChild(this.handleEl);
-        this.containerEl.appendChild(this.titleEl);
-        this.containerEl.appendChild(this.audioEl);
-        this.containerEl.appendChild(this.closeButtonEl);
     }
 
     private setupDragEvents(): void {
@@ -169,7 +162,9 @@ export class FloatingAudioPlayer {
 
     // --- Public 方法 ---
     public show(): void {
-        activeDocument.body.appendChild(this.containerEl);
+        if (!this.containerEl.parentElement) {
+            activeDocument.body.appendChild(this.containerEl);
+        }
 
         // 設定初始位置（右下角）
         const rect = this.containerEl.getBoundingClientRect();
@@ -180,6 +175,9 @@ export class FloatingAudioPlayer {
     }
 
     public close(): void {
+        if (this.audioEl) {
+            this.audioEl.pause();
+        }
         this.removeDragEvents(); // 清理事件監聽器
         this.containerEl.remove(); // 從 DOM 移除
         FloatingAudioPlayer.players.delete(this.currentFile.path); // 從靜態 Map 移除

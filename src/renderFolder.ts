@@ -200,7 +200,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
                     const parentContainer = isCompact ? folderEl : folderEl.createDiv('ge-content-area');
                     const titleContainer = parentContainer.createDiv('ge-title-container');
                     const customFolderIcon = gridView.plugin.settings.customFolderIcon;
-                    titleContainer.createEl('span', { cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
+                    titleContainer.createSpan({ cls: 'ge-title', text: `${customFolderIcon} ${folder.name}`.trim() });
                     setTooltip(folderEl, folder.name, { placement: gridView.cardLayout === 'vertical' ? 'bottom' : 'right' });
 
                     // 檢查同名筆記是否存在
@@ -209,7 +209,7 @@ export async function renderFolder(gridView: GridView, container: HTMLElement) {
 
                     if (noteFile instanceof TFile) {
                         // 使用 span 代替 button，只顯示圖示
-                        const noteIcon = titleContainer.createEl('span', {
+                        const noteIcon = titleContainer.createSpan({
                             cls: 'ge-foldernote-button'
                         });
                         setIcon(noteIcon, 'panel-left-open');

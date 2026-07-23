@@ -1636,10 +1636,8 @@ export class ExplorerView extends ItemView {
 
     // 創建拖拽預覽
     private createDragPreview(event: DragEvent, basename: string) {
-        const dragImage = activeDocument.createElement('div');
-        dragImage.className = 'ge-custom-drag-preview';
+        const dragImage = activeDocument.body.createDiv('ge-custom-drag-preview');
         dragImage.textContent = basename;
-        activeDocument.body.appendChild(dragImage);
         event.dataTransfer?.setDragImage(dragImage, 20, 20);
         window.setTimeout(() => activeDocument.body.removeChild(dragImage), 0);
     }

@@ -2461,14 +2461,14 @@ a.ge-current-folder:hover {
 
 /* 讓圖片延展到包含卷軸的介面寬度 (僅限行動裝置，且排除程式碼區塊、表格、清單等特殊容器內的圖片) */
 .is-mobile .ge-note-content img:not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *),
-.is-mobile .ge-note-content .internal-embed:has(img):not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) {
+.is-mobile .ge-note-content .internal-embed:not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) {
     width: 100cqw;
     max-width: 100cqw;
     margin-left: calc(50% - 50cqw);
     display: block;
 }
 
-.is-mobile .ge-note-content .internal-embed:has(img):not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) img {
+.is-mobile .ge-note-content .internal-embed:not(pre *, code *, [class*="block-language-"] *, .callout *, table *, ul *, ol *, blockquote *) img {
     width: 100%;
     max-width: 100%;
     margin-left: 0;

@@ -152,8 +152,7 @@ export class CustomModeModal extends Modal {
                 }
                 
                 // 在指示線之後插入選項容器
-                const optionContainer = activeDocument.createElement('div');
-                optionContainer.className = 'ge-custommode-option-container';
+                const optionContainer = optionsContainer.createDiv('ge-custommode-option-container');
                 if (expandedStates[idx]) {
                     optionContainer.classList.add('expanded');
                 }

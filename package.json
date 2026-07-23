@@ -1,6 +1,6 @@
 {
 	"name": "gridexplorer",
-	"version": "3.4.19",
+	"version": "3.5.0",
 	"description": "Browse and organize note files visually in a flexible grid layout.",
 	"main": "main.js",
 	"scripts": {
@@ -18,7 +18,7 @@
 		"@typescript-eslint/parser": "^8.59.3",
 		"esbuild": "0.17.3",
 		"eslint": "^10.3.0",
-		"eslint-plugin-obsidianmd": "^0.3.0",
+		"eslint-plugin-obsidianmd": "^0.4.1",
 		"globals": "^17.6.0",
 		"obsidian": "latest",
 		"tslib": "2.4.0",

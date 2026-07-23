@@ -1250,7 +1250,7 @@ export class GridPreviewManager {
         // 渲染反向連結
         if (backlinks.size > 0) {
             const backlinkHeader = linksContainer.createDiv('ge-note-links-header');
-            backlinkHeader.createEl('span', { text: `🔗 ${t('backlinks')} (${backlinks.size})` });
+            backlinkHeader.createSpan({ text: `🔗 ${t('backlinks')} (${backlinks.size})` });
             const backlinkList = linksContainer.createDiv('ge-note-links-list');
 
             Array.from(backlinks).forEach((linkFile) => {

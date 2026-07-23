@@ -181,7 +181,7 @@ export function renderModePath(gridView: GridView) {
                 if (path.path === '/') {
                     // 當根目錄時，根據設定使用 span 元素
                     if (gridView.plugin.settings.folderDisplayStyle !== 'menu') {
-                        pathEl = modenameContainer.createEl('span', {
+                        pathEl = modenameContainer.createSpan({
                             text: `${customFolderIcon} ${path.name}`.trim(),
                             cls: 'ge-mode-title'
                         });
@@ -217,7 +217,7 @@ export function renderModePath(gridView: GridView) {
 
             // 如果不是最後一個元素，添加分隔符
             if (i < pathElements.length - 1) {
-                pathContainer.createEl('span', {
+                pathContainer.createSpan({
                     text: '›',
                     cls: 'ge-breadcrumb-separator'
                 });
@@ -745,7 +745,7 @@ export function renderModePath(gridView: GridView) {
             });
         } else {
             // 其他模式維持原本的 span
-            modeTitleEl = modenameContainer.createEl('span', {
+            modeTitleEl = modenameContainer.createSpan({
                 text: `${modeIcon} ${modeName}`.trim(),
                 cls: 'ge-mode-title'
             });
@@ -972,7 +972,7 @@ export function renderModePath(gridView: GridView) {
         }
     } else if (gridView.searchQuery && !gridView.searchCurrentLocationOnly) {
         // 顯示全域搜尋名稱
-        modenameContainer.createEl('span', {
+        modenameContainer.createSpan({
             text: `🔍 ${t('global_search')}`,
             cls: 'ge-mode-title'
         });
@@ -985,7 +985,7 @@ export function renderModePath(gridView: GridView) {
         searchTextContainer.setAttribute('aria-label', gridView.searchQuery);
 
         // 建立可點選的搜尋文字
-        const searchText = searchTextContainer.createEl('span', { cls: 'ge-search-text', text: gridView.searchQuery });
+        const searchText = searchTextContainer.createSpan({ cls: 'ge-search-text', text: gridView.searchQuery });
         searchText.addEventListener('click', () => {
             // 以文字元素作為定位點開啟搜尋 modal（popup 樣式）
             showSearchModal(gridView.app, gridView, gridView.searchQuery, searchText);

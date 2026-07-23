@@ -1455,7 +1455,7 @@ export class GridView extends ItemView {
                                     const displayTags = Array.from(allTags);
 
                                     displayTags.forEach(tag => {
-                                        const tagEl = tagsContainer.createEl('span', {
+                                        const tagEl = tagsContainer.createSpan({
                                             cls: 'ge-tag',
                                             text: tag.startsWith('#') ? tag : `#${tag}`
                                         });
@@ -1833,7 +1833,7 @@ export class GridView extends ItemView {
         // 創建標題（立即載入）
         const shouldShowExtension = this.minMode && extension !== 'md';
         const displayText = shouldShowExtension ? `${file.basename}.${file.extension}` : file.basename;
-        const titleEl = titleContainer.createEl('span', { cls: 'ge-title', text: displayText });
+        const titleEl = titleContainer.createSpan({ cls: 'ge-title', text: displayText });
         if (this.plugin.settings.multiLineTitle) {
             titleEl.addClass('ge-multiline-title');
             titleContainer.addClass('has-multiline-title');
@@ -2148,12 +2148,8 @@ export class GridView extends ItemView {
                     drag_filename = file.basename;
                 }
 
-                const dragImage = activeDocument.createElement('div');
-                dragImage.className = 'ge-custom-drag-preview';
+                const dragImage = activeDocument.body.createDiv('ge-custom-drag-preview');
                 dragImage.textContent = drag_filename;
-
-                // 將元素暫時加入 DOM
-                activeDocument.body.appendChild(dragImage);
 
                 // 設定拖曳圖示
                 event.dataTransfer!.setDragImage(dragImage, 20, 20);

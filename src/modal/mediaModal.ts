@@ -200,6 +200,10 @@ export class MediaModal extends Modal {
     }
 
     onClose() {
+        if (this.currentMediaElement && this.currentMediaElement.instanceOf(HTMLMediaElement)) {
+            this.currentMediaElement.pause();
+        }
+
         const appWithPlugins = this.app as {
             plugins?: {
                 plugins?: Record<string, { activeMediaModal?: unknown }>;
@@ -211,9 +215,8 @@ export class MediaModal extends Modal {
         }
 
         const { contentEl } = this;
-        contentEl.empty();
 
-        // 如果存在之前的滾輪事件處理程序，先移除它
+        // 如果存在之前的滾輪事件處理程序，先移除它（必須在 contentEl.empty() 前進行）
         if (this.handleWheel) {
             const mediaView = contentEl.querySelector<HTMLElement>('.ge-media-view');
             if (mediaView) {
@@ -221,6 +224,8 @@ export class MediaModal extends Modal {
             }
             this.handleWheel = null;
         }
+
+        contentEl.empty();
 
         // 如果有 GridView 實例，跳轉到當前選中的項目
         if (this.gridView) {
@@ -266,8 +271,9 @@ export class MediaModal extends Modal {
 
         if (isImage(mediaFile)) {
             // 創建圖片元素
-            const img = activeDocument.createElement('img');
-            img.className = 'ge-fullscreen-image';
+            const img = mediaContainer.createEl('img', {
+                cls: 'ge-fullscreen-image'
+            });
             img.draggable = false;
             img.addEventListener('dragstart', (e) => e.preventDefault());
             img.addClass('ge-hidden'); // 先隱藏新圖片
@@ -276,6 +282,9 @@ export class MediaModal extends Modal {
             img.onload = () => {
                 // 移除舊 of 媒體元素
                 if (this.currentMediaElement) {
+                    if (this.currentMediaElement.instanceOf(HTMLMediaElement)) {
+                        this.currentMediaElement.pause();
+                    }
                     this.currentMediaElement.remove();
                 }
                 this.currentMediaElement = img;
@@ -292,8 +301,6 @@ export class MediaModal extends Modal {
             } else if (mediaFile instanceof TFile) {
                 img.src = this.app.vault.getResourcePath(mediaFile);
             }
-
-            mediaContainer.appendChild(img);
 
             // 取得與更新圖片初始大小並綁定手勢事件
             let initialWidth = 0;
@@ -477,10 +484,14 @@ export class MediaModal extends Modal {
         } else if (isVideo(mediaFile) || isAudio(mediaFile)) {
             // 對於影片和音樂，維持原有的處理方式
             if (this.currentMediaElement) {
+                if (this.currentMediaElement.instanceOf(HTMLMediaElement)) {
+                    this.currentMediaElement.pause();
+                }
                 this.currentMediaElement.remove();
             }
-            const video = activeDocument.createElement('video');
-            video.className = 'ge-fullscreen-video';
+            const video = mediaContainer.createEl('video', {
+                cls: 'ge-fullscreen-video'
+            });
             video.controls = true;
             video.autoplay = true;
 
@@ -492,7 +503,6 @@ export class MediaModal extends Modal {
                 video.src = this.app.vault.getResourcePath(mediaFile);
             }
 
-            mediaContainer.appendChild(video);
             this.currentMediaElement = video;
         }
 
@@ -504,10 +514,10 @@ export class MediaModal extends Modal {
         if (isAudio(mediaFile)) {
             //顯示檔案名稱
             const fileName = mediaFile.name;
-            const fileNameElement = activeDocument.createElement('div');
-            fileNameElement.className = 'ge-fullscreen-file-name';
-            fileNameElement.textContent = fileName;
-            mediaContainer.appendChild(fileNameElement);
+            mediaContainer.createDiv({
+                cls: 'ge-fullscreen-file-name',
+                text: fileName
+            });
         }
     }
 
