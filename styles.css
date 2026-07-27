@@ -69,42 +69,53 @@
     height: 100%;
 }
 
-/* 右上角懸浮開啟筆記按鈕 Hover Open-in-Grid Button 
+/* 右上角懸浮徽章按鈕 Hover iOS-style Badge Button */
 .ge-grid-item { position: relative; }
 .ge-hover-open-note {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    background: transparent;
-    border: 0;
+    top: -7px;
+    right: -7px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--background-secondary);
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--background-secondary);
-    color: var(--text-muted);
+    border: 2px solid var(--background-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     opacity: 0;
-    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
     pointer-events: none;
-    z-index: 2;
+    z-index: 10;
+    cursor: pointer;
 }
 
-.ge-grid-item:hover .ge-hover-open-note {
+.ge-grid-item:hover .ge-hover-open-note,
+.is-mobile .ge-hover-open-note,
+.is-phone .ge-hover-open-note,
+.is-tablet .ge-hover-open-note {
     opacity: 1;
     pointer-events: auto;
 }
 
 .ge-hover-open-note:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
+    transform: scale(1.12);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent, #ffffff);
+}
+
+.ge-hover-open-note.ge-hover-badge-delete:hover {
+    background: var(--text-error, #e74c3c);
+    color: #ffffff;
 }
 
 .ge-hover-open-note svg {
     width: 14px;
     height: 14px;
-} */
+    stroke-width: 2.5;
+}
 
 /* 摘要區域 Content Area */
 .ge-content-area {

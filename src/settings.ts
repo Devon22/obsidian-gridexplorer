@@ -95,6 +95,7 @@ export interface GallerySettings {
     searchCurrentLocationOnly: boolean; // 是否只搜尋當前位置
     searchFilesNameOnly: boolean; // 是否只搜尋筆記名稱
     searchMediaFiles: boolean; // 是否搜尋媒體檔案
+    badgeAction: 'none' | 'open-in-grid' | 'delete-note' | 'open-properties'; // 右上角徽章按鈕功能
     explorerStashPaths: string[]; // ExplorerView 暫存區的檔案路徑列表（跨視圖持久化）
 }
 
@@ -163,6 +164,7 @@ export const DEFAULT_SETTINGS: GallerySettings = {
     searchCurrentLocationOnly: false, // 預設搜尋所有筆記
     searchFilesNameOnly: false, // 預設不只搜尋筆記名稱
     searchMediaFiles: false, // 預設不搜尋媒體檔案
+    badgeAction: 'none', // 預設無徽章按鈕
     explorerStashPaths: [], // 預設暫存區為空
 };
 
@@ -714,7 +716,7 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .addOption('show', t('folder_display_style_show'))
                     .addOption('compact', t('folder_display_style_compact'))
                     .addOption('menu', t('folder_display_style_menu'))
-                    .addOption('hide', t('folder_display_style_hide'))
+                    .addOption('hide', t('hide'))
                     .setValue(this.plugin.settings.folderDisplayStyle)
                     .onChange(async (value) => {
                         this.plugin.settings.folderDisplayStyle = value as 'show' | 'compact' | 'menu' | 'hide';
@@ -757,6 +759,23 @@ export class GridExplorerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.showNoteInGrid)
                     .onChange(async (value) => {
                         this.plugin.settings.showNoteInGrid = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 右上角徽章按鈕功能設定
+        new Setting(sectionEl)
+            .setName(t('badge_action'))
+            .setDesc(t('badge_action_desc'))
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('none', t('hide'))
+                    .addOption('open-in-grid', t('badge_action_open_in_grid'))
+					.addOption('open-properties', t('badge_action_open_properties'))
+                    .addOption('delete-note', t('badge_action_delete_note'))
+                    .setValue(this.plugin.settings.badgeAction || 'none')
+                    .onChange(async (value) => {
+                        this.plugin.settings.badgeAction = value as 'none' | 'open-in-grid' | 'delete-note' | 'open-properties';
                         await this.plugin.saveSettings();
                     });
             });

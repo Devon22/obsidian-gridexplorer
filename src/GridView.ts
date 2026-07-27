@@ -359,7 +359,7 @@ export class GridView extends ItemView {
 
             const types = event.dataTransfer.types || [];
             const isExternalFile = types.includes('Files') && !types.includes('text/html') && !types.includes('text/plain');
-            
+
             // 如果不是外部檔案，直接返回（交給其他已經寫好搬移邏輯的處理器處理，不攔截）
             if (!isExternalFile) return;
 
@@ -1847,118 +1847,58 @@ export class GridView extends ItemView {
         // 開始觀察這個元素
         observer.observe(fileEl);
 
-        // 加入滑鼠移入顯示的右上角圓形按鈕（僅針對可在網格中顯示筆記的檔案）
-        // 位置與顯示由 CSS 控制（.ge-hover-open-note）
-        // 當設定為「直接在網格中顯示筆記」時，不顯示此按鈕
-        /*
-        if (file.extension === 'md' && !this.plugin.settings.showNoteInGrid) {
-            // 確保容器可做為定位參考
+        // 右上角懸浮徽章按鈕
+        const badgeAction = this.plugin.settings.badgeAction || 'none';
+        if (badgeAction !== 'none') {
             fileEl.style.position = fileEl.style.position || 'relative';
-            const quickBtn = fileEl.createDiv({ cls: 'ge-hover-open-note' });
-            setIcon(quickBtn, 'maximize-2');
-            quickBtn.addEventListener('click', (e) => {
+            const badgeBtn = fileEl.createDiv({ cls: 'ge-hover-open-note' });
+
+            if (badgeAction === 'delete-note') {
+                badgeBtn.addClass('ge-hover-badge-delete');
+                setIcon(badgeBtn, 'trash-2');
+                setTooltip(badgeBtn, t('delete_note'));
+            } else if (badgeAction === 'open-properties') {
+                setIcon(badgeBtn, 'palette');
+                setTooltip(badgeBtn, t('set_note_attribute'));
+            } else {
+                if (this.showNoteInGridState) {
+                    // 若「在網格中顯示筆記」開啟，預設點擊會在新分頁開啟筆記
+                    setIcon(badgeBtn, 'arrow-up-right');
+                    setTooltip(badgeBtn, t('open_in_new_tab'));
+                } else {
+                    // 若「在網格中顯示筆記」未開啟，點擊在網格內開啟
+                    setIcon(badgeBtn, 'maximize-2');
+                    setTooltip(badgeBtn, t('show_note_in_grid_view'));
+                }
+            }
+
+            badgeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                // 如果是捷徑檔案，遵循捷徑開啟邏輯；否則在網格中顯示筆記
-                if (!this.openShortcutFile(file)) {
-                    void this.showNoteInGrid(file);
+
+                if (badgeAction === 'delete-note') {
+                    void this.app.fileManager.trashFile(file);
+                } else if (badgeAction === 'open-properties') {
+                    showNoteSettingsModal(this.app, this.plugin, file);
+                } else {
+                    if (this.showNoteInGridState) {
+                        // 若開啟筆記設定有打開，開啟在新分頁
+                        void this.app.workspace.getLeaf('tab').openFile(file);
+                    } else {
+                        // 若開啟筆記設定未打開，在網格內開啟
+                        if (!this.openShortcutFile(file)) {
+                            void this.showNoteInGrid(file);
+                        }
+                    }
                 }
             });
+
             // 阻止滑鼠事件影響拖曳或選取
-            quickBtn.addEventListener('mousedown', (e) => {
+            badgeBtn.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
             });
-        }*/
-
-        // 滑鼠懸停在項目上時，按 Ctrl 鍵直接顯示筆記或 ZIP 圖片網格
-        if (Platform.isDesktop && (file.extension === 'md' || file.extension === 'zip') && !this.showNoteInGridState) {
-            let triggeredInHover = false;
-            let isHovering = false;
-            let isMouseDown = false; // 追蹤滑鼠按下狀態
-            let keydownListener: ((e: KeyboardEvent) => void) | null = null;
-
-            const trigger = () => {
-                if (triggeredInHover || isMouseDown) return; // 如果滑鼠按下則不觸發
-                triggeredInHover = true;
-                if (!this.openShortcutFile(file)) {
-                    if (file.extension === 'md') {
-                        void this.showNoteInGrid(file);
-                    } else if (file.extension === 'zip') {
-                        void this.showZipInGrid(file);
-                    }
-                }
-            };
-
-            const onKeyDown = (e: KeyboardEvent) => {
-                const target = e.target as HTMLElement | null;
-                const isEditingText = target?.closest('input, textarea, select, [contenteditable="true"]');
-
-                // 只有在滑鼠確實懸停在此項目上且單獨按下 Ctrl 時才觸發
-                // 避免在篩選輸入框使用 Ctrl+C / Ctrl+V 等快捷鍵時誤開筆記
-                // 且滑鼠沒有按下（避免干擾 Ctrl+click）
-                // 並且當前 GridView 必須是活動視圖
-                if (isHovering && e.key === 'Control' && !isEditingText && !isMouseDown &&
-                    this.app.workspace.getActiveViewOfType(GridView) === this) {
-                    // 短暫延遲以確保不是 Ctrl+click 操作
-                    window.setTimeout(() => {
-                        if (isHovering && !triggeredInHover && !isMouseDown &&
-                            this.app.workspace.getActiveViewOfType(GridView) === this) {
-                            trigger();
-                        }
-                    }, 300);
-                }
-            };
-
-            const onMouseDown = () => {
-                isMouseDown = true;
-                triggeredInHover = true; // 防止在點擊過程中觸發 hover 功能
-            };
-
-            const onMouseUp = () => {
-                isMouseDown = false;
-                // 重置觸發狀態，但稍微延遲以避免立即重新觸發
-                window.setTimeout(() => {
-                    if (isHovering) {
-                        triggeredInHover = false;
-                    }
-                }, 50);
-            };
-
-            const onMouseEnter = () => {
-                triggeredInHover = false;
-                isHovering = true;
-                if (!keydownListener) {
-                    keydownListener = onKeyDown;
-                    activeDocument.addEventListener('keydown', keydownListener, { capture: true });
-                }
-            };
-
-            const onMouseLeave = () => {
-                isHovering = false;
-                isMouseDown = false;
-                if (keydownListener) {
-                    activeDocument.removeEventListener('keydown', keydownListener, { capture: true });
-                    keydownListener = null;
-                }
-                triggeredInHover = false;
-            };
-
-            fileEl.addEventListener('mouseenter', onMouseEnter);
-            fileEl.addEventListener('mouseleave', onMouseLeave);
-            fileEl.addEventListener('mousedown', onMouseDown);
-            fileEl.addEventListener('mouseup', onMouseUp);
-
-            // 添加清理函數到數組中
-            this.eventCleanupFunctions.push(() => {
-                if (keydownListener) {
-                    activeDocument.removeEventListener('keydown', keydownListener, { capture: true });
-                }
-                fileEl.removeEventListener('mouseenter', onMouseEnter);
-                fileEl.removeEventListener('mouseleave', onMouseLeave);
-                fileEl.removeEventListener('mousedown', onMouseDown);
-                fileEl.removeEventListener('mouseup', onMouseUp);
-            });
         }
+
 
         // 點擊時開啟檔案
         fileEl.addEventListener('click', (event) => {

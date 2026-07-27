@@ -170,7 +170,7 @@ export class GridPreviewManager {
                         // 上下滑動 (原有拉動關閉功能)
                         if (isAtTop || isAtBottom) {
                             const pullDownStartThreshold = 24;
-                            const pullUpStartThreshold = 36;
+                            const pullUpStartThreshold = 60;
                             const canPullDown = isAtTop && deltaY > pullDownStartThreshold;
                             const canPullUp = isAtBottom && deltaY < -pullUpStartThreshold;
 
@@ -252,7 +252,7 @@ export class GridPreviewManager {
             } else if (isDragging) {
                 isDragging = false;
 
-                const closeThreshold = isPullingUp ? 170 : 110;
+                const closeThreshold = isPullingUp ? 220 : 110;
                 if ((!isPullingUp && deltaY > closeThreshold) || (isPullingUp && deltaY < -closeThreshold)) {
                     const targetY = isPullingUp ? '-100vh' : '100vh';
                     container.setCssProps({
