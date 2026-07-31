@@ -620,12 +620,16 @@ export class FolderSelectionModal extends Modal {
 
         // 檢查下方空間，如果不夠則顯示在上方
         if (top + 400 > viewportHeight && buttonRect.top - 400 > 0) {
-            top = buttonRect.top - 8;
+            top = buttonRect.top - 400 - 8;
         }
 
         // 應用位置
-        modalEl.style.left = `${left}px`;
-        modalEl.style.top = `${top}px`;
+        modalEl.setCssProps({
+            position: 'fixed',
+            top: `${top}px`,
+            left: `${left}px`,
+            transform: 'none',
+        });
     }
 
     onClose() {

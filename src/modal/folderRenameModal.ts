@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFolder, normalizePath, Notice } from 'obsidian';
+import { App, Modal, TFolder, normalizePath, Notice } from 'obsidian';
 import GridExplorerPlugin from '../main';
 import { GridView } from '../GridView';
 import { t } from '../translations';
@@ -37,50 +37,50 @@ export class NameInputModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        new Setting(contentEl)
-            .setName(this.titleText)
-            .setDesc(this.descText ?? '')
-            .addText(text => {
-                text
-                    .setValue(this.value)
-                    .onChange(value => {
-                        this.value = value;
-                    });
+        // 標題
+        contentEl.createEl('h2', { text: this.titleText });
 
-                // Focus and select current value for quick edit
-                window.setTimeout(() => {
-                    text.inputEl.focus();
-                    text.inputEl.select();
-                });
+        // 如果有描述文字
+        if (this.descText) {
+            contentEl.createEl('p', { text: this.descText, cls: 'setting-item-description' });
+        }
 
-                // Submit on Enter key
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.value = text.getValue();
-                        this.onSubmit(this.value.trim());
-                        this.close();
-                    }
-                });
-            });
+        // 輸入框容器與輸入框
+        const inputContainer = contentEl.createDiv('ge-input-field-container');
+        const input = inputContainer.createEl('input', {
+            type: 'text',
+            value: this.value,
+            cls: 'ge-input-field'
+        });
 
-        new Setting(contentEl)
-            .addButton(button => {
-                button
-                    .setButtonText(this.confirmText)
-                    .setCta()
-                    .onClick(() => {
-                        this.onSubmit(this.value.trim());
-                        this.close();
-                    });
-            })
-            .addButton(button => {
-                button
-                    .setButtonText(this.cancelText)
-                    .onClick(() => {
-                        this.close();
-                    });
-            });
+        // 按鈕容器
+        const buttonContainer = contentEl.createDiv('ge-button-container');
+        const submitButton = buttonContainer.createEl('button', {
+            text: this.confirmText,
+            cls: 'mod-cta'
+        });
+        const cancelButton = buttonContainer.createEl('button', {
+            text: this.cancelText
+        });
+
+        const performSubmit = () => {
+            const val = input.value.trim();
+            this.onSubmit(val);
+            this.close();
+        };
+
+        submitButton.addEventListener('click', performSubmit);
+        cancelButton.addEventListener('click', () => this.close());
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSubmit();
+            }
+        });
+
+        // 自動聚焦與選取
+        input.focus();
+        input.select();
     }
 }
 
@@ -113,48 +113,46 @@ export class FolderRenameModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        new Setting(contentEl)
-            .setName(t('rename_folder'))
-            .setDesc(t('enter_new_folder_name'))
-            .addText(text => {
-                text
-                    .setValue(this.folder.name)
-                    .onChange(value => {
-                        this.newName = value;
-                    });
+        // 標題
+        contentEl.createEl('h2', { text: t('rename_folder') });
 
-                window.setTimeout(() => {
-                    text.inputEl.focus();
-                    text.inputEl.select();
-                });
+        // 輸入框容器與輸入框
+        const inputContainer = contentEl.createDiv('ge-input-field-container');
+        const input = inputContainer.createEl('input', {
+            type: 'text',
+            value: this.folder.name,
+            placeholder: t('enter_new_folder_name'),
+            cls: 'ge-input-field'
+        });
 
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.newName = text.getValue();
-                        void this.renameFolder();
-                        this.close();
-                    }
-                });
-            });
+        // 按鈕容器
+        const buttonContainer = contentEl.createDiv('ge-button-container');
+        const submitButton = buttonContainer.createEl('button', {
+            text: t('confirm'),
+            cls: 'mod-cta'
+        });
+        const cancelButton = buttonContainer.createEl('button', {
+            text: t('cancel')
+        });
 
-        new Setting(contentEl)
-            .addButton(button => {
-                button
-                    .setButtonText(t('confirm'))
-                    .setCta()
-                    .onClick(() => {
-                        void this.renameFolder();
-                        this.close();
-                    });
-            })
-            .addButton(button => {
-                button
-                    .setButtonText(t('cancel'))
-                    .onClick(() => {
-                        this.close();
-                    });
-            });
+        const performSubmit = () => {
+            this.newName = input.value.trim();
+            void this.renameFolder();
+            this.close();
+        };
+
+        submitButton.addEventListener('click', performSubmit);
+        cancelButton.addEventListener('click', () => this.close());
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSubmit();
+            }
+        });
+
+        // 自動聚焦與選取
+        input.focus();
+        input.select();
     }
 
     async renameFolder() {

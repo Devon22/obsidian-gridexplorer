@@ -3691,3 +3691,11 @@ a.ge-current-folder:hover {
     font-family: var(--inline-title-font);
     letter-spacing: -0.015em;
 }
+
+/* 隱藏彈出模態框的原生關閉與標題列按鈕 */
+.ge-popup-modal .modal-close-button,
+.ge-popup-modal .modal-header-button {
+    display: none;
+}
+
+
