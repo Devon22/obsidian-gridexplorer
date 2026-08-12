@@ -1,4 +1,4 @@
-import { Menu, setIcon } from 'obsidian';
+import { Menu, MenuItem, setIcon } from 'obsidian';
 import { GridView } from './GridView';
 import { EXPLORER_VIEW_TYPE } from './ExplorerView';
 import { showFolderSelectionModal } from './modal/folderSelectionModal';
@@ -6,6 +6,14 @@ import { showSearchModal } from './modal/searchModal';
 import { ShortcutSelectionModal } from './modal/shortcutSelectionModal';
 import { createNewNote, createNewFolder, createNewCanvas, createNewBase, createShortcut as createShortcutUtil } from './utils/createItemUtils';
 import { t } from './translations';
+
+interface MenuItemWithSubmenu extends MenuItem {
+    setSubmenu(): Menu;
+}
+
+function isMenuItemWithSubmenu(item: MenuItem): item is MenuItemWithSubmenu {
+    return 'setSubmenu' in item && typeof (item as Record<string, unknown>).setSubmenu === 'function';
+}
 
 interface SourceInfo {
     mode: string;
@@ -445,35 +453,55 @@ export function renderHeaderButton(gridView: GridView) {
     moreMenu.addItem((item) => {
         item
             .setTitle(t('open_new_grid_view'))
-            .setIcon('grid')
-            .onClick(() => {
-                const { workspace } = gridView.app;
-                let leaf = null;
-                workspace.getLeavesOfType('grid-view');
-                switch (gridView.plugin.settings.defaultOpenLocation) {
-                    case 'left':
-                        leaf = workspace.getLeftLeaf(false);
-                        break;
-                    case 'right':
-                        leaf = workspace.getRightLeaf(false);
-                        break;
-                    case 'tab':
-                    default:
-                        leaf = workspace.getLeaf('tab');
-                        break;
-                }
-                if (!leaf) {
-                    // 如果無法獲取指定位置的 leaf，則回退到新分頁
-                    leaf = workspace.getLeaf('tab');
-                }
-                void leaf.setViewState({ type: 'grid-view', active: true });
-                // 設定資料來源
-                if (leaf.view instanceof GridView) {
-                    void leaf.view.setSource('folder', '/');
-                }
-                // 確保視圖是活躍的
-                void workspace.revealLeaf(leaf);
-            });
+            .setIcon('grid');
+        
+        const submenu = isMenuItemWithSubmenu(item) ? item.setSubmenu() : null;
+        const createViewInLeaf = async (location: 'tab' | 'left' | 'right') => {
+            const { workspace } = gridView.app;
+            let leaf = null;
+            if (location === 'left') {
+                leaf = workspace.getLeftLeaf(false);
+            } else if (location === 'right') {
+                leaf = workspace.getRightLeaf(false);
+            } else {
+                leaf = workspace.getLeaf('tab');
+            }
+            if (!leaf) {
+                leaf = workspace.getLeaf('tab');
+            }
+            await leaf.setViewState({ type: 'grid-view', active: true });
+            if (leaf.view instanceof GridView) {
+                void leaf.view.setSource('folder', '/');
+            }
+            void workspace.revealLeaf(leaf);
+        };
+
+        const targetMenu = submenu || moreMenu;
+
+        targetMenu.addItem((subItem) => {
+            subItem
+                .setTitle(t('open_in_new_tab'))
+                .setIcon('file-plus')
+                .onClick(() => {
+                    void createViewInLeaf('tab');
+                });
+        });
+        targetMenu.addItem((subItem) => {
+            subItem
+                .setTitle(t('open_in_left_sidebar'))
+                .setIcon('sidebar-left')
+                .onClick(() => {
+                    void createViewInLeaf('left');
+                });
+        });
+        targetMenu.addItem((subItem) => {
+            subItem
+                .setTitle(t('open_in_right_sidebar'))
+                .setIcon('sidebar-right')
+                .onClick(() => {
+                    void createViewInLeaf('right');
+                });
+        });
     });
     moreMenu.addSeparator();
 
