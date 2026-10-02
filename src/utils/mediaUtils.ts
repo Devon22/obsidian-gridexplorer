@@ -113,6 +113,13 @@ export async function findFirstImageInNote(app: App, content: string): Promise<s
 
 // 處理媒體連結
 async function processMediaLink(app: App, internalMatch: RegExpMatchArray | RegExpExecArray): Promise<string | null> {
+    const decodePath = (path: string): string => {
+        try {
+            return decodeURIComponent(path);
+        } catch {
+            return path;
+        }
+    };
 
     // Frontmatter 內的圖片連結
     if (internalMatch[4]) {
@@ -121,7 +128,7 @@ async function processMediaLink(app: App, internalMatch: RegExpMatchArray | RegE
 
     // 處理 Obsidian 內部連結 ![[file]]
     if (internalMatch[1]) {
-        const file = app.metadataCache.getFirstLinkpathDest(internalMatch[1], '');
+        const file = app.metadataCache.getFirstLinkpathDest(decodePath(internalMatch[1]), '');
         if (file) {
             if (file.extension.toLowerCase() === 'zip') {
                 return await getFirstImageFromZip(app, file);
@@ -136,9 +143,10 @@ async function processMediaLink(app: App, internalMatch: RegExpMatchArray | RegE
         if (isRemoteUrl(url)) {
             return await validateRemoteImage(url);
         } else {
-            const file = app.metadataCache.getFirstLinkpathDest(url, '');
+            const path = decodePath(url);
+            const file = app.metadataCache.getFirstLinkpathDest(path, '');
             if (!file) {
-                const fileByPath = app.vault.getAbstractFileByPath(url);
+                const fileByPath = app.vault.getAbstractFileByPath(path);
                 if (fileByPath instanceof TFile) {
                     if (fileByPath.extension.toLowerCase() === 'zip') {
                         return await getFirstImageFromZip(app, fileByPath);
