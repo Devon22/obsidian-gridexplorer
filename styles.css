@@ -854,16 +854,26 @@
 /* 針對非常窄的側邊欄（寬度小於 350px）進一步優化 */
 @container (max-width: 350px) {
     .ge-header-buttons {
-        gap: 7px;
-        padding: 9px 7px;
-        /* 保持上下 padding 9px，減少左右 padding 到 6px */
+	    gap: 7px;
+	    padding: 9px 7px;
     }
 
     .ge-header-buttons button {
-        padding: 6px 9px;
-        /* 保持上下 padding 6px，減少左右 padding 到 8px */
-        gap: 3px;
-        font-size: 13px;
+	    padding: 6px 9px;
+	    gap: 3px;
+	    font-size: 13px;
+    }
+
+    /* 手機的側邊欄需要更小的按鈕 */
+    .is-phone .ge-header-buttons {
+        gap: 4px;
+        padding: 5px 3px;
+    }
+
+    .is-phone .ge-header-buttons button {
+        padding: 3px 7px;
+        gap: 2px;
+        font-size: 11px;
     }
 }
 
@@ -2369,7 +2379,7 @@ a.ge-current-folder:hover {
     overflow-y: auto;
     overflow-x: hidden;
     background-color: var(--background-primary);
-    font-size: var(--font-text-size);
+    font-size: var(--font-preferred-size, var(--font-text-size));
 }
 
 .ge-note-sidebar-scroll-container {
@@ -3697,5 +3707,3 @@ a.ge-current-folder:hover {
 .ge-popup-modal .modal-header-button {
     display: none;
 }
-
-
